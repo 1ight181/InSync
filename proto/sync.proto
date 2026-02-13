@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package syncproto.v1;
+
+
+// Тип файла для передачи метаданных о файлах и директориях
+message FileMetadata {
+    string file_uuid = 1;
+    string relative_path = 2;
+    uint32 size_bytes = 3;
+    uint32 modified_unix = 4;
+    string hash = 5;
+    bool is_directory = 6;
+}
+
+
+// Тип для запроса и ответа при получении списка файлов
+message GetFileListRequest {
+    string root_name = 1;
+}
+
+message GetFileListResponse {
+    repeated FileMetadata files = 1;
+}
+
+
+// Тип для запроса и ответа при получении файла
+message GetFileRequest {
+    string root_name = 1;
+    string relative_path = 2;
+}
+
+message GetFileResponse {
+    FileChunk chunk = 1;
+}
+
+// Тип запроса и ответа для загрузки файла
+
+message PutFileInit {
+    string root_name = 1;
+    string relative_path = 2;
+}
+
+message PutFileRequest {
+    oneof payload {
+        PutFileInit init = 1;
+        FileChunk chunk = 2;
+    }
+}
+
+message PutFileResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+
+// Тип запроса и ответа для удаления файла
+message DeleteFileRequest {
+    string root_name = 1;
+    string relative_path = 2;
+}
+
+message DeleteFileResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+
+// Тип запроса и ответа для переименования файла
+message RenameFileRequest {
+    string root_name = 1;
+    string file_uuid = 2;
+    string new_relative_path = 3;
+}
+
+message RenameFileResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+
+// Чанк файла
+message FileChunk {
+    uint32 index = 1;
+    bytes data = 2;
+}
+
+// Сервис для синхронизации файлов
+service FileSyncService {
+    rpc GetFileList(GetFileListRequest) returns (GetFileListResponse);
+    rpc GetFile(GetFileRequest) returns (stream GetFileResponse);
+    rpc PutFile(stream PutFileRequest) returns (PutFileResponse);
+    rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
+    rpc RenameFile(RenameFileRequest) returns (RenameFileResponse);
+}
