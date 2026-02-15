@@ -1,6 +1,8 @@
 syntax = "proto3";
 
-package syncproto.v1;
+package syncproto;
+
+option go_package = "internal/syncproto;syncproto";
 
 
 // Тип файла для передачи метаданных о файлах и директориях
