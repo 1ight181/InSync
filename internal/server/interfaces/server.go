@@ -1,6 +1,8 @@
 package interfaces
 
-type Server interface {
+import "context"
+
+type IServer interface {
 	Start() error
-	Stop()
+	Stop(context.Context)
 }

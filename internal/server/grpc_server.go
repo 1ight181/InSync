@@ -10,6 +10,7 @@ import (
 	"os"
 
 	serverr "insync/internal/server/errors"
+	serverifaces "insync/internal/server/interfaces"
 
 	grpc "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -26,14 +27,14 @@ type GrpcServer struct {
 
 	ctx context.Context
 
-	logger slog.Logger
+	logger *slog.Logger
 
 	server *grpc.Server
 }
 
 type GrpcServerOption struct {
 	Ctx            context.Context
-	Logger         slog.Logger
+	Logger         *slog.Logger
 	ServerCertPath string
 	ServerKeyPath  string
 	CaCertPath     string
@@ -41,9 +42,9 @@ type GrpcServerOption struct {
 	Address        string
 }
 
-func NewGrpcServer(opts GrpcServerOption) *GrpcServer {
+func NewGrpcServer(opts GrpcServerOption) serverifaces.IServer {
 	if opts.Ctx == nil ||
-		opts.Logger == (slog.Logger{}) ||
+		opts.Logger == nil ||
 		opts.ServerCertPath == "" ||
 		opts.ServerKeyPath == "" ||
 		opts.CaCertPath == "" ||
