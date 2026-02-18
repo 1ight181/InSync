@@ -33,33 +33,42 @@ type GrpcServer struct {
 }
 
 type GrpcServerOption struct {
-	Ctx               context.Context
-	Logger            *slog.Logger
-	ServerCertPath    string
-	ServerKeyPath     string
-	CaCertPath        string
+	ServerCertPath string
+	ServerKeyPath  string
+	CaCertPath     string
+
 	ServerNetworkType string
 	ServerAddress     string
+
+	Ctx context.Context
+
+	Logger *slog.Logger
 }
 
 func NewGrpcServer(opts GrpcServerOption) serverifaces.IServer {
-	if opts.Ctx == nil ||
-		opts.Logger == nil ||
-		opts.ServerCertPath == "" ||
+	if opts.ServerCertPath == "" ||
 		opts.ServerKeyPath == "" ||
 		opts.CaCertPath == "" ||
+
 		opts.ServerNetworkType == "" ||
-		opts.ServerAddress == "" {
+		opts.ServerAddress == "" ||
+
+		opts.Logger == nil ||
+
+		opts.Ctx == nil {
 		panic("Все поля GrpcServerOption должны быть заполнены")
 	}
 	return &GrpcServer{
-		ctx:               opts.Ctx,
-		logger:            opts.Logger,
-		serverCertPath:    opts.ServerCertPath,
-		serverKeyPath:     opts.ServerKeyPath,
-		caCertPath:        opts.CaCertPath,
+		serverCertPath: opts.ServerCertPath,
+		serverKeyPath:  opts.ServerKeyPath,
+		caCertPath:     opts.CaCertPath,
+
 		serverNetworkType: opts.ServerNetworkType,
 		serverAddress:     opts.ServerAddress,
+
+		ctx: opts.Ctx,
+
+		logger: opts.Logger,
 	}
 }
 
