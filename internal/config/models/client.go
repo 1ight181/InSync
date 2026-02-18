@@ -26,5 +26,5 @@ func (cc *ClientConfig) Validate() error {
 }
 
 func (cc *ClientConfig) GetClientAddress() string {
-	return cc.ClientIp + ":" + strconv.Itoa(sc.ClientPort)
+	return cc.ClientIp + ":" + strconv.Itoa(cc.ClientPort)
 }
