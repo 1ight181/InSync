@@ -22,8 +22,8 @@ type GrpcServer struct {
 	serverKeyPath  string
 	caCertPath     string
 
-	networkType string
-	address     string
+	serverNetworkType string
+	serverAddress     string
 
 	ctx context.Context
 
@@ -33,13 +33,13 @@ type GrpcServer struct {
 }
 
 type GrpcServerOption struct {
-	Ctx            context.Context
-	Logger         *slog.Logger
-	ServerCertPath string
-	ServerKeyPath  string
-	CaCertPath     string
-	NetworkType    string
-	Address        string
+	Ctx               context.Context
+	Logger            *slog.Logger
+	ServerCertPath    string
+	ServerKeyPath     string
+	CaCertPath        string
+	ServerNetworkType string
+	ServerAddress     string
 }
 
 func NewGrpcServer(opts GrpcServerOption) serverifaces.IServer {
@@ -48,18 +48,18 @@ func NewGrpcServer(opts GrpcServerOption) serverifaces.IServer {
 		opts.ServerCertPath == "" ||
 		opts.ServerKeyPath == "" ||
 		opts.CaCertPath == "" ||
-		opts.NetworkType == "" ||
-		opts.Address == "" {
+		opts.ServerNetworkType == "" ||
+		opts.ServerAddress == "" {
 		panic("Все поля GrpcServerOption должны быть заполнены")
 	}
 	return &GrpcServer{
-		ctx:            opts.Ctx,
-		logger:         opts.Logger,
-		serverCertPath: opts.ServerCertPath,
-		serverKeyPath:  opts.ServerKeyPath,
-		caCertPath:     opts.CaCertPath,
-		networkType:    opts.NetworkType,
-		address:        opts.Address,
+		ctx:               opts.Ctx,
+		logger:            opts.Logger,
+		serverCertPath:    opts.ServerCertPath,
+		serverKeyPath:     opts.ServerKeyPath,
+		caCertPath:        opts.CaCertPath,
+		serverNetworkType: opts.ServerNetworkType,
+		serverAddress:     opts.ServerAddress,
 	}
 }
 
@@ -110,7 +110,7 @@ func (s *GrpcServer) Start() error {
 		return serverr.ServerStartError{Err: err}
 	}
 
-	listener, err := net.Listen(s.networkType, s.address)
+	listener, err := net.Listen(s.serverNetworkType, s.serverAddress)
 	if err != nil {
 		return serverr.ServerStartError{Err: err}
 	}
