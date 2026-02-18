@@ -20,6 +20,13 @@ var (
 	ErrServerNetworkTypeIsEmpty = errors.New("Тип сети сервера не может быть пустым")
 )
 
+// Ошибки валидации конфигурации клиента
+var (
+	ErrClientIpIsEmpty          = errors.New("IP клиента не может быть пустым")
+	ErrClientPortIsInvalid      = errors.New("Порт клиента должен быть целым числом в диапозоне от 0 до 65535")
+	ErrClientNetworkTypeIsEmpty = errors.New("Тип сети клиента не может быть пустым")
+)
+
 // Ошибки валидации конфигурации базы данных
 var (
 	ErrDbHostIsEmpty     = errors.New("Хост БД не может быть пустым")
