@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"sync/atomic"
 
 	serverr "insync/internal/server/errors"
 	serverifaces "insync/internal/server/interfaces"
@@ -30,6 +31,8 @@ type GrpcServer struct {
 	logger *slog.Logger
 
 	server *grpc.Server
+
+	isStarted atomic.Bool
 }
 
 type GrpcServerOption struct {
@@ -113,6 +116,11 @@ func (s *GrpcServer) createServerTlsConfig() (*tls.Config, error) {
 
 // Start блокирует выполнение, поэтому его нужно запускать в отдельной горутине. Он будет работать до тех пор, пока сервер не будет остановлен через метод Stop.
 func (s *GrpcServer) Start() error {
+	if s.isStarted.Swap(true) {
+		s.logger.Warn("Попытка запустить сервер, который уже запущен")
+		return serverr.ErrServerAlreadyStarted
+	}
+
 	s.logger.Info("Запуск gRPC сервера...")
 	tlsConfig, err := s.createServerTlsConfig()
 	if err != nil {
@@ -124,9 +132,10 @@ func (s *GrpcServer) Start() error {
 		return serverr.ServerStartError{Err: err}
 	}
 
-	creds := credentials.NewTLS(tlsConfig)
+	transportCreds := credentials.NewTLS(tlsConfig)
+	serverOptsWithCreds := grpc.Creds(transportCreds)
 
-	server := grpc.NewServer(grpc.Creds(creds))
+	server := grpc.NewServer(serverOptsWithCreds)
 	s.server = server
 
 	syncproto.RegisterFileSyncServiceServer(server, s)
@@ -141,7 +150,11 @@ func (s *GrpcServer) Start() error {
 // который позволяет завершить текущие соединения и запросы.
 // Если в течение заданного таймаута сервер не успевает остановиться,
 // вызывается принудительная остановка через Stop.
-func (s *GrpcServer) Stop(timeoutCtx context.Context) {
+func (s *GrpcServer) Stop(timeoutCtx context.Context) error {
+	if !s.isStarted.Swap(false) {
+		s.logger.Warn("Попытка остановить сервер, который не запущен")
+		return serverr.ErrServerAlreadyStopped
+	}
 	s.logger.Info("Остановка gRPC сервера...")
 	done := make(chan struct{})
 	go func() {
@@ -156,4 +169,6 @@ func (s *GrpcServer) Stop(timeoutCtx context.Context) {
 		s.server.Stop()
 		s.logger.Warn("Вызвана принудительная остановка gRPC сервера из-за таймаута")
 	}
+
+	return nil
 }

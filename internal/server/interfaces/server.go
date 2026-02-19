@@ -4,5 +4,5 @@ import "context"
 
 type IServer interface {
 	Start() error
-	Stop(context.Context)
+	Stop(context.Context) error
 }
