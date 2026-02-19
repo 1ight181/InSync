@@ -56,9 +56,9 @@ func NewGrpcServer(opts GrpcServerOption) serverifaces.IServer {
 		opts.ServerNetworkType == "" ||
 		opts.ServerAddress == "" ||
 
-		opts.Logger == nil ||
+		opts.Ctx == nil ||
 
-		opts.Ctx == nil {
+		opts.Logger == nil {
 		panic("Все поля GrpcServerOption должны быть заполнены")
 	}
 	return &GrpcServer{
@@ -75,21 +75,21 @@ func NewGrpcServer(opts GrpcServerOption) serverifaces.IServer {
 	}
 }
 
-func (s *GrpcServer) createServerTlsConfig() (*tls.Config, error) {
-	cert, err := tls.LoadX509KeyPair(s.serverCertPath, s.serverKeyPath)
+func (gs *GrpcServer) createServerTlsConfig() (*tls.Config, error) {
+	cert, err := tls.LoadX509KeyPair(gs.serverCertPath, gs.serverKeyPath)
 	if err != nil {
 		return nil, err
 	}
 
-	s.logger.LogAttrs(
-		s.ctx,
+	gs.logger.LogAttrs(
+		gs.ctx,
 		slog.LevelDebug,
 		"Сертификат сервера успешно загружен",
-		slog.String("certPath", s.serverCertPath),
-		slog.String("keyPath", s.serverKeyPath),
+		slog.String("certPath", gs.serverCertPath),
+		slog.String("keyPath", gs.serverKeyPath),
 	)
 
-	caCert, err := os.ReadFile(s.caCertPath)
+	caCert, err := os.ReadFile(gs.caCertPath)
 	if err != nil {
 		return nil, err
 	}
@@ -100,11 +100,11 @@ func (s *GrpcServer) createServerTlsConfig() (*tls.Config, error) {
 		return nil, serverr.ErrFailedToAppendCa
 	}
 
-	s.logger.LogAttrs(
-		s.ctx,
+	gs.logger.LogAttrs(
+		gs.ctx,
 		slog.LevelDebug,
-		"CA сертификат успешно загружен",
-		slog.String("caCertPath", s.caCertPath),
+		"CA сертификат успешно загружен для сервера",
+		slog.String("caCertPath", gs.caCertPath),
 	)
 
 	return &tls.Config{
@@ -115,19 +115,19 @@ func (s *GrpcServer) createServerTlsConfig() (*tls.Config, error) {
 }
 
 // Start блокирует выполнение, поэтому его нужно запускать в отдельной горутине. Он будет работать до тех пор, пока сервер не будет остановлен через метод Stop.
-func (s *GrpcServer) Start() error {
-	if s.isStarted.Swap(true) {
-		s.logger.Warn("Попытка запустить сервер, который уже запущен")
+func (gs *GrpcServer) Start() error {
+	if gs.isStarted.Swap(true) {
+		gs.logger.Warn("Попытка запустить сервер, который уже запущен")
 		return serverr.ErrServerAlreadyStarted
 	}
 
-	s.logger.Info("Запуск gRPC сервера...")
-	tlsConfig, err := s.createServerTlsConfig()
+	gs.logger.Info("Запуск gRPC сервера...")
+	tlsConfig, err := gs.createServerTlsConfig()
 	if err != nil {
 		return serverr.ServerStartError{Err: err}
 	}
 
-	listener, err := net.Listen(s.serverNetworkType, s.serverAddress)
+	listener, err := net.Listen(gs.serverNetworkType, gs.serverAddress)
 	if err != nil {
 		return serverr.ServerStartError{Err: err}
 	}
@@ -136,9 +136,9 @@ func (s *GrpcServer) Start() error {
 	serverOptsWithCreds := grpc.Creds(transportCreds)
 
 	server := grpc.NewServer(serverOptsWithCreds)
-	s.server = server
+	gs.server = server
 
-	syncproto.RegisterFileSyncServiceServer(server, s)
+	syncproto.RegisterFileSyncServiceServer(server, gs)
 	if err := server.Serve(listener); err != nil && err != grpc.ErrServerStopped {
 		return serverr.ServerStartError{Err: err}
 	}
@@ -150,24 +150,24 @@ func (s *GrpcServer) Start() error {
 // который позволяет завершить текущие соединения и запросы.
 // Если в течение заданного таймаута сервер не успевает остановиться,
 // вызывается принудительная остановка через Stop.
-func (s *GrpcServer) Stop(timeoutCtx context.Context) error {
-	if !s.isStarted.Swap(false) {
-		s.logger.Warn("Попытка остановить сервер, который не запущен")
+func (gs *GrpcServer) Stop(timeoutCtx context.Context) error {
+	if !gs.isStarted.Swap(false) {
+		gs.logger.Warn("Попытка остановить сервер, который не запущен")
 		return serverr.ErrServerAlreadyStopped
 	}
-	s.logger.Info("Остановка gRPC сервера...")
+	gs.logger.Info("Остановка gRPC сервера...")
 	done := make(chan struct{})
 	go func() {
-		s.server.GracefulStop()
+		gs.server.GracefulStop()
 		close(done)
 	}()
 
 	select {
 	case <-done:
-		s.logger.Info("gRPC сервер успешно остановлен")
+		gs.logger.Info("gRPC сервер успешно остановлен")
 	case <-timeoutCtx.Done():
-		s.server.Stop()
-		s.logger.Warn("Вызвана принудительная остановка gRPC сервера из-за таймаута")
+		gs.server.Stop()
+		gs.logger.Warn("Вызвана принудительная остановка gRPC сервера из-за таймаута")
 	}
 
 	return nil
