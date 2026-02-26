@@ -1,0 +1,49 @@
+
+# Пример конфигурационного файла
+# DEBUG
+# Для прода задавать через env
+# Либо через config.yaml
+server:
+  server_ip: ""
+  server_port: 50051
+  server_network_type: "tcp"
+
+client:
+  client_ip: "localhost"
+  client_port: 50051
+  client_network_type: "tcp"
+  chunk_size_in_bytes: 1024
+
+database:
+  host: "db.example.com"
+  port: 5432
+  user: "dbuser"
+  password: "securepassword"
+
+tls:
+  server_cert_dir: "../certs"
+  server_cert_filename: "server"
+  server_cert_extension: ".crt"
+
+  server_key_dir: "../certs"
+  server_key_filename: "server"
+  server_key_extension: ".key"
+
+  client_cert_dir: "../certs"
+  client_cert_filename: "client"
+  client_cert_extension: ".crt"
+
+  client_key_dir: "../certs"
+  client_key_filename: "client"
+  client_key_extension: ".key"
+
+  ca_cert_dir: "../certs"
+  ca_cert_filename: "ca"
+  ca_cert_extension: ".crt"
+
+logger:
+  should_log_to_file: true
+  log_file_directory: "../logs"
+  log_file_name: "logs"
+  log_file_extension: "txt"
+  log_level: "info"
