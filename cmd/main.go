@@ -1,7 +1,9 @@
 package cmd
 
-import "fmt"
+import (
+	app "insync/internal/app"
+)
 
 func main() {
-	fmt.Println("Hello, World!")
+	app.RunApp()
 }
