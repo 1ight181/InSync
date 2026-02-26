@@ -6,6 +6,7 @@ import (
 	syncproto "insync/internal/syncproto"
 	"io"
 	"net"
+	"runtime/debug"
 	"sync/atomic"
 
 	"crypto/tls"
@@ -43,7 +44,7 @@ type GrpcClient struct {
 	isStarted atomic.Bool
 }
 
-type GrpcClientOption struct {
+type GrpcClientOptions struct {
 	ClientCertPath string
 	ClientKeyPath  string
 	CaCertPath     string
@@ -58,7 +59,7 @@ type GrpcClientOption struct {
 	Logger *slog.Logger
 }
 
-func NewGrpcClient(opts GrpcClientOption) clientifaces.IClient {
+func NewGrpcClient(opts GrpcClientOptions) clientifaces.IClient {
 	if opts.ClientCertPath == "" ||
 		opts.ClientKeyPath == "" ||
 		opts.CaCertPath == "" ||
@@ -136,6 +137,12 @@ func (gc *GrpcClient) Start() error {
 		return clienterr.ErrClientAlreadyStarted
 	}
 
+	ctx := gc.ctx
+	if ctx.Err() != nil {
+		gc.isStarted.Store(false)
+		return ctx.Err()
+	}
+
 	tlsConfig, err := gc.createClientTlsConfig()
 	if err != nil {
 		gc.isStarted.Store(false)
@@ -153,6 +160,10 @@ func (gc *GrpcClient) Start() error {
 
 	clientOptsWithDialer := grpc.WithContextDialer(networkAwareDialer)
 
+	if ctx.Err() != nil {
+		gc.isStarted.Store(false)
+		return ctx.Err()
+	}
 	conn, err := grpc.NewClient(gc.clientAddress, clientOptsWithCreds, clientOptsWithDialer)
 	if err != nil {
 		gc.isStarted.Store(false)
@@ -257,6 +268,7 @@ func (gc *GrpcClient) GetFile(ctx context.Context, rootName, relativePath string
 				slog.LevelWarn,
 				"Ошибка при закрытии пайпа методом Close при выполнении GetFile",
 				slog.String("error", err.Error()),
+				slog.String("trace", string(debug.Stack())),
 			)
 		}
 	}()
@@ -304,6 +316,7 @@ func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName, rel
 					"Ошибка при закрытии потока PutFile после получения ошибки от чтения файла",
 					slog.String("readError", err.Error()),
 					slog.String("closeSendError", closeErr.Error()),
+					slog.String("trace", string(debug.Stack())),
 				)
 			}
 			return err

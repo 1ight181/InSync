@@ -35,7 +35,7 @@ type GrpcServer struct {
 	isStarted atomic.Bool
 }
 
-type GrpcServerOption struct {
+type GrpcServerOptions struct {
 	ServerCertPath string
 	ServerKeyPath  string
 	CaCertPath     string
@@ -48,7 +48,7 @@ type GrpcServerOption struct {
 	Logger *slog.Logger
 }
 
-func NewGrpcServer(opts GrpcServerOption) serverifaces.IServer {
+func NewGrpcServer(opts GrpcServerOptions) serverifaces.IServer {
 	if opts.ServerCertPath == "" ||
 		opts.ServerKeyPath == "" ||
 		opts.CaCertPath == "" ||
@@ -120,6 +120,12 @@ func (gs *GrpcServer) Start() error {
 		gs.logger.Warn("Попытка запустить сервер, который уже запущен")
 		return serverr.ErrServerAlreadyStarted
 	}
+	defer gs.isStarted.Store(false)
+
+	ctx := gs.ctx
+	if ctx.Err() != nil {
+		return serverr.ServerStartError{Err: ctx.Err()}
+	}
 
 	gs.logger.Info("Запуск gRPC сервера...")
 	tlsConfig, err := gs.createServerTlsConfig()
@@ -139,6 +145,10 @@ func (gs *GrpcServer) Start() error {
 	gs.server = server
 
 	syncproto.RegisterFileSyncServiceServer(server, gs)
+
+	if ctx.Err() != nil {
+		return serverr.ServerStartError{Err: ctx.Err()}
+	}
 	if err := server.Serve(listener); err != nil && err != grpc.ErrServerStopped {
 		return serverr.ServerStartError{Err: err}
 	}
