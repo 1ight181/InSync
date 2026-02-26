@@ -149,21 +149,26 @@ func (cc *TlsConfig) Validate() error {
 }
 
 func (cc *TlsConfig) GetServerCertPath() string {
-	return filepath.Join(cc.ServerCertDir, cc.ServerCertFilename+cc.ServerCertExtension)
+	normalizedDir := filepath.FromSlash(cc.ServerCertDir)
+	return filepath.Join(normalizedDir, cc.ServerCertFilename+cc.ServerCertExtension)
 }
 
 func (cc *TlsConfig) GetServerKeyPath() string {
-	return filepath.Join(cc.ServerKeyDir, cc.ServerKeyFilename+cc.ServerKeyExtension)
+	normalizedDir := filepath.FromSlash(cc.ServerKeyDir)
+	return filepath.Join(normalizedDir, cc.ServerKeyFilename+cc.ServerKeyExtension)
 }
 
 func (cc *TlsConfig) GetClientCertPath() string {
-	return filepath.Join(cc.ClientCertDir, cc.ClientCertFilename+cc.ClientCertExtension)
+	normalizedDir := filepath.FromSlash(cc.ClientCertDir)
+	return filepath.Join(normalizedDir, cc.ClientCertFilename+cc.ClientCertExtension)
 }
 
 func (cc *TlsConfig) GetClientKeyPath() string {
-	return filepath.Join(cc.ClientKeyDir, cc.ClientKeyFilename+cc.ClientKeyExtension)
+	normalizedDir := filepath.FromSlash(cc.ClientKeyDir)
+	return filepath.Join(normalizedDir, cc.ClientKeyFilename+cc.ClientKeyExtension)
 }
 
 func (cc *TlsConfig) GetCaCertPath() string {
-	return filepath.Join(cc.CaCertDir, cc.CaCertFilename+cc.CaCertExtension)
+	normalizedDir := filepath.FromSlash(cc.CaCertDir)
+	return filepath.Join(normalizedDir, cc.CaCertFilename+cc.CaCertExtension)
 }

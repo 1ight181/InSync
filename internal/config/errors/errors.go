@@ -36,6 +36,14 @@ var (
 	ErrDbPasswordIsEmpty = errors.New("Пароль БД не может быть пустым")
 )
 
+// Ошибки валидации конфигурации логгера
+var (
+	ErrLogFileDirectoryIsEmpty = errors.New("Директория для логов не может быть пустой")
+	ErrLogFileNameIsEmpty      = errors.New("Имя файла логов не может быть пустым")
+	ErrLogFileExtensionIsEmpty = errors.New("Расширение файла логов не может быть пустым")
+	ErrLogLevelIsEmpty         = errors.New("Уровень логирования не может быть пустым")
+)
+
 // Ошибки валидации конфигурации сертификатов
 var (
 	ErrServerCertDirIsEmpty       = errors.New("Директория сертификата сервера не может быть пустой")
@@ -97,4 +105,12 @@ type CaCertFileDoesNotExistError struct {
 
 func (e *CaCertFileDoesNotExistError) Error() string {
 	return "Файл сертификата CA не существует: " + e.FilePath
+}
+
+type LogFileDoesNotExistError struct {
+	Err error
+}
+
+func (e *LogFileDoesNotExistError) Error() string {
+	return "Файл логов не существует: " + e.Err.Error()
 }
