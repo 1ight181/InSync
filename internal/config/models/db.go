@@ -6,10 +6,10 @@ import (
 
 // Реализует интерфейс ConfigModel
 type DbConfig struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
 }
 
 func (dc *DbConfig) Validate() error {

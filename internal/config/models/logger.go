@@ -8,11 +8,11 @@ import (
 )
 
 type LoggerConfig struct {
-	ShouldLogToFile  bool   `yaml:"should_log_to_file"`
-	LogFileDirectory string `yaml:"log_file_path"`
-	LogFileName      string `yaml:"log_file_name"`
-	LogFileExtension string `yaml:"log_file_extension"`
-	LogLevel         string `yaml:"log_level"`
+	ShouldLogToFile  bool   `mapstructure:"should_log_to_file"`
+	LogFileDirectory string `mapstructure:"log_file_path"`
+	LogFileName      string `mapstructure:"log_file_name"`
+	LogFileExtension string `mapstructure:"log_file_extension"`
+	LogLevel         string `mapstructure:"log_level"`
 }
 
 func (lc LoggerConfig) Validate() error {

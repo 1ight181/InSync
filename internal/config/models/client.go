@@ -6,11 +6,11 @@ import (
 )
 
 type ClientConfig struct {
-	Ip          string
-	Port        int
-	NetworkType string
+	Ip          string `mapstructure:"ip"`
+	Port        int    `mapstructure:"port"`
+	NetworkType string `mapstructure:"network_type"`
 
-	ChunkSizeInBytes int
+	ChunkSizeInBytes int `mapstructure:"chunk_size_in_bytes"`
 }
 
 func (cc *ClientConfig) Validate() error {

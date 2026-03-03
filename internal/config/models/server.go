@@ -7,9 +7,9 @@ import (
 
 // Реализует интерфейс ConfigModel
 type ServerConfig struct {
-	Ip          string
-	Port        int
-	NetworkType string
+	Ip          string `mapstructure:"ip"`
+	Port        int    `mapstructure:"port"`
+	NetworkType string `mapstructure:"network_type"`
 }
 
 func (sc *ServerConfig) Validate() error {

@@ -9,25 +9,25 @@ import (
 )
 
 type TlsConfig struct {
-	ServerCertDir       string
-	ServerCertFilename  string
-	ServerCertExtension string
+	ServerCertDir       string `mapstructure:"server_cert_dir"`
+	ServerCertFilename  string `mapstructure:"server_cert_filename"`
+	ServerCertExtension string `mapstructure:"server_cert_extension"`
 
-	ServerKeyDir       string
-	ServerKeyFilename  string
-	ServerKeyExtension string
+	ServerKeyDir       string `mapstructure:"server_key_dir"`
+	ServerKeyFilename  string `mapstructure:"server_key_filename"`
+	ServerKeyExtension string `mapstructure:"server_key_extension"`
 
-	ClientCertDir       string
-	ClientCertFilename  string
-	ClientCertExtension string
+	ClientCertDir       string `mapstructure:"client_cert_dir"`
+	ClientCertFilename  string `mapstructure:"client_cert_filename"`
+	ClientCertExtension string `mapstructure:"client_cert_extension"`
 
-	ClientKeyDir       string
-	ClientKeyFilename  string
-	ClientKeyExtension string
+	ClientKeyDir       string `mapstructure:"client_key_dir"`
+	ClientKeyFilename  string `mapstructure:"client_key_filename"`
+	ClientKeyExtension string `mapstructure:"client_key_extension"`
 
-	CaCertDir       string
-	CaCertFilename  string
-	CaCertExtension string
+	CaCertDir       string `mapstructure:"ca_cert_dir"`
+	CaCertFilename  string `mapstructure:"ca_cert_filename"`
+	CaCertExtension string `mapstructure:"ca_cert_extension"`
 }
 
 func (cc *TlsConfig) validateServerCert() error {

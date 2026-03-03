@@ -2,11 +2,11 @@ package models
 
 // Реализует интерфейс ConfigModel
 type GeneralConfig struct {
-	DbConfig     DbConfig
-	ServerConfig ServerConfig
-	ClientConfig ClientConfig
-	LoggerConfig LoggerConfig
-	TlsConfig    TlsConfig
+	DbConfig     DbConfig     `mapstructure:"db"`
+	ServerConfig ServerConfig `mapstructure:"server"`
+	ClientConfig ClientConfig `mapstructure:"client"`
+	LoggerConfig LoggerConfig `mapstructure:"logger"`
+	TlsConfig    TlsConfig    `mapstructure:"tls"`
 }
 
 func (gc *GeneralConfig) Validate() error {
