@@ -9,7 +9,7 @@ import (
 
 type LoggerConfig struct {
 	ShouldLogToFile  bool   `mapstructure:"should_log_to_file"`
-	LogFileDirectory string `mapstructure:"log_file_path"`
+	LogFileDirectory string `mapstructure:"log_file_directory"`
 	LogFileName      string `mapstructure:"log_file_name"`
 	LogFileExtension string `mapstructure:"log_file_extension"`
 	LogLevel         string `mapstructure:"log_level"`

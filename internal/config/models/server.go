@@ -13,9 +13,6 @@ type ServerConfig struct {
 }
 
 func (sc *ServerConfig) Validate() error {
-	if sc.Ip == "" {
-		return conferr.ErrServerIpIsEmpty
-	}
 	if sc.Port < 0 || sc.Port > 65535 {
 		return conferr.ErrServerPortIsInvalid
 	}
