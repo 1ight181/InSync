@@ -29,6 +29,8 @@ func startGrpcClient(
 		ClientNetworkType: clientNetworkType,
 		ClientAddress:     clientAddress,
 
+		ServiceName: "insincpb.FileSyncService",
+
 		Ctx: ctx,
 
 		ChunkSizeInBytes: chunkSizeInBytes,

@@ -52,6 +52,7 @@ func RunApp() {
 	)
 
 	clientConfig := config.ClientConfig
+	clientLogger := logger.With("module", "grpc_client")
 	err = startGrpcClient(
 		tlsConfig.GetClientCertPath(),
 		tlsConfig.GetClientKeyPath(),
@@ -64,10 +65,10 @@ func RunApp() {
 
 		clientConfig.ChunkSizeInBytes,
 
-		logger,
+		clientLogger,
 	)
 	if err != nil {
-		panic("Не удалось запустить Grpc клиента")
+		panic(fmt.Sprintf("Не удалось запустить gRPC клиент: %v", err))
 	}
 
 	<-stopSignal
