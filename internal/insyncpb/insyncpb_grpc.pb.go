@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.1
 // - protoc             v6.33.5
-// source: proto/sync.proto
+// source: proto/insyncpb.proto
 
-package sync
+package insyncpb
 
 import (
 	context "context"
@@ -19,11 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	FileSyncService_GetFileList_FullMethodName = "/sync.FileSyncService/GetFileList"
-	FileSyncService_GetFile_FullMethodName     = "/sync.FileSyncService/GetFile"
-	FileSyncService_PutFile_FullMethodName     = "/sync.FileSyncService/PutFile"
-	FileSyncService_DeleteFile_FullMethodName  = "/sync.FileSyncService/DeleteFile"
-	FileSyncService_RenameFile_FullMethodName  = "/sync.FileSyncService/RenameFile"
+	FileSyncService_GetFileList_FullMethodName = "/insyncpb.FileSyncService/GetFileList"
+	FileSyncService_GetFile_FullMethodName     = "/insyncpb.FileSyncService/GetFile"
+	FileSyncService_PutFile_FullMethodName     = "/insyncpb.FileSyncService/PutFile"
+	FileSyncService_DeleteFile_FullMethodName  = "/insyncpb.FileSyncService/DeleteFile"
+	FileSyncService_RenameFile_FullMethodName  = "/insyncpb.FileSyncService/RenameFile"
 )
 
 // FileSyncServiceClient is the client API for FileSyncService service.
@@ -242,7 +242,7 @@ func _FileSyncService_RenameFile_Handler(srv interface{}, ctx context.Context, d
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var FileSyncService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "sync.FileSyncService",
+	ServiceName: "insyncpb.FileSyncService",
 	HandlerType: (*FileSyncServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -270,5 +270,5 @@ var FileSyncService_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: "proto/sync.proto",
+	Metadata: "proto/insyncpb.proto",
 }

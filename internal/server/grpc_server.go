@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"insync/internal/sync"
+	"insync/internal/insyncpb"
 	"log/slog"
 	"net"
 	"os"
@@ -20,7 +20,7 @@ import (
 )
 
 type GrpcServer struct {
-	sync.UnimplementedFileSyncServiceServer
+	insyncpb.UnimplementedFileSyncServiceServer
 	serverCertPath string
 	serverKeyPath  string
 	caCertPath     string
@@ -149,7 +149,7 @@ func (gs *GrpcServer) Start() error {
 	healthServer := health.NewServer()
 	grpc_health_v1.RegisterHealthServer(server, healthServer)
 
-	sync.RegisterFileSyncServiceServer(server, gs)
+	insyncpb.RegisterFileSyncServiceServer(server, gs)
 
 	if ctx.Err() != nil {
 		return serverr.ServerStartError{Err: ctx.Err()}

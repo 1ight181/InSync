@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v6.33.5
-// source: proto/sync.proto
+// source: proto/insyncpb.proto
 
-package sync
+package insyncpb
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -36,7 +36,7 @@ type FileMetadata struct {
 
 func (x *FileMetadata) Reset() {
 	*x = FileMetadata{}
-	mi := &file_proto_sync_proto_msgTypes[0]
+	mi := &file_proto_insyncpb_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -48,7 +48,7 @@ func (x *FileMetadata) String() string {
 func (*FileMetadata) ProtoMessage() {}
 
 func (x *FileMetadata) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sync_proto_msgTypes[0]
+	mi := &file_proto_insyncpb_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -61,7 +61,7 @@ func (x *FileMetadata) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileMetadata.ProtoReflect.Descriptor instead.
 func (*FileMetadata) Descriptor() ([]byte, []int) {
-	return file_proto_sync_proto_rawDescGZIP(), []int{0}
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *FileMetadata) GetFileUuid() string {
@@ -116,7 +116,7 @@ type GetFileListRequest struct {
 
 func (x *GetFileListRequest) Reset() {
 	*x = GetFileListRequest{}
-	mi := &file_proto_sync_proto_msgTypes[1]
+	mi := &file_proto_insyncpb_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -128,7 +128,7 @@ func (x *GetFileListRequest) String() string {
 func (*GetFileListRequest) ProtoMessage() {}
 
 func (x *GetFileListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sync_proto_msgTypes[1]
+	mi := &file_proto_insyncpb_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -141,7 +141,7 @@ func (x *GetFileListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFileListRequest.ProtoReflect.Descriptor instead.
 func (*GetFileListRequest) Descriptor() ([]byte, []int) {
-	return file_proto_sync_proto_rawDescGZIP(), []int{1}
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GetFileListRequest) GetRootName() string {
@@ -160,7 +160,7 @@ type GetFileListResponse struct {
 
 func (x *GetFileListResponse) Reset() {
 	*x = GetFileListResponse{}
-	mi := &file_proto_sync_proto_msgTypes[2]
+	mi := &file_proto_insyncpb_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -172,7 +172,7 @@ func (x *GetFileListResponse) String() string {
 func (*GetFileListResponse) ProtoMessage() {}
 
 func (x *GetFileListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sync_proto_msgTypes[2]
+	mi := &file_proto_insyncpb_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -185,7 +185,7 @@ func (x *GetFileListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFileListResponse.ProtoReflect.Descriptor instead.
 func (*GetFileListResponse) Descriptor() ([]byte, []int) {
-	return file_proto_sync_proto_rawDescGZIP(), []int{2}
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *GetFileListResponse) GetFiles() []*FileMetadata {
@@ -206,7 +206,7 @@ type GetFileRequest struct {
 
 func (x *GetFileRequest) Reset() {
 	*x = GetFileRequest{}
-	mi := &file_proto_sync_proto_msgTypes[3]
+	mi := &file_proto_insyncpb_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -218,7 +218,7 @@ func (x *GetFileRequest) String() string {
 func (*GetFileRequest) ProtoMessage() {}
 
 func (x *GetFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sync_proto_msgTypes[3]
+	mi := &file_proto_insyncpb_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -231,7 +231,7 @@ func (x *GetFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFileRequest.ProtoReflect.Descriptor instead.
 func (*GetFileRequest) Descriptor() ([]byte, []int) {
-	return file_proto_sync_proto_rawDescGZIP(), []int{3}
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetFileRequest) GetRootName() string {
@@ -257,7 +257,7 @@ type GetFileResponse struct {
 
 func (x *GetFileResponse) Reset() {
 	*x = GetFileResponse{}
-	mi := &file_proto_sync_proto_msgTypes[4]
+	mi := &file_proto_insyncpb_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -269,7 +269,7 @@ func (x *GetFileResponse) String() string {
 func (*GetFileResponse) ProtoMessage() {}
 
 func (x *GetFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sync_proto_msgTypes[4]
+	mi := &file_proto_insyncpb_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -282,7 +282,7 @@ func (x *GetFileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFileResponse.ProtoReflect.Descriptor instead.
 func (*GetFileResponse) Descriptor() ([]byte, []int) {
-	return file_proto_sync_proto_rawDescGZIP(), []int{4}
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetFileResponse) GetChunk() *FileChunk {
@@ -302,7 +302,7 @@ type PutFileInit struct {
 
 func (x *PutFileInit) Reset() {
 	*x = PutFileInit{}
-	mi := &file_proto_sync_proto_msgTypes[5]
+	mi := &file_proto_insyncpb_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -314,7 +314,7 @@ func (x *PutFileInit) String() string {
 func (*PutFileInit) ProtoMessage() {}
 
 func (x *PutFileInit) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sync_proto_msgTypes[5]
+	mi := &file_proto_insyncpb_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -327,7 +327,7 @@ func (x *PutFileInit) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutFileInit.ProtoReflect.Descriptor instead.
 func (*PutFileInit) Descriptor() ([]byte, []int) {
-	return file_proto_sync_proto_rawDescGZIP(), []int{5}
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *PutFileInit) GetRootName() string {
@@ -357,7 +357,7 @@ type PutFileRequest struct {
 
 func (x *PutFileRequest) Reset() {
 	*x = PutFileRequest{}
-	mi := &file_proto_sync_proto_msgTypes[6]
+	mi := &file_proto_insyncpb_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -369,7 +369,7 @@ func (x *PutFileRequest) String() string {
 func (*PutFileRequest) ProtoMessage() {}
 
 func (x *PutFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sync_proto_msgTypes[6]
+	mi := &file_proto_insyncpb_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -382,7 +382,7 @@ func (x *PutFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutFileRequest.ProtoReflect.Descriptor instead.
 func (*PutFileRequest) Descriptor() ([]byte, []int) {
-	return file_proto_sync_proto_rawDescGZIP(), []int{6}
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *PutFileRequest) GetPayload() isPutFileRequest_Payload {
@@ -436,7 +436,7 @@ type PutFileResponse struct {
 
 func (x *PutFileResponse) Reset() {
 	*x = PutFileResponse{}
-	mi := &file_proto_sync_proto_msgTypes[7]
+	mi := &file_proto_insyncpb_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -448,7 +448,7 @@ func (x *PutFileResponse) String() string {
 func (*PutFileResponse) ProtoMessage() {}
 
 func (x *PutFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sync_proto_msgTypes[7]
+	mi := &file_proto_insyncpb_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -461,7 +461,7 @@ func (x *PutFileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutFileResponse.ProtoReflect.Descriptor instead.
 func (*PutFileResponse) Descriptor() ([]byte, []int) {
-	return file_proto_sync_proto_rawDescGZIP(), []int{7}
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PutFileResponse) GetSuccess() bool {
@@ -489,7 +489,7 @@ type DeleteFileRequest struct {
 
 func (x *DeleteFileRequest) Reset() {
 	*x = DeleteFileRequest{}
-	mi := &file_proto_sync_proto_msgTypes[8]
+	mi := &file_proto_insyncpb_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -501,7 +501,7 @@ func (x *DeleteFileRequest) String() string {
 func (*DeleteFileRequest) ProtoMessage() {}
 
 func (x *DeleteFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sync_proto_msgTypes[8]
+	mi := &file_proto_insyncpb_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -514,7 +514,7 @@ func (x *DeleteFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFileRequest.ProtoReflect.Descriptor instead.
 func (*DeleteFileRequest) Descriptor() ([]byte, []int) {
-	return file_proto_sync_proto_rawDescGZIP(), []int{8}
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *DeleteFileRequest) GetRootName() string {
@@ -541,7 +541,7 @@ type DeleteFileResponse struct {
 
 func (x *DeleteFileResponse) Reset() {
 	*x = DeleteFileResponse{}
-	mi := &file_proto_sync_proto_msgTypes[9]
+	mi := &file_proto_insyncpb_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -553,7 +553,7 @@ func (x *DeleteFileResponse) String() string {
 func (*DeleteFileResponse) ProtoMessage() {}
 
 func (x *DeleteFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sync_proto_msgTypes[9]
+	mi := &file_proto_insyncpb_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -566,7 +566,7 @@ func (x *DeleteFileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFileResponse.ProtoReflect.Descriptor instead.
 func (*DeleteFileResponse) Descriptor() ([]byte, []int) {
-	return file_proto_sync_proto_rawDescGZIP(), []int{9}
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeleteFileResponse) GetSuccess() bool {
@@ -595,7 +595,7 @@ type RenameFileRequest struct {
 
 func (x *RenameFileRequest) Reset() {
 	*x = RenameFileRequest{}
-	mi := &file_proto_sync_proto_msgTypes[10]
+	mi := &file_proto_insyncpb_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -607,7 +607,7 @@ func (x *RenameFileRequest) String() string {
 func (*RenameFileRequest) ProtoMessage() {}
 
 func (x *RenameFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sync_proto_msgTypes[10]
+	mi := &file_proto_insyncpb_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -620,7 +620,7 @@ func (x *RenameFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenameFileRequest.ProtoReflect.Descriptor instead.
 func (*RenameFileRequest) Descriptor() ([]byte, []int) {
-	return file_proto_sync_proto_rawDescGZIP(), []int{10}
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RenameFileRequest) GetRootName() string {
@@ -654,7 +654,7 @@ type RenameFileResponse struct {
 
 func (x *RenameFileResponse) Reset() {
 	*x = RenameFileResponse{}
-	mi := &file_proto_sync_proto_msgTypes[11]
+	mi := &file_proto_insyncpb_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -666,7 +666,7 @@ func (x *RenameFileResponse) String() string {
 func (*RenameFileResponse) ProtoMessage() {}
 
 func (x *RenameFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sync_proto_msgTypes[11]
+	mi := &file_proto_insyncpb_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -679,7 +679,7 @@ func (x *RenameFileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenameFileResponse.ProtoReflect.Descriptor instead.
 func (*RenameFileResponse) Descriptor() ([]byte, []int) {
-	return file_proto_sync_proto_rawDescGZIP(), []int{11}
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *RenameFileResponse) GetSuccess() bool {
@@ -707,7 +707,7 @@ type FileChunk struct {
 
 func (x *FileChunk) Reset() {
 	*x = FileChunk{}
-	mi := &file_proto_sync_proto_msgTypes[12]
+	mi := &file_proto_insyncpb_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -719,7 +719,7 @@ func (x *FileChunk) String() string {
 func (*FileChunk) ProtoMessage() {}
 
 func (x *FileChunk) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sync_proto_msgTypes[12]
+	mi := &file_proto_insyncpb_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -732,7 +732,7 @@ func (x *FileChunk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileChunk.ProtoReflect.Descriptor instead.
 func (*FileChunk) Descriptor() ([]byte, []int) {
-	return file_proto_sync_proto_rawDescGZIP(), []int{12}
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *FileChunk) GetIndex() uint32 {
@@ -749,11 +749,11 @@ func (x *FileChunk) GetData() []byte {
 	return nil
 }
 
-var File_proto_sync_proto protoreflect.FileDescriptor
+var File_proto_insyncpb_proto protoreflect.FileDescriptor
 
-const file_proto_sync_proto_rawDesc = "" +
+const file_proto_insyncpb_proto_rawDesc = "" +
 	"\n" +
-	"\x10proto/sync.proto\x12\x04sync\"\xcb\x01\n" +
+	"\x14proto/insyncpb.proto\x12\binsyncpb\"\xcb\x01\n" +
 	"\fFileMetadata\x12\x1b\n" +
 	"\tfile_uuid\x18\x01 \x01(\tR\bfileUuid\x12#\n" +
 	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\x12\x1d\n" +
@@ -763,20 +763,20 @@ const file_proto_sync_proto_rawDesc = "" +
 	"\x04hash\x18\x05 \x01(\tR\x04hash\x12!\n" +
 	"\fis_directory\x18\x06 \x01(\bR\visDirectory\"1\n" +
 	"\x12GetFileListRequest\x12\x1b\n" +
-	"\troot_name\x18\x01 \x01(\tR\brootName\"?\n" +
-	"\x13GetFileListResponse\x12(\n" +
-	"\x05files\x18\x01 \x03(\v2\x12.sync.FileMetadataR\x05files\"R\n" +
+	"\troot_name\x18\x01 \x01(\tR\brootName\"C\n" +
+	"\x13GetFileListResponse\x12,\n" +
+	"\x05files\x18\x01 \x03(\v2\x16.insyncpb.FileMetadataR\x05files\"R\n" +
 	"\x0eGetFileRequest\x12\x1b\n" +
 	"\troot_name\x18\x01 \x01(\tR\brootName\x12#\n" +
-	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\"8\n" +
-	"\x0fGetFileResponse\x12%\n" +
-	"\x05chunk\x18\x01 \x01(\v2\x0f.sync.FileChunkR\x05chunk\"O\n" +
+	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\"<\n" +
+	"\x0fGetFileResponse\x12)\n" +
+	"\x05chunk\x18\x01 \x01(\v2\x13.insyncpb.FileChunkR\x05chunk\"O\n" +
 	"\vPutFileInit\x12\x1b\n" +
 	"\troot_name\x18\x01 \x01(\tR\brootName\x12#\n" +
-	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\"m\n" +
-	"\x0ePutFileRequest\x12'\n" +
-	"\x04init\x18\x01 \x01(\v2\x11.sync.PutFileInitH\x00R\x04init\x12'\n" +
-	"\x05chunk\x18\x02 \x01(\v2\x0f.sync.FileChunkH\x00R\x05chunkB\t\n" +
+	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\"u\n" +
+	"\x0ePutFileRequest\x12+\n" +
+	"\x04init\x18\x01 \x01(\v2\x15.insyncpb.PutFileInitH\x00R\x04init\x12+\n" +
+	"\x05chunk\x18\x02 \x01(\v2\x13.insyncpb.FileChunkH\x00R\x05chunkB\t\n" +
 	"\apayload\"E\n" +
 	"\x0fPutFileResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
@@ -796,59 +796,59 @@ const file_proto_sync_proto_rawDesc = "" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"5\n" +
 	"\tFileChunk\x12\x14\n" +
 	"\x05index\x18\x01 \x01(\rR\x05index\x12\x12\n" +
-	"\x04data\x18\x02 \x01(\fR\x04data2\xcb\x02\n" +
-	"\x0fFileSyncService\x12B\n" +
-	"\vGetFileList\x12\x18.sync.GetFileListRequest\x1a\x19.sync.GetFileListResponse\x128\n" +
-	"\aGetFile\x12\x14.sync.GetFileRequest\x1a\x15.sync.GetFileResponse0\x01\x128\n" +
-	"\aPutFile\x12\x14.sync.PutFileRequest\x1a\x15.sync.PutFileResponse(\x01\x12?\n" +
+	"\x04data\x18\x02 \x01(\fR\x04data2\xf3\x02\n" +
+	"\x0fFileSyncService\x12J\n" +
+	"\vGetFileList\x12\x1c.insyncpb.GetFileListRequest\x1a\x1d.insyncpb.GetFileListResponse\x12@\n" +
+	"\aGetFile\x12\x18.insyncpb.GetFileRequest\x1a\x19.insyncpb.GetFileResponse0\x01\x12@\n" +
+	"\aPutFile\x12\x18.insyncpb.PutFileRequest\x1a\x19.insyncpb.PutFileResponse(\x01\x12G\n" +
 	"\n" +
-	"DeleteFile\x12\x17.sync.DeleteFileRequest\x1a\x18.sync.DeleteFileResponse\x12?\n" +
+	"DeleteFile\x12\x1b.insyncpb.DeleteFileRequest\x1a\x1c.insyncpb.DeleteFileResponse\x12G\n" +
 	"\n" +
-	"RenameFile\x12\x17.sync.RenameFileRequest\x1a\x18.sync.RenameFileResponseB\x14Z\x12internal/sync;syncb\x06proto3"
+	"RenameFile\x12\x1b.insyncpb.RenameFileRequest\x1a\x1c.insyncpb.RenameFileResponseB\x1cZ\x1ainternal/insyncpb;insyncpbb\x06proto3"
 
 var (
-	file_proto_sync_proto_rawDescOnce sync.Once
-	file_proto_sync_proto_rawDescData []byte
+	file_proto_insyncpb_proto_rawDescOnce sync.Once
+	file_proto_insyncpb_proto_rawDescData []byte
 )
 
-func file_proto_sync_proto_rawDescGZIP() []byte {
-	file_proto_sync_proto_rawDescOnce.Do(func() {
-		file_proto_sync_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_sync_proto_rawDesc), len(file_proto_sync_proto_rawDesc)))
+func file_proto_insyncpb_proto_rawDescGZIP() []byte {
+	file_proto_insyncpb_proto_rawDescOnce.Do(func() {
+		file_proto_insyncpb_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_insyncpb_proto_rawDesc), len(file_proto_insyncpb_proto_rawDesc)))
 	})
-	return file_proto_sync_proto_rawDescData
+	return file_proto_insyncpb_proto_rawDescData
 }
 
-var file_proto_sync_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
-var file_proto_sync_proto_goTypes = []any{
-	(*FileMetadata)(nil),        // 0: sync.FileMetadata
-	(*GetFileListRequest)(nil),  // 1: sync.GetFileListRequest
-	(*GetFileListResponse)(nil), // 2: sync.GetFileListResponse
-	(*GetFileRequest)(nil),      // 3: sync.GetFileRequest
-	(*GetFileResponse)(nil),     // 4: sync.GetFileResponse
-	(*PutFileInit)(nil),         // 5: sync.PutFileInit
-	(*PutFileRequest)(nil),      // 6: sync.PutFileRequest
-	(*PutFileResponse)(nil),     // 7: sync.PutFileResponse
-	(*DeleteFileRequest)(nil),   // 8: sync.DeleteFileRequest
-	(*DeleteFileResponse)(nil),  // 9: sync.DeleteFileResponse
-	(*RenameFileRequest)(nil),   // 10: sync.RenameFileRequest
-	(*RenameFileResponse)(nil),  // 11: sync.RenameFileResponse
-	(*FileChunk)(nil),           // 12: sync.FileChunk
+var file_proto_insyncpb_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_proto_insyncpb_proto_goTypes = []any{
+	(*FileMetadata)(nil),        // 0: insyncpb.FileMetadata
+	(*GetFileListRequest)(nil),  // 1: insyncpb.GetFileListRequest
+	(*GetFileListResponse)(nil), // 2: insyncpb.GetFileListResponse
+	(*GetFileRequest)(nil),      // 3: insyncpb.GetFileRequest
+	(*GetFileResponse)(nil),     // 4: insyncpb.GetFileResponse
+	(*PutFileInit)(nil),         // 5: insyncpb.PutFileInit
+	(*PutFileRequest)(nil),      // 6: insyncpb.PutFileRequest
+	(*PutFileResponse)(nil),     // 7: insyncpb.PutFileResponse
+	(*DeleteFileRequest)(nil),   // 8: insyncpb.DeleteFileRequest
+	(*DeleteFileResponse)(nil),  // 9: insyncpb.DeleteFileResponse
+	(*RenameFileRequest)(nil),   // 10: insyncpb.RenameFileRequest
+	(*RenameFileResponse)(nil),  // 11: insyncpb.RenameFileResponse
+	(*FileChunk)(nil),           // 12: insyncpb.FileChunk
 }
-var file_proto_sync_proto_depIdxs = []int32{
-	0,  // 0: sync.GetFileListResponse.files:type_name -> sync.FileMetadata
-	12, // 1: sync.GetFileResponse.chunk:type_name -> sync.FileChunk
-	5,  // 2: sync.PutFileRequest.init:type_name -> sync.PutFileInit
-	12, // 3: sync.PutFileRequest.chunk:type_name -> sync.FileChunk
-	1,  // 4: sync.FileSyncService.GetFileList:input_type -> sync.GetFileListRequest
-	3,  // 5: sync.FileSyncService.GetFile:input_type -> sync.GetFileRequest
-	6,  // 6: sync.FileSyncService.PutFile:input_type -> sync.PutFileRequest
-	8,  // 7: sync.FileSyncService.DeleteFile:input_type -> sync.DeleteFileRequest
-	10, // 8: sync.FileSyncService.RenameFile:input_type -> sync.RenameFileRequest
-	2,  // 9: sync.FileSyncService.GetFileList:output_type -> sync.GetFileListResponse
-	4,  // 10: sync.FileSyncService.GetFile:output_type -> sync.GetFileResponse
-	7,  // 11: sync.FileSyncService.PutFile:output_type -> sync.PutFileResponse
-	9,  // 12: sync.FileSyncService.DeleteFile:output_type -> sync.DeleteFileResponse
-	11, // 13: sync.FileSyncService.RenameFile:output_type -> sync.RenameFileResponse
+var file_proto_insyncpb_proto_depIdxs = []int32{
+	0,  // 0: insyncpb.GetFileListResponse.files:type_name -> insyncpb.FileMetadata
+	12, // 1: insyncpb.GetFileResponse.chunk:type_name -> insyncpb.FileChunk
+	5,  // 2: insyncpb.PutFileRequest.init:type_name -> insyncpb.PutFileInit
+	12, // 3: insyncpb.PutFileRequest.chunk:type_name -> insyncpb.FileChunk
+	1,  // 4: insyncpb.FileSyncService.GetFileList:input_type -> insyncpb.GetFileListRequest
+	3,  // 5: insyncpb.FileSyncService.GetFile:input_type -> insyncpb.GetFileRequest
+	6,  // 6: insyncpb.FileSyncService.PutFile:input_type -> insyncpb.PutFileRequest
+	8,  // 7: insyncpb.FileSyncService.DeleteFile:input_type -> insyncpb.DeleteFileRequest
+	10, // 8: insyncpb.FileSyncService.RenameFile:input_type -> insyncpb.RenameFileRequest
+	2,  // 9: insyncpb.FileSyncService.GetFileList:output_type -> insyncpb.GetFileListResponse
+	4,  // 10: insyncpb.FileSyncService.GetFile:output_type -> insyncpb.GetFileResponse
+	7,  // 11: insyncpb.FileSyncService.PutFile:output_type -> insyncpb.PutFileResponse
+	9,  // 12: insyncpb.FileSyncService.DeleteFile:output_type -> insyncpb.DeleteFileResponse
+	11, // 13: insyncpb.FileSyncService.RenameFile:output_type -> insyncpb.RenameFileResponse
 	9,  // [9:14] is the sub-list for method output_type
 	4,  // [4:9] is the sub-list for method input_type
 	4,  // [4:4] is the sub-list for extension type_name
@@ -856,12 +856,12 @@ var file_proto_sync_proto_depIdxs = []int32{
 	0,  // [0:4] is the sub-list for field type_name
 }
 
-func init() { file_proto_sync_proto_init() }
-func file_proto_sync_proto_init() {
-	if File_proto_sync_proto != nil {
+func init() { file_proto_insyncpb_proto_init() }
+func file_proto_insyncpb_proto_init() {
+	if File_proto_insyncpb_proto != nil {
 		return
 	}
-	file_proto_sync_proto_msgTypes[6].OneofWrappers = []any{
+	file_proto_insyncpb_proto_msgTypes[6].OneofWrappers = []any{
 		(*PutFileRequest_Init)(nil),
 		(*PutFileRequest_Chunk)(nil),
 	}
@@ -869,17 +869,17 @@ func file_proto_sync_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_sync_proto_rawDesc), len(file_proto_sync_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_insyncpb_proto_rawDesc), len(file_proto_insyncpb_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto_sync_proto_goTypes,
-		DependencyIndexes: file_proto_sync_proto_depIdxs,
-		MessageInfos:      file_proto_sync_proto_msgTypes,
+		GoTypes:           file_proto_insyncpb_proto_goTypes,
+		DependencyIndexes: file_proto_insyncpb_proto_depIdxs,
+		MessageInfos:      file_proto_insyncpb_proto_msgTypes,
 	}.Build()
-	File_proto_sync_proto = out.File
-	file_proto_sync_proto_goTypes = nil
-	file_proto_sync_proto_depIdxs = nil
+	File_proto_insyncpb_proto = out.File
+	file_proto_insyncpb_proto_goTypes = nil
+	file_proto_insyncpb_proto_depIdxs = nil
 }

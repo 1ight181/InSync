@@ -36,10 +36,10 @@ func (e PutFileFailedError) Error() string {
 	return fmt.Sprintf("PutFile не удался: %v", e.Message)
 }
 
-type HealthCheckFailedError struct {
-	Status string
+type FailedToStartHealthCheckerError struct {
+	Err error
 }
 
-func (e HealthCheckFailedError) Error() string {
-	return fmt.Sprintf("Health check не прошел, возвращенный статус: %v", e.Status)
+func (e FailedToStartHealthCheckerError) Error() string {
+	return fmt.Sprintf("Не удалось запустить HealthChecker: %v", e.Err)
 }

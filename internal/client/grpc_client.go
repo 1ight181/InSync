@@ -2,8 +2,8 @@ package client
 
 import (
 	"context"
+	"insync/internal/insyncpb"
 	"insync/internal/models"
-	"insync/internal/sync"
 	"io"
 	"net"
 	"runtime/debug"
@@ -42,9 +42,10 @@ type GrpcClient struct {
 
 	clientConn *grpc.ClientConn
 
-	client sync.FileSyncServiceClient
+	client insyncpb.FileSyncServiceClient
 
-	isStarted atomic.Bool
+	isStarted  atomic.Bool
+	isServerOk atomic.Bool
 }
 
 type GrpcClientOptions struct {
@@ -97,6 +98,53 @@ func NewGrpcClient(opts GrpcClientOptions) clientifaces.IClient {
 
 		logger: opts.Logger,
 	}
+}
+
+func (gc *GrpcClient) startHealthChecker(conn *grpc.ClientConn) error {
+	healthCheckerClient := grpc_health_v1.NewHealthClient(conn)
+
+	healthCheckStream, err := healthCheckerClient.Watch(gc.ctx, &grpc_health_v1.HealthCheckRequest{
+		Service: gc.serviceName,
+	})
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		var lastStatus grpc_health_v1.HealthCheckResponse_ServingStatus
+		for {
+			healthCheckResponse, err := healthCheckStream.Recv()
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					gc.isServerOk.Store(false)
+					gc.logger.Info("Сервер завершил стрим своего состояния, вероятно сервер остановлен")
+					break
+				}
+			}
+
+			newStatus := healthCheckResponse.GetStatus()
+
+			if lastStatus != newStatus {
+				if newStatus == grpc_health_v1.HealthCheckResponse_SERVING {
+					gc.isServerOk.Store(true)
+				} else {
+					gc.isServerOk.Store(false)
+				}
+			}
+
+			gc.logger.LogAttrs(
+				gc.ctx,
+				slog.LevelDebug,
+				"Состояние сервера изменилось",
+				slog.String("last_status", lastStatus.String()),
+				slog.String("new_status", newStatus.String()),
+			)
+
+		}
+	}()
+
+	return nil
+
 }
 
 func (gc *GrpcClient) createClientTlsConfig() (*tls.Config, error) {
@@ -182,19 +230,11 @@ func (gc *GrpcClient) Start() error {
 	}
 
 	gc.clientConn = conn
-	gc.client = sync.NewFileSyncServiceClient(conn)
+	gc.client = insyncpb.NewFileSyncServiceClient(conn)
 
-	healthClient := grpc_health_v1.NewHealthClient(conn)
-	healthCheckResponse, err := healthClient.Check(ctx, &grpc_health_v1.HealthCheckRequest{Service: gc.serviceName})
-	if err != nil {
+	if err := gc.startHealthChecker(conn); err != nil {
 		gc.isStarted.Store(false)
-		return err
-	}
-	if healthCheckResponse.Status != grpc_health_v1.HealthCheckResponse_SERVING {
-		gc.isStarted.Store(false)
-		return clienterr.HealthCheckFailedError{
-			Status: healthCheckResponse.Status.String(),
-		}
+		return clienterr.FailedToStartHealthCheckerError{Err: err}
 	}
 
 	gc.logger.Info("gRPC клиент успешно запущен")
@@ -222,7 +262,7 @@ func (gc *GrpcClient) GetFileList(ctx context.Context, rootName string) ([]model
 		return nil, clienterr.ErrClientNotStarted
 	}
 
-	getFileListResponse, err := gc.client.GetFileList(ctx, &sync.GetFileListRequest{
+	getFileListResponse, err := gc.client.GetFileList(ctx, &insyncpb.GetFileListRequest{
 		RootName: rootName,
 	})
 	if err != nil {
@@ -251,7 +291,7 @@ func (gc *GrpcClient) GetFile(ctx context.Context, rootName, relativePath string
 		return nil, clienterr.ErrClientNotStarted
 	}
 
-	getFileRequest := &sync.GetFileRequest{
+	getFileRequest := &insyncpb.GetFileRequest{
 		RootName:     rootName,
 		RelativePath: relativePath,
 	}
@@ -313,9 +353,9 @@ func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName, rel
 		return err
 	}
 
-	initMessage := &sync.PutFileRequest{
-		Payload: &sync.PutFileRequest_Init{
-			Init: &sync.PutFileInit{
+	initMessage := &insyncpb.PutFileRequest{
+		Payload: &insyncpb.PutFileRequest_Init{
+			Init: &insyncpb.PutFileInit{
 				RootName:     rootName,
 				RelativePath: relativePath,
 			},
@@ -348,9 +388,9 @@ func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName, rel
 			return err
 		}
 
-		chunkMessage := &sync.PutFileRequest{
-			Payload: &sync.PutFileRequest_Chunk{
-				Chunk: &sync.FileChunk{
+		chunkMessage := &insyncpb.PutFileRequest{
+			Payload: &insyncpb.PutFileRequest_Chunk{
+				Chunk: &insyncpb.FileChunk{
 					Index: uint32(i),
 					Data:  buf[:numberOfBytes],
 				},
@@ -382,7 +422,7 @@ func (gc *GrpcClient) DeleteFile(ctx context.Context, rootName, relativePath str
 		return clienterr.ErrClientNotStarted
 	}
 
-	deleteFileRequest := &sync.DeleteFileRequest{
+	deleteFileRequest := &insyncpb.DeleteFileRequest{
 		RootName:     rootName,
 		RelativePath: relativePath,
 	}
@@ -406,7 +446,7 @@ func (gc *GrpcClient) RenameFile(ctx context.Context, rootName, fileUuid, relati
 		return clienterr.ErrClientNotStarted
 	}
 
-	renameFileRequest := &sync.RenameFileRequest{
+	renameFileRequest := &insyncpb.RenameFileRequest{
 		RootName:        rootName,
 		FileUuid:        fileUuid,
 		NewRelativePath: relativePath,

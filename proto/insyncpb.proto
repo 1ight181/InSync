@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package sync;
+package insyncpb;
 
-option go_package = "internal/sync;sync";
+option go_package = "internal/insyncpb;insyncpb";
 
 
 // Тип файла для передачи метаданных о файлах и директориях
