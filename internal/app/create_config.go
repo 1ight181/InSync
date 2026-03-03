@@ -12,7 +12,7 @@ const (
 	isDebug                     = true
 	defaultConfigFileDirEnvKey  = "INSYNC_CONFIG_FILE_DIR"
 	defaultConfigFileNameEnvKey = "INSYNC_CONFIG_FILE_NAME"
-	defaultConfigFileDir        = "config"
+	defaultConfigFileDir        = "../config"
 	defaultDebugConfigFileName  = "debug_config.yaml"
 	defaultProdConfigFileName   = "config.yaml"
 	defaultEnvPrefix            = "INSYNC"
