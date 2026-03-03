@@ -153,6 +153,8 @@ func (gs *GrpcServer) Start() error {
 		return serverr.ServerStartError{Err: err}
 	}
 
+	gs.logger.Info("gRPC сервер успешно запущен")
+
 	return nil
 }
 
