@@ -2,6 +2,7 @@ package errors
 
 import (
 	"errors"
+	"fmt"
 )
 
 var (
@@ -16,7 +17,7 @@ type DeleteFileFailedError struct {
 }
 
 func (e DeleteFileFailedError) Error() string {
-	return e.Message
+	return fmt.Sprintf("DeleteFile не удался: %v", e.Message)
 }
 
 type RenameFileFailedError struct {
@@ -24,7 +25,7 @@ type RenameFileFailedError struct {
 }
 
 func (e RenameFileFailedError) Error() string {
-	return e.Message
+	return fmt.Sprintf("RenameFile не удался: %v", e.Message)
 }
 
 type PutFileFailedError struct {
@@ -32,5 +33,13 @@ type PutFileFailedError struct {
 }
 
 func (e PutFileFailedError) Error() string {
-	return e.Message
+	return fmt.Sprintf("PutFile не удался: %v", e.Message)
+}
+
+type HealthCheckFailedError struct {
+	Status string
+}
+
+func (e HealthCheckFailedError) Error() string {
+	return fmt.Sprintf("Health check не прошел, возвращенный статус: %v", e.Status)
 }

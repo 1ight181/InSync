@@ -4,15 +4,14 @@
 // 	protoc        v6.33.5
 // source: proto/sync.proto
 
-package syncproto
+package sync
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -754,7 +753,7 @@ var File_proto_sync_proto protoreflect.FileDescriptor
 
 const file_proto_sync_proto_rawDesc = "" +
 	"\n" +
-	"\x10proto/sync.proto\x12\tsyncproto\"\xcb\x01\n" +
+	"\x10proto/sync.proto\x12\x04sync\"\xcb\x01\n" +
 	"\fFileMetadata\x12\x1b\n" +
 	"\tfile_uuid\x18\x01 \x01(\tR\bfileUuid\x12#\n" +
 	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\x12\x1d\n" +
@@ -764,20 +763,20 @@ const file_proto_sync_proto_rawDesc = "" +
 	"\x04hash\x18\x05 \x01(\tR\x04hash\x12!\n" +
 	"\fis_directory\x18\x06 \x01(\bR\visDirectory\"1\n" +
 	"\x12GetFileListRequest\x12\x1b\n" +
-	"\troot_name\x18\x01 \x01(\tR\brootName\"D\n" +
-	"\x13GetFileListResponse\x12-\n" +
-	"\x05files\x18\x01 \x03(\v2\x17.syncproto.FileMetadataR\x05files\"R\n" +
+	"\troot_name\x18\x01 \x01(\tR\brootName\"?\n" +
+	"\x13GetFileListResponse\x12(\n" +
+	"\x05files\x18\x01 \x03(\v2\x12.sync.FileMetadataR\x05files\"R\n" +
 	"\x0eGetFileRequest\x12\x1b\n" +
 	"\troot_name\x18\x01 \x01(\tR\brootName\x12#\n" +
-	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\"=\n" +
-	"\x0fGetFileResponse\x12*\n" +
-	"\x05chunk\x18\x01 \x01(\v2\x14.syncproto.FileChunkR\x05chunk\"O\n" +
+	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\"8\n" +
+	"\x0fGetFileResponse\x12%\n" +
+	"\x05chunk\x18\x01 \x01(\v2\x0f.sync.FileChunkR\x05chunk\"O\n" +
 	"\vPutFileInit\x12\x1b\n" +
 	"\troot_name\x18\x01 \x01(\tR\brootName\x12#\n" +
-	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\"w\n" +
-	"\x0ePutFileRequest\x12,\n" +
-	"\x04init\x18\x01 \x01(\v2\x16.syncproto.PutFileInitH\x00R\x04init\x12,\n" +
-	"\x05chunk\x18\x02 \x01(\v2\x14.syncproto.FileChunkH\x00R\x05chunkB\t\n" +
+	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\"m\n" +
+	"\x0ePutFileRequest\x12'\n" +
+	"\x04init\x18\x01 \x01(\v2\x11.sync.PutFileInitH\x00R\x04init\x12'\n" +
+	"\x05chunk\x18\x02 \x01(\v2\x0f.sync.FileChunkH\x00R\x05chunkB\t\n" +
 	"\apayload\"E\n" +
 	"\x0fPutFileResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
@@ -797,15 +796,15 @@ const file_proto_sync_proto_rawDesc = "" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"5\n" +
 	"\tFileChunk\x12\x14\n" +
 	"\x05index\x18\x01 \x01(\rR\x05index\x12\x12\n" +
-	"\x04data\x18\x02 \x01(\fR\x04data2\xfd\x02\n" +
-	"\x0fFileSyncService\x12L\n" +
-	"\vGetFileList\x12\x1d.syncproto.GetFileListRequest\x1a\x1e.syncproto.GetFileListResponse\x12B\n" +
-	"\aGetFile\x12\x19.syncproto.GetFileRequest\x1a\x1a.syncproto.GetFileResponse0\x01\x12B\n" +
-	"\aPutFile\x12\x19.syncproto.PutFileRequest\x1a\x1a.syncproto.PutFileResponse(\x01\x12I\n" +
+	"\x04data\x18\x02 \x01(\fR\x04data2\xcb\x02\n" +
+	"\x0fFileSyncService\x12B\n" +
+	"\vGetFileList\x12\x18.sync.GetFileListRequest\x1a\x19.sync.GetFileListResponse\x128\n" +
+	"\aGetFile\x12\x14.sync.GetFileRequest\x1a\x15.sync.GetFileResponse0\x01\x128\n" +
+	"\aPutFile\x12\x14.sync.PutFileRequest\x1a\x15.sync.PutFileResponse(\x01\x12?\n" +
 	"\n" +
-	"DeleteFile\x12\x1c.syncproto.DeleteFileRequest\x1a\x1d.syncproto.DeleteFileResponse\x12I\n" +
+	"DeleteFile\x12\x17.sync.DeleteFileRequest\x1a\x18.sync.DeleteFileResponse\x12?\n" +
 	"\n" +
-	"RenameFile\x12\x1c.syncproto.RenameFileRequest\x1a\x1d.syncproto.RenameFileResponseB\x1eZ\x1cinternal/syncproto;syncprotob\x06proto3"
+	"RenameFile\x12\x17.sync.RenameFileRequest\x1a\x18.sync.RenameFileResponseB\x14Z\x12internal/sync;syncb\x06proto3"
 
 var (
 	file_proto_sync_proto_rawDescOnce sync.Once
@@ -821,35 +820,35 @@ func file_proto_sync_proto_rawDescGZIP() []byte {
 
 var file_proto_sync_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_proto_sync_proto_goTypes = []any{
-	(*FileMetadata)(nil),        // 0: syncproto.FileMetadata
-	(*GetFileListRequest)(nil),  // 1: syncproto.GetFileListRequest
-	(*GetFileListResponse)(nil), // 2: syncproto.GetFileListResponse
-	(*GetFileRequest)(nil),      // 3: syncproto.GetFileRequest
-	(*GetFileResponse)(nil),     // 4: syncproto.GetFileResponse
-	(*PutFileInit)(nil),         // 5: syncproto.PutFileInit
-	(*PutFileRequest)(nil),      // 6: syncproto.PutFileRequest
-	(*PutFileResponse)(nil),     // 7: syncproto.PutFileResponse
-	(*DeleteFileRequest)(nil),   // 8: syncproto.DeleteFileRequest
-	(*DeleteFileResponse)(nil),  // 9: syncproto.DeleteFileResponse
-	(*RenameFileRequest)(nil),   // 10: syncproto.RenameFileRequest
-	(*RenameFileResponse)(nil),  // 11: syncproto.RenameFileResponse
-	(*FileChunk)(nil),           // 12: syncproto.FileChunk
+	(*FileMetadata)(nil),        // 0: sync.FileMetadata
+	(*GetFileListRequest)(nil),  // 1: sync.GetFileListRequest
+	(*GetFileListResponse)(nil), // 2: sync.GetFileListResponse
+	(*GetFileRequest)(nil),      // 3: sync.GetFileRequest
+	(*GetFileResponse)(nil),     // 4: sync.GetFileResponse
+	(*PutFileInit)(nil),         // 5: sync.PutFileInit
+	(*PutFileRequest)(nil),      // 6: sync.PutFileRequest
+	(*PutFileResponse)(nil),     // 7: sync.PutFileResponse
+	(*DeleteFileRequest)(nil),   // 8: sync.DeleteFileRequest
+	(*DeleteFileResponse)(nil),  // 9: sync.DeleteFileResponse
+	(*RenameFileRequest)(nil),   // 10: sync.RenameFileRequest
+	(*RenameFileResponse)(nil),  // 11: sync.RenameFileResponse
+	(*FileChunk)(nil),           // 12: sync.FileChunk
 }
 var file_proto_sync_proto_depIdxs = []int32{
-	0,  // 0: syncproto.GetFileListResponse.files:type_name -> syncproto.FileMetadata
-	12, // 1: syncproto.GetFileResponse.chunk:type_name -> syncproto.FileChunk
-	5,  // 2: syncproto.PutFileRequest.init:type_name -> syncproto.PutFileInit
-	12, // 3: syncproto.PutFileRequest.chunk:type_name -> syncproto.FileChunk
-	1,  // 4: syncproto.FileSyncService.GetFileList:input_type -> syncproto.GetFileListRequest
-	3,  // 5: syncproto.FileSyncService.GetFile:input_type -> syncproto.GetFileRequest
-	6,  // 6: syncproto.FileSyncService.PutFile:input_type -> syncproto.PutFileRequest
-	8,  // 7: syncproto.FileSyncService.DeleteFile:input_type -> syncproto.DeleteFileRequest
-	10, // 8: syncproto.FileSyncService.RenameFile:input_type -> syncproto.RenameFileRequest
-	2,  // 9: syncproto.FileSyncService.GetFileList:output_type -> syncproto.GetFileListResponse
-	4,  // 10: syncproto.FileSyncService.GetFile:output_type -> syncproto.GetFileResponse
-	7,  // 11: syncproto.FileSyncService.PutFile:output_type -> syncproto.PutFileResponse
-	9,  // 12: syncproto.FileSyncService.DeleteFile:output_type -> syncproto.DeleteFileResponse
-	11, // 13: syncproto.FileSyncService.RenameFile:output_type -> syncproto.RenameFileResponse
+	0,  // 0: sync.GetFileListResponse.files:type_name -> sync.FileMetadata
+	12, // 1: sync.GetFileResponse.chunk:type_name -> sync.FileChunk
+	5,  // 2: sync.PutFileRequest.init:type_name -> sync.PutFileInit
+	12, // 3: sync.PutFileRequest.chunk:type_name -> sync.FileChunk
+	1,  // 4: sync.FileSyncService.GetFileList:input_type -> sync.GetFileListRequest
+	3,  // 5: sync.FileSyncService.GetFile:input_type -> sync.GetFileRequest
+	6,  // 6: sync.FileSyncService.PutFile:input_type -> sync.PutFileRequest
+	8,  // 7: sync.FileSyncService.DeleteFile:input_type -> sync.DeleteFileRequest
+	10, // 8: sync.FileSyncService.RenameFile:input_type -> sync.RenameFileRequest
+	2,  // 9: sync.FileSyncService.GetFileList:output_type -> sync.GetFileListResponse
+	4,  // 10: sync.FileSyncService.GetFile:output_type -> sync.GetFileResponse
+	7,  // 11: sync.FileSyncService.PutFile:output_type -> sync.PutFileResponse
+	9,  // 12: sync.FileSyncService.DeleteFile:output_type -> sync.DeleteFileResponse
+	11, // 13: sync.FileSyncService.RenameFile:output_type -> sync.RenameFileResponse
 	9,  // [9:14] is the sub-list for method output_type
 	4,  // [4:9] is the sub-list for method input_type
 	4,  // [4:4] is the sub-list for extension type_name

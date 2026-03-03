@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"insync/internal/syncproto"
+	"insync/internal/sync"
 	"log/slog"
 	"net"
 	"os"
@@ -15,10 +15,12 @@ import (
 
 	grpc "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 type GrpcServer struct {
-	syncproto.UnimplementedFileSyncServiceServer
+	sync.UnimplementedFileSyncServiceServer
 	serverCertPath string
 	serverKeyPath  string
 	caCertPath     string
@@ -144,7 +146,10 @@ func (gs *GrpcServer) Start() error {
 	server := grpc.NewServer(serverOptsWithCreds)
 	gs.server = server
 
-	syncproto.RegisterFileSyncServiceServer(server, gs)
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(server, healthServer)
+
+	sync.RegisterFileSyncServiceServer(server, gs)
 
 	if ctx.Err() != nil {
 		return serverr.ServerStartError{Err: ctx.Err()}

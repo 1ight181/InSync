@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 	"insync/internal/models"
-	syncproto "insync/internal/syncproto"
+	"insync/internal/sync"
 	"io"
 	"net"
 	"runtime/debug"
@@ -18,6 +18,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/health/grpc_health_v1"
 
 	clienterr "insync/internal/client/errors"
 	clientifaces "insync/internal/client/interfaces"
@@ -31,6 +32,8 @@ type GrpcClient struct {
 	clientNetworkType string
 	clientAddress     string
 
+	serviceName string
+
 	ctx context.Context
 
 	chunkSizeInBytes int
@@ -39,7 +42,7 @@ type GrpcClient struct {
 
 	clientConn *grpc.ClientConn
 
-	client syncproto.FileSyncServiceClient
+	client sync.FileSyncServiceClient
 
 	isStarted atomic.Bool
 }
@@ -51,6 +54,8 @@ type GrpcClientOptions struct {
 
 	ClientNetworkType string
 	ClientAddress     string
+
+	ServiceName string
 
 	Ctx context.Context
 
@@ -67,6 +72,8 @@ func NewGrpcClient(opts GrpcClientOptions) clientifaces.IClient {
 		opts.ClientNetworkType == "" ||
 		opts.ClientAddress == "" ||
 
+		opts.ServiceName == "" ||
+
 		opts.Ctx == nil ||
 
 		opts.ChunkSizeInBytes <= 0 ||
@@ -81,6 +88,8 @@ func NewGrpcClient(opts GrpcClientOptions) clientifaces.IClient {
 
 		clientNetworkType: opts.ClientNetworkType,
 		clientAddress:     opts.ClientAddress,
+
+		serviceName: opts.ServiceName,
 
 		ctx: opts.Ctx,
 
@@ -173,7 +182,20 @@ func (gc *GrpcClient) Start() error {
 	}
 
 	gc.clientConn = conn
-	gc.client = syncproto.NewFileSyncServiceClient(conn)
+	gc.client = sync.NewFileSyncServiceClient(conn)
+
+	healthClient := grpc_health_v1.NewHealthClient(conn)
+	healthCheckResponse, err := healthClient.Check(ctx, &grpc_health_v1.HealthCheckRequest{Service: gc.serviceName})
+	if err != nil {
+		gc.isStarted.Store(false)
+		return err
+	}
+	if healthCheckResponse.Status != grpc_health_v1.HealthCheckResponse_SERVING {
+		gc.isStarted.Store(false)
+		return clienterr.HealthCheckFailedError{
+			Status: healthCheckResponse.Status.String(),
+		}
+	}
 
 	gc.logger.Info("gRPC клиент успешно запущен")
 
@@ -200,7 +222,7 @@ func (gc *GrpcClient) GetFileList(ctx context.Context, rootName string) ([]model
 		return nil, clienterr.ErrClientNotStarted
 	}
 
-	getFileListResponse, err := gc.client.GetFileList(ctx, &syncproto.GetFileListRequest{
+	getFileListResponse, err := gc.client.GetFileList(ctx, &sync.GetFileListRequest{
 		RootName: rootName,
 	})
 	if err != nil {
@@ -229,7 +251,7 @@ func (gc *GrpcClient) GetFile(ctx context.Context, rootName, relativePath string
 		return nil, clienterr.ErrClientNotStarted
 	}
 
-	getFileRequest := &syncproto.GetFileRequest{
+	getFileRequest := &sync.GetFileRequest{
 		RootName:     rootName,
 		RelativePath: relativePath,
 	}
@@ -291,9 +313,9 @@ func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName, rel
 		return err
 	}
 
-	initMessage := &syncproto.PutFileRequest{
-		Payload: &syncproto.PutFileRequest_Init{
-			Init: &syncproto.PutFileInit{
+	initMessage := &sync.PutFileRequest{
+		Payload: &sync.PutFileRequest_Init{
+			Init: &sync.PutFileInit{
 				RootName:     rootName,
 				RelativePath: relativePath,
 			},
@@ -326,9 +348,9 @@ func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName, rel
 			return err
 		}
 
-		chunkMessage := &syncproto.PutFileRequest{
-			Payload: &syncproto.PutFileRequest_Chunk{
-				Chunk: &syncproto.FileChunk{
+		chunkMessage := &sync.PutFileRequest{
+			Payload: &sync.PutFileRequest_Chunk{
+				Chunk: &sync.FileChunk{
 					Index: uint32(i),
 					Data:  buf[:numberOfBytes],
 				},
@@ -360,7 +382,7 @@ func (gc *GrpcClient) DeleteFile(ctx context.Context, rootName, relativePath str
 		return clienterr.ErrClientNotStarted
 	}
 
-	deleteFileRequest := &syncproto.DeleteFileRequest{
+	deleteFileRequest := &sync.DeleteFileRequest{
 		RootName:     rootName,
 		RelativePath: relativePath,
 	}
@@ -384,7 +406,7 @@ func (gc *GrpcClient) RenameFile(ctx context.Context, rootName, fileUuid, relati
 		return clienterr.ErrClientNotStarted
 	}
 
-	renameFileRequest := &syncproto.RenameFileRequest{
+	renameFileRequest := &sync.RenameFileRequest{
 		RootName:        rootName,
 		FileUuid:        fileUuid,
 		NewRelativePath: relativePath,
