@@ -137,6 +137,8 @@ func (gc *GrpcClient) Start() error {
 		return clienterr.ErrClientAlreadyStarted
 	}
 
+	gc.logger.Info("Запуск gRPC клиента...")
+
 	ctx := gc.ctx
 	if ctx.Err() != nil {
 		gc.isStarted.Store(false)
@@ -172,6 +174,8 @@ func (gc *GrpcClient) Start() error {
 
 	gc.clientConn = conn
 	gc.client = syncproto.NewFileSyncServiceClient(conn)
+
+	gc.logger.Info("gRPC клиент успешно запущен")
 
 	return nil
 }
