@@ -7,19 +7,19 @@ import (
 
 // Реализует интерфейс ConfigModel
 type ServerConfig struct {
-	ServerIp          string
-	ServerPort        int
-	ServerNetworkType string
+	Ip          string
+	Port        int
+	NetworkType string
 }
 
 func (sc *ServerConfig) Validate() error {
-	if sc.ServerIp == "" {
+	if sc.Ip == "" {
 		return conferr.ErrServerIpIsEmpty
 	}
-	if sc.ServerPort < 0 || sc.ServerPort > 65535 {
+	if sc.Port < 0 || sc.Port > 65535 {
 		return conferr.ErrServerPortIsInvalid
 	}
-	if sc.ServerNetworkType == "" {
+	if sc.NetworkType == "" {
 		return conferr.ErrServerNetworkTypeIsEmpty
 	}
 
@@ -27,5 +27,5 @@ func (sc *ServerConfig) Validate() error {
 }
 
 func (sc *ServerConfig) GetServerAddress() string {
-	return sc.ServerIp + ":" + strconv.Itoa(sc.ServerPort)
+	return sc.Ip + ":" + strconv.Itoa(sc.Port)
 }

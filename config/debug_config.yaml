@@ -4,17 +4,17 @@
 # Для прода задавать через env
 # Либо через config.yaml
 server:
-  server_ip: ""
-  server_port: 50051
-  server_network_type: "tcp"
+  ip: ""
+  port: 50051
+  network_type: "tcp"
 
 client:
-  client_ip: "localhost"
-  client_port: 50051
-  client_network_type: "tcp"
+  ip: "localhost"
+  port: 50051
+  network_type: "tcp"
   chunk_size_in_bytes: 1024
 
-database:
+db:
   host: "db.example.com"
   port: 5432
   user: "dbuser"

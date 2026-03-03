@@ -6,21 +6,21 @@ import (
 )
 
 type ClientConfig struct {
-	ClientIp          string
-	ClientPort        int
-	ClientNetworkType string
+	Ip          string
+	Port        int
+	NetworkType string
 
 	ChunkSizeInBytes int
 }
 
 func (cc *ClientConfig) Validate() error {
-	if cc.ClientIp == "" {
+	if cc.Ip == "" {
 		return conferr.ErrClientIpIsEmpty
 	}
-	if cc.ClientPort < 0 || cc.ClientPort > 65535 {
+	if cc.Port < 0 || cc.Port > 65535 {
 		return conferr.ErrClientPortIsInvalid
 	}
-	if cc.ClientNetworkType == "" {
+	if cc.NetworkType == "" {
 		return conferr.ErrClientNetworkTypeIsEmpty
 	}
 	if cc.ChunkSizeInBytes <= 0 {
@@ -31,5 +31,5 @@ func (cc *ClientConfig) Validate() error {
 }
 
 func (cc *ClientConfig) GetClientAddress() string {
-	return cc.ClientIp + ":" + strconv.Itoa(cc.ClientPort)
+	return cc.Ip + ":" + strconv.Itoa(cc.Port)
 }

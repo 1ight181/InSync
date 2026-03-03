@@ -30,7 +30,8 @@ func startGrpcServer(
 		ServerNetworkType: serverNetworkType,
 		ServerAddress:     serverAddress,
 
-		Ctx:    ctx,
+		Ctx: ctx,
+
 		Logger: logger,
 	}
 

@@ -44,7 +44,7 @@ func RunApp() {
 		tlsConfig.GetServerKeyPath(),
 		tlsConfig.GetCaCertPath(),
 
-		serverConfig.ServerNetworkType,
+		serverConfig.NetworkType,
 		serverConfig.GetServerAddress(),
 
 		appCtx,
@@ -57,7 +57,7 @@ func RunApp() {
 		tlsConfig.GetClientKeyPath(),
 		tlsConfig.GetCaCertPath(),
 
-		clientConfig.ClientNetworkType,
+		clientConfig.NetworkType,
 		clientConfig.GetClientAddress(),
 
 		appCtx,
