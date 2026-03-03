@@ -19,7 +19,7 @@ func RunApp() {
 
 	appCtx, cancel := context.WithCancel(context.Background())
 
-	config, err := createConfig()
+	config, err := createConfig(appCtx)
 	if err != nil {
 		panic(fmt.Sprintf("Не удалось загрузить и проверить конфиг: %v", err))
 	}

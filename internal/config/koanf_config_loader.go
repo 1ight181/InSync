@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	conferr "insync/internal/config/errors"
 	confifaces "insync/internal/config/interfaces"
 	confmodels "insync/internal/config/models"
@@ -20,22 +21,28 @@ type KoanfYamlEnvConfigLoader struct {
 	envPrefix          string
 	envDelimiter       string
 	logger             *slog.Logger
+	ctx                context.Context
+	tag                string
 }
 
 type KoanfYamlEnvConfigLoaderOption struct {
 	KoanfDelimiter     string
 	YamlConfigFilePath string
-	Logger             *slog.Logger
 	EnvPrefix          string
 	EnvDelimiter       string
+	Logger             *slog.Logger
+	Ctx                context.Context
+	Tag                string
 }
 
 func NewConfigLoader(opts KoanfYamlEnvConfigLoaderOption) confifaces.IConfigLoader[*confmodels.GeneralConfig] {
 	if opts.KoanfDelimiter == "" ||
 		opts.YamlConfigFilePath == "" ||
-		opts.Logger == nil ||
 		opts.EnvPrefix == "" ||
-		opts.EnvDelimiter == "" {
+		opts.EnvDelimiter == "" ||
+		opts.Logger == nil ||
+		opts.Ctx == nil ||
+		opts.Tag == "" {
 		panic("Все поля KoanfYamlEnvConfigLoaderOption должны быть заполнены")
 	}
 	return &KoanfYamlEnvConfigLoader{
@@ -44,6 +51,8 @@ func NewConfigLoader(opts KoanfYamlEnvConfigLoaderOption) confifaces.IConfigLoad
 		logger:             opts.Logger,
 		envPrefix:          opts.EnvPrefix,
 		envDelimiter:       opts.EnvDelimiter,
+		ctx:                opts.Ctx,
+		tag:                opts.Tag,
 	}
 }
 
@@ -74,9 +83,17 @@ func (kyecl *KoanfYamlEnvConfigLoader) LoadAndValidateConfig() (*confmodels.Gene
 	}
 
 	var generalConfig confmodels.GeneralConfig
-	if err := koanfLoader.Unmarshal("", &generalConfig); err != nil {
+	if err := koanfLoader.UnmarshalWithConf("", &generalConfig, koanf.UnmarshalConf{
+		Tag: kyecl.tag,
+	}); err != nil {
 		return nil, &conferr.FailedToLoadConfigError{Err: err}
 	}
+
+	if err := generalConfig.Validate(); err != nil {
+		return nil, &conferr.FailedToLoadConfigError{Err: err}
+	}
+
+	kyecl.logger.Info("Конфигурация успешно загружена")
 
 	return &generalConfig, nil
 }

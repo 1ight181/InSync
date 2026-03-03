@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	cnf "insync/internal/config"
 	cnfmodels "insync/internal/config/models"
 	"log/slog"
@@ -17,6 +18,8 @@ const (
 	defaultProdConfigFileName   = "config.yaml"
 	defaultEnvPrefix            = "INSYNC"
 	defaultEnvDelimiter         = "_"
+	defaultKoanfDelimiter       = "."
+	defaultTag                  = "mapstructure"
 )
 
 func getConfigFileInfoFromEnv() (string, string) {
@@ -26,7 +29,7 @@ func getConfigFileInfoFromEnv() (string, string) {
 	return configFileDir, configFileName
 }
 
-func createConfig() (*cnfmodels.GeneralConfig, error) {
+func createConfig(ctx context.Context) (*cnfmodels.GeneralConfig, error) {
 	configFileDir, configFileName := getConfigFileInfoFromEnv()
 	if configFileDir == "" || configFileName == "" {
 		if isDebug {
@@ -38,15 +41,20 @@ func createConfig() (*cnfmodels.GeneralConfig, error) {
 		configFileDir = defaultConfigFileDir
 	}
 
+	stubLoggerHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
+	stubLogger := slog.New(stubLoggerHandler)
+
 	configOpts := cnf.KoanfYamlEnvConfigLoaderOption{
-		KoanfDelimiter: ".",
+		KoanfDelimiter: defaultKoanfDelimiter,
 		YamlConfigFilePath: filepath.Join(
 			configFileDir,
 			configFileName,
 		),
-		Logger:       slog.Default(),
 		EnvPrefix:    defaultEnvPrefix,
 		EnvDelimiter: defaultEnvDelimiter,
+		Logger:       stubLogger,
+		Ctx:          ctx,
+		Tag:          defaultTag,
 	}
 
 	configLoader := cnf.NewConfigLoader(configOpts)
