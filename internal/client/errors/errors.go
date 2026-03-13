@@ -3,6 +3,7 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 var (
@@ -42,4 +43,16 @@ type FailedToStartHealthCheckerError struct {
 
 func (e FailedToStartHealthCheckerError) Error() string {
 	return fmt.Sprintf("Не удалось запустить HealthChecker: %v", e.Err)
+}
+
+func (e FailedToStartHealthCheckerError) Unwrap() error {
+	return e.Err
+}
+
+type FailedToConnectToServerError struct {
+	Addresses []string
+}
+
+func (e FailedToConnectToServerError) Error() string {
+	return fmt.Sprintf("Не удалось подключиться к серверу ни по одному из адресов: %s", strings.Join(e.Addresses, ", "))
 }

@@ -10,7 +10,12 @@ import (
 )
 
 const (
-	exitTimeoutSeconds = 5
+	exitTimeoutSeconds     = 5
+	moduleAtrributeName    = "module"
+	mDnsModuleName         = "mdns"
+	mDnsResolverModuleName = "mdns_resolver"
+	grpcServerModuleName   = "grpc_server"
+	grpcClientModuleName   = "grpc_client"
 )
 
 func RunApp() {
@@ -34,10 +39,42 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать логгер: %v", err))
 	}
 
-	serverLogger := logger.With("module", "grpc_server")
+	mDnsLogger := logger.With(moduleAtrributeName, mDnsModuleName)
+	mDnsConfig := config.MDnsConfig
+
+	if err := startMDnsServer(
+		mDnsConfig.SelfInstanceName,
+		mDnsConfig.ServiceType,
+		mDnsConfig.Domain,
+		mDnsConfig.Port,
+		mDnsConfig.GetInterfaces(),
+		mDnsLogger,
+		appCtx,
+	); err != nil {
+		panic(fmt.Sprintf("Не удалось запустить mDNS сервер: %v", err))
+	}
+
+	mDnsResolverLogger := logger.With(moduleAtrributeName, mDnsResolverModuleName)
+
+	resolver, err := createMDnsResolver(
+		mDnsConfig.ServiceType,
+		mDnsConfig.Domain,
+		mDnsConfig.GetInterfaces(),
+		mDnsResolverLogger,
+		appCtx,
+	)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать mDNS резолвер: %v", err))
+	}
+
+	resolvedAddressesChan, err := resolver.Browse()
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось запустить mDNS резолвер: %v", err))
+	}
 
 	tlsConfig := config.TlsConfig
 
+	serverLogger := logger.With(moduleAtrributeName, grpcServerModuleName)
 	serverConfig := config.ServerConfig
 	startGrpcServer(
 		tlsConfig.GetServerCertPath(),
@@ -45,21 +82,37 @@ func RunApp() {
 		tlsConfig.GetCaCertPath(),
 
 		serverConfig.NetworkType,
-		serverConfig.GetServerAddress(),
+		serverConfig.GetAddress(),
 
 		appCtx,
 		serverLogger,
 	)
 
 	clientConfig := config.ClientConfig
-	clientLogger := logger.With("module", "grpc_client")
+
+	var addresses []string
+	if clientConfig.GetServerAddress() == "" {
+		for resolvedAddresses := range resolvedAddressesChan {
+			if resolvedAddresses.Name == mDnsConfig.InstanceNameToSync {
+				addresses = resolvedAddresses.GetAddresses()
+				break
+			}
+		}
+	} else {
+		addresses = append(addresses, clientConfig.GetServerAddress())
+	}
+
+	clientLogger := logger.With(moduleAtrributeName, grpcClientModuleName)
 	err = startGrpcClient(
 		tlsConfig.GetClientCertPath(),
 		tlsConfig.GetClientKeyPath(),
 		tlsConfig.GetCaCertPath(),
 
-		clientConfig.NetworkType,
-		clientConfig.GetClientAddress(),
+		clientConfig.ServerNetworkType,
+		addresses,
+		clientConfig.ResolverScheme,
+
+		clientConfig.ServiceName,
 
 		appCtx,
 

@@ -21,12 +21,12 @@ import (
 
 type GrpcServer struct {
 	insyncpb.UnimplementedFileSyncServiceServer
-	serverCertPath string
-	serverKeyPath  string
-	caCertPath     string
+	certPath   string
+	keyPath    string
+	caCertPath string
 
-	serverNetworkType string
-	serverAddress     string
+	networkType string
+	address     string
 
 	ctx context.Context
 
@@ -38,12 +38,12 @@ type GrpcServer struct {
 }
 
 type GrpcServerOptions struct {
-	ServerCertPath string
-	ServerKeyPath  string
-	CaCertPath     string
+	CertPath   string
+	KeyPath    string
+	CaCertPath string
 
-	ServerNetworkType string
-	ServerAddress     string
+	NetworkType string
+	Address     string
 
 	Ctx context.Context
 
@@ -51,12 +51,12 @@ type GrpcServerOptions struct {
 }
 
 func NewGrpcServer(opts GrpcServerOptions) serverifaces.IServer {
-	if opts.ServerCertPath == "" ||
-		opts.ServerKeyPath == "" ||
+	if opts.CertPath == "" ||
+		opts.KeyPath == "" ||
 		opts.CaCertPath == "" ||
 
-		opts.ServerNetworkType == "" ||
-		opts.ServerAddress == "" ||
+		opts.NetworkType == "" ||
+		opts.Address == "" ||
 
 		opts.Ctx == nil ||
 
@@ -64,12 +64,12 @@ func NewGrpcServer(opts GrpcServerOptions) serverifaces.IServer {
 		panic("Все поля GrpcServerOption должны быть заполнены")
 	}
 	return &GrpcServer{
-		serverCertPath: opts.ServerCertPath,
-		serverKeyPath:  opts.ServerKeyPath,
-		caCertPath:     opts.CaCertPath,
+		certPath:   opts.CertPath,
+		keyPath:    opts.KeyPath,
+		caCertPath: opts.CaCertPath,
 
-		serverNetworkType: opts.ServerNetworkType,
-		serverAddress:     opts.ServerAddress,
+		networkType: opts.NetworkType,
+		address:     opts.Address,
 
 		ctx: opts.Ctx,
 
@@ -78,7 +78,7 @@ func NewGrpcServer(opts GrpcServerOptions) serverifaces.IServer {
 }
 
 func (gs *GrpcServer) createServerTlsConfig() (*tls.Config, error) {
-	cert, err := tls.LoadX509KeyPair(gs.serverCertPath, gs.serverKeyPath)
+	cert, err := tls.LoadX509KeyPair(gs.certPath, gs.keyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +87,8 @@ func (gs *GrpcServer) createServerTlsConfig() (*tls.Config, error) {
 		gs.ctx,
 		slog.LevelDebug,
 		"Сертификат сервера успешно загружен",
-		slog.String("certPath", gs.serverCertPath),
-		slog.String("keyPath", gs.serverKeyPath),
+		slog.String("certPath", gs.certPath),
+		slog.String("keyPath", gs.keyPath),
 	)
 
 	caCert, err := os.ReadFile(gs.caCertPath)
@@ -135,7 +135,7 @@ func (gs *GrpcServer) Start() error {
 		return serverr.ServerStartError{Err: err}
 	}
 
-	listener, err := net.Listen(gs.serverNetworkType, gs.serverAddress)
+	listener, err := net.Listen(gs.networkType, gs.address)
 	if err != nil {
 		return serverr.ServerStartError{Err: err}
 	}

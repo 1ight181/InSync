@@ -2,17 +2,20 @@ package app
 
 import (
 	"context"
-	clt "insync/internal/client"
+	cltmng "insync/internal/client"
 	"log/slog"
 )
 
 func startGrpcClient(
-	clientCertPath string,
-	clientKeyPath string,
+	certPath string,
+	keyPath string,
 	caCertPath string,
 
-	clientNetworkType string,
-	clientAddress string,
+	networkType string,
+	serverAddresses []string,
+	resolverScheme string,
+
+	serviceName string,
 
 	ctx context.Context,
 
@@ -21,15 +24,16 @@ func startGrpcClient(
 	logger *slog.Logger,
 
 ) error {
-	clientOpts := clt.GrpcClientOptions{
-		ClientCertPath: clientCertPath,
-		ClientKeyPath:  clientKeyPath,
-		CaCertPath:     caCertPath,
+	clientManagerOpts := cltmng.GrpcClientManagerOptions{
+		CertPath:   certPath,
+		KeyPath:    keyPath,
+		CaCertPath: caCertPath,
 
-		ClientNetworkType: clientNetworkType,
-		ClientAddress:     clientAddress,
+		NetworkType:     networkType,
+		ServerAddresses: serverAddresses,
+		ResolverScheme:  resolverScheme,
 
-		ServiceName: "insincpb.FileSyncService",
+		ServiceName: serviceName,
 
 		Ctx: ctx,
 
@@ -38,8 +42,8 @@ func startGrpcClient(
 		Logger: logger,
 	}
 
-	grpcClient := clt.NewGrpcClient(clientOpts)
-	err := grpcClient.Start()
+	grpcClientManager := cltmng.NewGrpcClientManager(clientManagerOpts)
+	grpcClient, err := grpcClientManager.GetClient()
 	if err != nil {
 		return err
 	}

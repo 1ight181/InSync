@@ -23,6 +23,6 @@ func (sc *ServerConfig) Validate() error {
 	return nil
 }
 
-func (sc *ServerConfig) GetServerAddress() string {
+func (sc *ServerConfig) GetAddress() string {
 	return sc.Ip + ":" + strconv.Itoa(sc.Port)
 }

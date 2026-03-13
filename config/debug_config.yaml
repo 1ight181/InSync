@@ -9,10 +9,12 @@ server:
   network_type: "tcp"
 
 client:
-  ip: "localhost"
+  server_ip: ""
   port: 50051
   network_type: "tcp"
+  resolver_scheme: "passthrough"
   chunk_size_in_bytes: 1024
+  service_name: "insincpb.FileSyncService"
 
 db:
   host: "db.example.com"
@@ -47,3 +49,11 @@ logger:
   log_file_name: "logs"
   log_file_extension: "txt"
   log_level: "info"
+
+mdns:
+  self_instance_name: "insync"
+  instance_name_to_sync: "insync"
+  service_type: "_grpc._tcp"
+  domain: "local"
+  port: 50051
+  interfaces: ""

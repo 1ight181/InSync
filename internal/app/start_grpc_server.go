@@ -12,23 +12,23 @@ const (
 )
 
 func startGrpcServer(
-	serverCertPath string,
-	serverKeyPath string,
+	certPath string,
+	keyPath string,
 	caCertPath string,
 
-	serverNetworkType string,
-	serverAddress string,
+	networkType string,
+	address string,
 
 	ctx context.Context,
 	logger *slog.Logger,
 ) {
 	grpcServerOpts := serv.GrpcServerOptions{
-		ServerCertPath: serverCertPath,
-		ServerKeyPath:  serverKeyPath,
-		CaCertPath:     caCertPath,
+		CertPath:   certPath,
+		KeyPath:    keyPath,
+		CaCertPath: caCertPath,
 
-		ServerNetworkType: serverNetworkType,
-		ServerAddress:     serverAddress,
+		NetworkType: networkType,
+		Address:     address,
 
 		Ctx: ctx,
 

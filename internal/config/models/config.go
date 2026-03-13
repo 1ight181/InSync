@@ -7,6 +7,7 @@ type GeneralConfig struct {
 	ClientConfig ClientConfig `mapstructure:"client"`
 	LoggerConfig LoggerConfig `mapstructure:"logger"`
 	TlsConfig    TlsConfig    `mapstructure:"tls"`
+	MDnsConfig   MdnsConfig   `mapstructure:"mdns"`
 }
 
 func (gc *GeneralConfig) Validate() error {
