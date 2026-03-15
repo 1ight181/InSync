@@ -10,8 +10,8 @@ server:
 
 client:
   server_ip: ""
-  port: 50051
-  network_type: "tcp"
+  server_port: 50051
+  server_network_type: "tcp"
   resolver_scheme: "passthrough"
   chunk_size_in_bytes: 1024
   service_name: "insincpb.FileSyncService"
