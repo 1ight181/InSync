@@ -56,3 +56,11 @@ type FailedToConnectToServerError struct {
 func (e FailedToConnectToServerError) Error() string {
 	return fmt.Sprintf("Не удалось подключиться к серверу ни по одному из адресов: %s", strings.Join(e.Addresses, ", "))
 }
+
+type ServerUnavailableError struct {
+	MethodName string
+}
+
+func (e ServerUnavailableError) Error() string {
+	return fmt.Sprintf("Метод %s не выполнен, так как сервер недоступен", e.MethodName)
+}

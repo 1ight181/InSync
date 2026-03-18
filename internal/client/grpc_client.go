@@ -282,6 +282,13 @@ func (gc *grpcClient) GetFileList(ctx context.Context, rootName string) ([]model
 		return nil, clienterr.ErrClientNotStarted
 	}
 
+	if !gc.isServerOk.Load() {
+		gc.logger.Warn("Попытка получить список файлов, когда сервер недоступен")
+		return nil, clienterr.ServerUnavailableError{
+			MethodName: "GetFileList",
+		}
+	}
+
 	getFileListResponse, err := gc.client.GetFileList(ctx, &insyncpb.GetFileListRequest{
 		RootName: rootName,
 	})
@@ -309,6 +316,13 @@ func (gc *grpcClient) GetFile(ctx context.Context, rootName, relativePath string
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка получить файл, когда клиент не запущен")
 		return nil, clienterr.ErrClientNotStarted
+	}
+
+	if !gc.isServerOk.Load() {
+		gc.logger.Warn("Попытка получить список файлов, когда сервер недоступен")
+		return nil, clienterr.ServerUnavailableError{
+			MethodName: "GetFile",
+		}
 	}
 
 	getFileRequest := &insyncpb.GetFileRequest{
@@ -366,6 +380,13 @@ func (gc *grpcClient) PutFile(ctx context.Context, file io.Reader, rootName, rel
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка отправить файл, когда клиент не запущен")
 		return clienterr.ErrClientNotStarted
+	}
+
+	if !gc.isServerOk.Load() {
+		gc.logger.Warn("Попытка получить список файлов, когда сервер недоступен")
+		return clienterr.ServerUnavailableError{
+			MethodName: "PutFile",
+		}
 	}
 
 	putFileStream, err := gc.client.PutFile(ctx)
@@ -442,6 +463,13 @@ func (gc *grpcClient) DeleteFile(ctx context.Context, rootName, relativePath str
 		return clienterr.ErrClientNotStarted
 	}
 
+	if !gc.isServerOk.Load() {
+		gc.logger.Warn("Попытка получить список файлов, когда сервер недоступен")
+		return clienterr.ServerUnavailableError{
+			MethodName: "DeleteFile",
+		}
+	}
+
 	deleteFileRequest := &insyncpb.DeleteFileRequest{
 		RootName:     rootName,
 		RelativePath: relativePath,
@@ -464,6 +492,13 @@ func (gc *grpcClient) RenameFile(ctx context.Context, rootName, fileUuid, relati
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка переименовать файл, когда клиент не запущен")
 		return clienterr.ErrClientNotStarted
+	}
+
+	if !gc.isServerOk.Load() {
+		gc.logger.Warn("Попытка получить список файлов, когда сервер недоступен")
+		return clienterr.ServerUnavailableError{
+			MethodName: "RenameFile",
+		}
 	}
 
 	renameFileRequest := &insyncpb.RenameFileRequest{
