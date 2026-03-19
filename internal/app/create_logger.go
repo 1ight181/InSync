@@ -1,7 +1,7 @@
 package app
 
 import (
-	loghandler "insync/internal/logger"
+	loghandler "insync/internal/infrastructure/logger"
 	"log/slog"
 	"os"
 )

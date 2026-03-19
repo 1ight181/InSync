@@ -2,7 +2,7 @@ package app
 
 import (
 	"context"
-	cltmng "insync/internal/client"
+	cltmng "insync/internal/transport/grpc/client"
 	"log/slog"
 )
 

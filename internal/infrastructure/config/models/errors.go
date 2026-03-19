@@ -1,0 +1,115 @@
+package models
+
+import "errors"
+
+// Ошибки валидации конфигурации сервера
+var (
+	ErrServerIpIsEmpty          = errors.New("IP сервера не может быть пустым")
+	ErrServerPortIsInvalid      = errors.New("Порт сервера должен быть целым числом в диапозоне от 0 до 65535")
+	ErrServerNetworkTypeIsEmpty = errors.New("Тип сети сервера не может быть пустым")
+)
+
+// Ошибки валидации конфигурации клиента
+var (
+	ErrClientPortIsInvalid         = errors.New("Порт клиента должен быть целым числом в диапозоне от 0 до 65535")
+	ErrClientNetworkTypeIsEmpty    = errors.New("Тип сети клиента не может быть пустым")
+	ErrClientResolverSchemeIsEmpty = errors.New("Схема резолвера не может быть пустой")
+	ErrChunkSizeIsInvalid          = errors.New("Размер чанка должен быть положительным целым числом")
+)
+
+// Ошибки валидации конфигурации базы данных
+var (
+	ErrDbHostIsEmpty     = errors.New("Хост БД не может быть пустым")
+	ErrDbPortIsInvalid   = errors.New("Порт БД должен быть целым числом в диапозоне от 0 до 65535")
+	ErrDbUserIsEmpty     = errors.New("Пользователь БД не может быть пустым")
+	ErrDbPasswordIsEmpty = errors.New("Пароль БД не может быть пустым")
+)
+
+// Ошибки валидации конфигурации логгера
+var (
+	ErrLogFileDirectoryIsEmpty = errors.New("Директория для логов не может быть пустой")
+	ErrLogFileNameIsEmpty      = errors.New("Имя файла логов не может быть пустым")
+	ErrLogFileExtensionIsEmpty = errors.New("Расширение файла логов не может быть пустым")
+	ErrLogLevelIsEmpty         = errors.New("Уровень логирования не может быть пустым")
+)
+
+// Ошибки валидации конфигурации TLS
+var (
+	ErrServerCertDirIsEmpty       = errors.New("Директория сертификата сервера не может быть пустой")
+	ErrServerCertFilenameIsEmpty  = errors.New("Имя файла сертификата сервера не может быть пустым")
+	ErrServerCertExtensionIsEmpty = errors.New("Расширение файла сертификата сервера не может быть пустым")
+
+	ErrServerKeyDirIsEmpty       = errors.New("Директория ключа сервера не может быть пустой")
+	ErrServerKeyFilenameIsEmpty  = errors.New("Имя файла ключа сервера не может быть пустым")
+	ErrServerKeyExtensionIsEmpty = errors.New("Расширение файла ключа сервера не может быть пустым")
+
+	ErrClientCertDirIsEmpty       = errors.New("Директория сертификата клиента не может быть пустой")
+	ErrClientCertFilenameIsEmpty  = errors.New("Имя файла сертификата клиента не может быть пустым")
+	ErrClientCertExtensionIsEmpty = errors.New("Расширение файла сертификата клиента не может быть пустым")
+
+	ErrClientKeyDirIsEmpty       = errors.New("Директория ключа клиента не может быть пустой")
+	ErrClientKeyFilenameIsEmpty  = errors.New("Имя файла ключа клиента не может быть пустым")
+	ErrClientKeyExtensionIsEmpty = errors.New("Расширение файла ключа клиента не может быть пустым")
+
+	ErrCaCertDirIsEmpty       = errors.New("Директория сертификата CA не может быть пустой")
+	ErrCaCertFilenameIsEmpty  = errors.New("Имя файла сертификата CA не может быть пустым")
+	ErrCaCertExtensionIsEmpty = errors.New("Расширение файла сертификата CA не может быть пустым")
+)
+
+// Ошибки валидации конфигурации mDNS
+var (
+	ErrMdnsSelfInstanceNameIsEmpty   = errors.New("Самоназвание экземпляра mDNS не может быть пустым")
+	ErrMdnsInstanceNameToSyncIsEmpty = errors.New("Имя экземпляра mDNS к которому производится подключение для синхронизации не может быть пустым")
+	ErrMdnsServiceTypeIsEmpty        = errors.New("Тип сервиса mDNS не может быть пустым")
+	ErrMdnsDomainIsEmpty             = errors.New("Домен mDNS не может быть пустым")
+	ErrMdnsPortIsInvalid             = errors.New("Порт mDNS должен быть целым числом в диапозоне от 0 до 65535")
+	ErrMdnsInterfacesIsEmpty         = errors.New("Список интерфейсов mDNS не может быть пустым")
+)
+
+type ServerCertFileDoesNotExistError struct {
+	FilePath string
+}
+
+func (e *ServerCertFileDoesNotExistError) Error() string {
+	return "Файл сертификата сервера не существует: " + e.FilePath
+}
+
+type ServerKeyFileDoesNotExistError struct {
+	FilePath string
+}
+
+func (e *ServerKeyFileDoesNotExistError) Error() string {
+	return "Файл ключа сервера не существует: " + e.FilePath
+}
+
+type ClientCertFileDoesNotExistError struct {
+	FilePath string
+}
+
+func (e *ClientCertFileDoesNotExistError) Error() string {
+	return "Файл сертификата клиента не существует: " + e.FilePath
+}
+
+type ClientKeyFileDoesNotExistError struct {
+	FilePath string
+}
+
+func (e *ClientKeyFileDoesNotExistError) Error() string {
+	return "Файл ключа клиента не существует: " + e.FilePath
+}
+
+type CaCertFileDoesNotExistError struct {
+	FilePath string
+}
+
+func (e *CaCertFileDoesNotExistError) Error() string {
+	return "Файл сертификата CA не существует: " + e.FilePath
+}
+
+type LogFileDoesNotExistError struct {
+	Err error
+}
+
+func (e *LogFileDoesNotExistError) Error() string {
+	return "Файл логов не существует: " + e.Err.Error()
+}

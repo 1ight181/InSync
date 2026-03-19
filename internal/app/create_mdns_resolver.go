@@ -2,10 +2,10 @@ package app
 
 import (
 	"context"
-	mdnsifaces "insync/internal/mdns/interfaces"
+	mdnsifaces "insync/internal/interfaces"
 	"log/slog"
 
-	mdns "insync/internal/mdns"
+	mdns "insync/internal/infrastructure/mdns"
 )
 
 func createMDnsResolver(
@@ -14,8 +14,8 @@ func createMDnsResolver(
 	interfaces []string,
 	logger *slog.Logger,
 	ctx context.Context,
-) (mdnsifaces.IResolver, error) {
-	mDnsResolverOpts := mdns.MDnsResolverOptions{
+) (mdnsifaces.IMdnsBrowser, error) {
+	mDnsResolverOpts := mdns.MDnsBrowserOptions{
 		ServiceType: serviceType,
 		Domain:      domain,
 		Interfaces:  interfaces,
@@ -23,5 +23,5 @@ func createMDnsResolver(
 		Ctx:         ctx,
 	}
 
-	return mdns.NewMDnsResolver(mDnsResolverOpts), nil
+	return mdns.NewMDnsBrowser(mDnsResolverOpts), nil
 }

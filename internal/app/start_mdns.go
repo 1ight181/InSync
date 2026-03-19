@@ -2,7 +2,7 @@ package app
 
 import (
 	"context"
-	mdns "insync/internal/mdns"
+	mdns "insync/internal/infrastructure/mdns"
 	"log/slog"
 )
 

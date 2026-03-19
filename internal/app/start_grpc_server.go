@@ -2,7 +2,7 @@ package app
 
 import (
 	"context"
-	serv "insync/internal/server"
+	serv "insync/internal/transport/grpc/server"
 	"log/slog"
 	"time"
 )

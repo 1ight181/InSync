@@ -2,8 +2,8 @@ package app
 
 import (
 	"context"
-	cnf "insync/internal/config"
-	cnfmodels "insync/internal/config/models"
+	cnf "insync/internal/infrastructure/config"
+	cnfmodels "insync/internal/infrastructure/config/models"
 	"log/slog"
 	"os"
 	"path/filepath"

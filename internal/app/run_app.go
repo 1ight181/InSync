@@ -94,7 +94,9 @@ func RunApp() {
 	if clientConfig.GetServerAddress() == "" {
 		for resolvedAddresses := range resolvedAddressesChan {
 			if resolvedAddresses.Name == mDnsConfig.InstanceNameToSync {
-				addresses = resolvedAddresses.GetAddresses()
+				for _, addr := range resolvedAddresses.Addresses {
+					addresses = append(addresses, fmt.Sprintf("%s:%d", addr.Ip, addr.Port))
+				}
 				break
 			}
 		}
