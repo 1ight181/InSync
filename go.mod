@@ -12,6 +12,8 @@ require (
 	google.golang.org/protobuf v1.36.10
 )
 
+require github.com/adityak368/mdnsresolver v0.0.0-20201104184138-ec7a91dbb1bc
+
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect

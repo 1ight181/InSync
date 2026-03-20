@@ -6,9 +6,10 @@ import (
 
 // Реализует интерфейс ConfigModel
 type ServerConfig struct {
-	Ip          string `mapstructure:"ip"`
+	Address     string `mapstructure:"address"`
 	Port        int    `mapstructure:"port"`
 	NetworkType string `mapstructure:"network_type"`
+	ServiceName string `mapstructure:"service_name"`
 }
 
 func (sc *ServerConfig) Validate() error {
@@ -23,5 +24,5 @@ func (sc *ServerConfig) Validate() error {
 }
 
 func (sc *ServerConfig) GetAddress() string {
-	return sc.Ip + ":" + strconv.Itoa(sc.Port)
+	return sc.Address + ":" + strconv.Itoa(sc.Port)
 }

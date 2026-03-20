@@ -26,11 +26,15 @@ type GrpcServer struct {
 	networkType string
 	address     string
 
+	serviceName string
+
 	ctx context.Context
 
 	logger *slog.Logger
 
 	server *grpc.Server
+
+	healthServer *health.Server
 
 	isStarted atomic.Bool
 }
@@ -145,6 +149,8 @@ func (gs *GrpcServer) Start() error {
 	gs.server = server
 
 	healthServer := health.NewServer()
+	gs.healthServer = healthServer
+
 	grpc_health_v1.RegisterHealthServer(server, healthServer)
 
 	insyncpb.RegisterFileSyncServiceServer(server, gs)
@@ -155,6 +161,8 @@ func (gs *GrpcServer) Start() error {
 	if err := server.Serve(listener); err != nil && err != grpc.ErrServerStopped {
 		return ServerStartError{Err: err}
 	}
+
+	healthServer.SetServingStatus(gs.serviceName, grpc_health_v1.HealthCheckResponse_SERVING)
 
 	gs.logger.Info("gRPC сервер успешно запущен")
 

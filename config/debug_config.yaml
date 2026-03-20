@@ -7,14 +7,20 @@ server:
   ip: ""
   port: 50051
   network_type: "tcp"
+  service_name: "insincpb.FileSyncService"
 
 client:
-  server_ip: ""
+  # passthrough/mdns
+  resolver_scheme: "mdns"
+  server_address: "_grpc._tcp/server.local"
   server_port: 50051
   server_network_type: "tcp"
-  resolver_scheme: "passthrough"
+  server_service_name: "insincpb.FileSyncService"
+  server_interfaces: ""
+  load_balancing_policy: "pick_first"
+  should_use_health_check: true
+  # формат "eth0;wlan0"
   chunk_size_in_bytes: 1024
-  service_name: "insincpb.FileSyncService"
 
 db:
   host: "db.example.com"
@@ -50,10 +56,10 @@ logger:
   log_file_extension: "txt"
   log_level: "info"
 
-mdns:
-  self_instance_name: "insync"
-  instance_name_to_sync: "insync"
+mdns_server:
+  instance_name: "server"
   service_type: "_grpc._tcp"
   domain: "local"
   port: 50051
+  # формат "eth0;wlan0"
   interfaces: ""

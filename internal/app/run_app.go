@@ -43,7 +43,7 @@ func RunApp() {
 	mDnsConfig := config.MDnsConfig
 
 	if err := startMDnsServer(
-		mDnsConfig.SelfInstanceName,
+		mDnsConfig.InstanceName,
 		mDnsConfig.ServiceType,
 		mDnsConfig.Domain,
 		mDnsConfig.Port,
@@ -52,24 +52,6 @@ func RunApp() {
 		appCtx,
 	); err != nil {
 		panic(fmt.Sprintf("Не удалось запустить mDNS сервер: %v", err))
-	}
-
-	mDnsResolverLogger := logger.With(moduleAtrributeName, mDnsResolverModuleName)
-
-	resolver, err := createMDnsResolver(
-		mDnsConfig.ServiceType,
-		mDnsConfig.Domain,
-		mDnsConfig.GetInterfaces(),
-		mDnsResolverLogger,
-		appCtx,
-	)
-	if err != nil {
-		panic(fmt.Sprintf("Не удалось создать mDNS резолвер: %v", err))
-	}
-
-	resolvedAddressesChan, err := resolver.Browse()
-	if err != nil {
-		panic(fmt.Sprintf("Не удалось запустить mDNS резолвер: %v", err))
 	}
 
 	tlsConfig := config.TlsConfig
@@ -90,20 +72,6 @@ func RunApp() {
 
 	clientConfig := config.ClientConfig
 
-	var addresses []string
-	if clientConfig.GetServerAddress() == "" {
-		for resolvedAddresses := range resolvedAddressesChan {
-			if resolvedAddresses.Name == mDnsConfig.InstanceNameToSync {
-				for _, addr := range resolvedAddresses.Addresses {
-					addresses = append(addresses, fmt.Sprintf("%s:%d", addr.Ip, addr.Port))
-				}
-				break
-			}
-		}
-	} else {
-		addresses = append(addresses, clientConfig.GetServerAddress())
-	}
-
 	clientLogger := logger.With(moduleAtrributeName, grpcClientModuleName)
 	err = startGrpcClient(
 		tlsConfig.GetClientCertPath(),
@@ -111,10 +79,12 @@ func RunApp() {
 		tlsConfig.GetCaCertPath(),
 
 		clientConfig.ServerNetworkType,
-		addresses,
+		clientConfig.ServerAddress,
+		clientConfig.ServerServiceName,
+		mDnsConfig.InstanceName,
 		clientConfig.ResolverScheme,
 
-		clientConfig.ServiceName,
+		clientConfig.LoadBalancingPolicy,
 
 		appCtx,
 
@@ -124,6 +94,18 @@ func RunApp() {
 	)
 	if err != nil {
 		panic(fmt.Sprintf("Не удалось запустить gRPC клиент: %v", err))
+	}
+
+	// передавать в cli
+	_, err = createMDnsBrowser(
+		mDnsConfig.ServiceType,
+		mDnsConfig.Domain,
+		mDnsConfig.GetInterfaces(),
+		mDnsLogger,
+		appCtx,
+	)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать mDNS браузер: %v", err))
 	}
 
 	<-stopSignal

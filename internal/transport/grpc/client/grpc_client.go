@@ -8,7 +8,10 @@ import (
 	"io"
 	"net"
 	"runtime/debug"
+	"strings"
 	"sync/atomic"
+
+	"github.com/adityak368/mdnsresolver"
 
 	"crypto/tls"
 	"crypto/x509"
@@ -19,7 +22,6 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/health/grpc_health_v1"
 
 	ifaces "insync/internal/interfaces"
 )
@@ -28,18 +30,22 @@ const (
 	resolverSchemeSeparator = ":///"
 )
 
-type grpcClient struct {
+type GrpcClient struct {
 	certPath string
 	keyPath  string
 
 	caCertPath string
 
-	networkType   string
-	serverAddress string
+	serverNetworkType string
+	serverAddress     string
+	serverServiceName string
+	serverName        string
 
 	resolverScheme string
 
-	serviceName string
+	loadBalancingPolicy string
+
+	ShouldUseHealthCheck bool
 
 	ctx context.Context
 
@@ -51,20 +57,24 @@ type grpcClient struct {
 
 	client insyncpb.FileSyncServiceClient
 
-	isStarted  atomic.Bool
-	isServerOk atomic.Bool
+	isStarted atomic.Bool
 }
 
-type grpcClientOptions struct {
+type GrpcClientOptions struct {
 	CertPath   string
 	KeyPath    string
 	CaCertPath string
 
-	NetworkType    string
-	ServerAddress  string
+	NetworkType   string
+	ServerAddress string
+	ServiceName   string
+	ServerName    string
+
 	ResolverScheme string
 
-	ServiceName string
+	LoadBalancingPolicy string
+
+	ShouldUseHealthCheck bool
 
 	Ctx context.Context
 
@@ -73,7 +83,7 @@ type grpcClientOptions struct {
 	Logger *slog.Logger
 }
 
-func newGrpcClient(opts grpcClientOptions) ifaces.IClient {
+func NewGrpcClient(opts GrpcClientOptions) ifaces.IClient {
 	if opts.CertPath == "" ||
 		opts.KeyPath == "" ||
 		opts.CaCertPath == "" ||
@@ -84,6 +94,8 @@ func newGrpcClient(opts grpcClientOptions) ifaces.IClient {
 
 		opts.ServiceName == "" ||
 
+		opts.LoadBalancingPolicy == "" ||
+
 		opts.Ctx == nil ||
 
 		opts.ChunkSizeInBytes <= 0 ||
@@ -91,16 +103,18 @@ func newGrpcClient(opts grpcClientOptions) ifaces.IClient {
 		opts.Logger == nil {
 		panic("Все поля GrpcClientOption должны быть заполнены")
 	}
-	return &grpcClient{
+	return &GrpcClient{
 		certPath:   opts.CertPath,
 		keyPath:    opts.KeyPath,
 		caCertPath: opts.CaCertPath,
 
-		networkType:    opts.NetworkType,
-		serverAddress:  opts.ServerAddress,
-		resolverScheme: opts.ResolverScheme,
+		serverNetworkType: opts.NetworkType,
+		serverAddress:     opts.ServerAddress,
+		resolverScheme:    opts.ResolverScheme,
 
-		serviceName: opts.ServiceName,
+		serverServiceName: opts.ServiceName,
+
+		loadBalancingPolicy: opts.LoadBalancingPolicy,
 
 		ctx: opts.Ctx,
 
@@ -110,95 +124,10 @@ func newGrpcClient(opts grpcClientOptions) ifaces.IClient {
 	}
 }
 
-func (gc *grpcClient) startHealthChecker(conn *grpc.ClientConn) error {
-	healthCheckerClient := grpc_health_v1.NewHealthClient(conn)
-
-	healthCheckStream, err := healthCheckerClient.Watch(gc.ctx, &grpc_health_v1.HealthCheckRequest{
-		Service: gc.serviceName,
-	})
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		var lastStatus grpc_health_v1.HealthCheckResponse_ServingStatus
-		for {
-			healthCheckResponse, err := healthCheckStream.Recv()
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					gc.isServerOk.Store(false)
-					gc.logger.Info("Сервер завершил стрим своего состояния, вероятно сервер остановлен")
-					break
-				}
-			}
-
-			newStatus := healthCheckResponse.GetStatus()
-
-			if lastStatus != newStatus {
-				if newStatus == grpc_health_v1.HealthCheckResponse_SERVING {
-					gc.isServerOk.Store(true)
-				} else {
-					gc.isServerOk.Store(false)
-				}
-			}
-
-			gc.logger.LogAttrs(
-				gc.ctx,
-				slog.LevelDebug,
-				"Состояние сервера изменилось",
-				slog.String("last_status", lastStatus.String()),
-				slog.String("new_status", newStatus.String()),
-			)
-
-		}
-	}()
-
-	return nil
-
-}
-
-func (gc *grpcClient) createClientTlsConfig() (*tls.Config, error) {
-	cert, err := tls.LoadX509KeyPair(gc.certPath, gc.keyPath)
-	if err != nil {
-		return nil, err
-	}
-
-	gc.logger.LogAttrs(
-		gc.ctx,
-		slog.LevelDebug,
-		"Сертификат клиента успешно загружен",
-		slog.String("certPath", gc.certPath),
-		slog.String("keyPath", gc.keyPath),
-	)
-
-	caCert, err := os.ReadFile(gc.caCertPath)
-	if err != nil {
-		return nil, err
-	}
-
-	caCertPool := x509.NewCertPool()
-	if !caCertPool.AppendCertsFromPEM(caCert) {
-		return nil, ErrFailedToAppendCa
-	}
-
-	gc.logger.LogAttrs(
-		gc.ctx,
-		slog.LevelDebug,
-		"CA сертификат успешно загружен для клиента",
-		slog.String("caCertPath", gc.caCertPath),
-	)
-
-	return &tls.Config{
-		Certificates:       []tls.Certificate{cert},
-		RootCAs:            caCertPool,
-		InsecureSkipVerify: false,
-	}, nil
-}
-
 // Start устанавливает защищенное TLS соединение с gRPC сервером и создает gRPC клиент для взаимодействия с сервером.
 // Если клиент уже запущен, возвращается ошибка.
 // Этот метод должен быть вызван до использования клиента для выполнения RPC вызовов.
-func (gc *grpcClient) Start() error {
+func (gc *GrpcClient) Start() error {
 	if gc.isStarted.Swap(true) {
 		gc.logger.Warn("Попытка запустить клиент, который уже запущен")
 		return ErrClientAlreadyStarted
@@ -219,29 +148,44 @@ func (gc *grpcClient) Start() error {
 	}
 
 	transportCreds := credentials.NewTLS(tlsConfig)
-	clientOptsWithCreds := grpc.WithTransportCredentials(transportCreds)
+	withCreds := grpc.WithTransportCredentials(transportCreds)
 
 	baseDialer := &net.Dialer{}
-
 	networkAwareDialer := func(ctx context.Context, addr string) (net.Conn, error) {
-		return baseDialer.DialContext(ctx, gc.networkType, addr)
+		return baseDialer.DialContext(ctx, gc.serverNetworkType, addr)
 	}
+	withContextDialer := grpc.WithContextDialer(networkAwareDialer)
 
-	clientOptsWithDialer := grpc.WithContextDialer(networkAwareDialer)
+	stringBuilder := &strings.Builder{}
+	stringBuilder.WriteString("{\"loadBalancingPolicy\": \"")
+	stringBuilder.WriteString(gc.loadBalancingPolicy)
+	if gc.ShouldUseHealthCheck {
+		stringBuilder.WriteString(", \"healthCheckConfig\": { \"serviceName\":")
+		stringBuilder.WriteString(gc.serverServiceName)
+		stringBuilder.WriteString("\"}")
+	}
+	stringBuilder.WriteString("}")
+
+	serviceConfig := stringBuilder.String()
+	withDefaultServiceConf := grpc.WithDefaultServiceConfig(
+		serviceConfig,
+	)
+
+	withResolvers := grpc.WithResolvers(mdnsresolver.NewBuilder())
+
+	address := fmt.Sprintf("%s%s%s", gc.resolverScheme, resolverSchemeSeparator, gc.serverAddress)
 
 	if ctx.Err() != nil {
 		gc.isStarted.Store(false)
 		return ctx.Err()
 	}
+
 	conn, err := grpc.NewClient(
-		fmt.Sprintf(
-			"%s%s%s",
-			gc.resolverScheme,
-			resolverSchemeSeparator,
-			gc.serverAddress,
-		),
-		clientOptsWithCreds,
-		clientOptsWithDialer,
+		address,
+		withCreds,
+		withContextDialer,
+		withDefaultServiceConf,
+		withResolvers,
 	)
 	if err != nil {
 		gc.isStarted.Store(false)
@@ -251,18 +195,13 @@ func (gc *grpcClient) Start() error {
 	gc.clientConn = conn
 	gc.client = insyncpb.NewFileSyncServiceClient(conn)
 
-	if err := gc.startHealthChecker(conn); err != nil {
-		gc.isStarted.Store(false)
-		return FailedToStartHealthCheckerError{Err: err}
-	}
-
 	gc.logger.Info("gRPC клиент успешно запущен")
 
 	return nil
 }
 
 // Stop закрывает gRPC соединение с сервером. Если клиент не запущен, возвращается ошибка. Этот метод должен быть вызван для корректного завершения работы клиента и освобождения ресурсов.
-func (gc *grpcClient) Stop() error {
+func (gc *GrpcClient) Stop() error {
 	if !gc.isStarted.Swap(false) {
 		gc.logger.Warn("Попытка остановить клиент, который не запущен")
 		return ErrClientAlreadyStopped
@@ -275,17 +214,10 @@ func (gc *grpcClient) Stop() error {
 	return nil
 }
 
-func (gc *grpcClient) GetFileList(ctx context.Context, rootName string) ([]domain.FileMetadata, error) {
+func (gc *GrpcClient) GetFileList(ctx context.Context, rootName string) ([]domain.FileMetadata, error) {
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка получить список файлов, когда клиент не запущен")
 		return nil, ErrClientNotStarted
-	}
-
-	if !gc.isServerOk.Load() {
-		gc.logger.Warn("Попытка получить список файлов, когда сервер недоступен")
-		return nil, ServerUnavailableError{
-			MethodName: "GetFileList",
-		}
 	}
 
 	getFileListResponse, err := gc.client.GetFileList(ctx, &insyncpb.GetFileListRequest{
@@ -311,17 +243,10 @@ func (gc *grpcClient) GetFileList(ctx context.Context, rootName string) ([]domai
 	return fileList, nil
 }
 
-func (gc *grpcClient) GetFile(ctx context.Context, rootName, relativePath string) (*io.PipeReader, error) {
+func (gc *GrpcClient) GetFile(ctx context.Context, rootName, relativePath string) (*io.PipeReader, error) {
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка получить файл, когда клиент не запущен")
 		return nil, ErrClientNotStarted
-	}
-
-	if !gc.isServerOk.Load() {
-		gc.logger.Warn("Попытка получить список файлов, когда сервер недоступен")
-		return nil, ServerUnavailableError{
-			MethodName: "GetFile",
-		}
 	}
 
 	getFileRequest := &insyncpb.GetFileRequest{
@@ -375,17 +300,10 @@ func (gc *grpcClient) GetFile(ctx context.Context, rootName, relativePath string
 	return pipeReader, nil
 }
 
-func (gc *grpcClient) PutFile(ctx context.Context, file io.Reader, rootName, relativePath string) error {
+func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName, relativePath string) error {
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка отправить файл, когда клиент не запущен")
 		return ErrClientNotStarted
-	}
-
-	if !gc.isServerOk.Load() {
-		gc.logger.Warn("Попытка получить список файлов, когда сервер недоступен")
-		return ServerUnavailableError{
-			MethodName: "PutFile",
-		}
 	}
 
 	putFileStream, err := gc.client.PutFile(ctx)
@@ -456,17 +374,10 @@ func (gc *grpcClient) PutFile(ctx context.Context, file io.Reader, rootName, rel
 	return nil
 }
 
-func (gc *grpcClient) DeleteFile(ctx context.Context, rootName, relativePath string) error {
+func (gc *GrpcClient) DeleteFile(ctx context.Context, rootName, relativePath string) error {
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка удалить файл, когда клиент не запущен")
 		return ErrClientNotStarted
-	}
-
-	if !gc.isServerOk.Load() {
-		gc.logger.Warn("Попытка получить список файлов, когда сервер недоступен")
-		return ServerUnavailableError{
-			MethodName: "DeleteFile",
-		}
 	}
 
 	deleteFileRequest := &insyncpb.DeleteFileRequest{
@@ -487,17 +398,10 @@ func (gc *grpcClient) DeleteFile(ctx context.Context, rootName, relativePath str
 	return nil
 }
 
-func (gc *grpcClient) RenameFile(ctx context.Context, rootName, fileUuid, relativePath string) error {
+func (gc *GrpcClient) RenameFile(ctx context.Context, rootName, fileUuid, relativePath string) error {
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка переименовать файл, когда клиент не запущен")
 		return ErrClientNotStarted
-	}
-
-	if !gc.isServerOk.Load() {
-		gc.logger.Warn("Попытка получить список файлов, когда сервер недоступен")
-		return ServerUnavailableError{
-			MethodName: "RenameFile",
-		}
 	}
 
 	renameFileRequest := &insyncpb.RenameFileRequest{
@@ -517,4 +421,43 @@ func (gc *grpcClient) RenameFile(ctx context.Context, rootName, fileUuid, relati
 	}
 
 	return nil
+}
+
+func (gc *GrpcClient) createClientTlsConfig() (*tls.Config, error) {
+	cert, err := tls.LoadX509KeyPair(gc.certPath, gc.keyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	gc.logger.LogAttrs(
+		gc.ctx,
+		slog.LevelDebug,
+		"Сертификат клиента успешно загружен",
+		slog.String("certPath", gc.certPath),
+		slog.String("keyPath", gc.keyPath),
+	)
+
+	caCert, err := os.ReadFile(gc.caCertPath)
+	if err != nil {
+		return nil, err
+	}
+
+	caCertPool := x509.NewCertPool()
+	if !caCertPool.AppendCertsFromPEM(caCert) {
+		return nil, ErrFailedToAppendCa
+	}
+
+	gc.logger.LogAttrs(
+		gc.ctx,
+		slog.LevelDebug,
+		"CA сертификат успешно загружен для клиента",
+		slog.String("caCertPath", gc.caCertPath),
+	)
+
+	return &tls.Config{
+		Certificates:       []tls.Certificate{cert},
+		RootCAs:            caCertPool,
+		InsecureSkipVerify: false,
+		ServerName:         gc.serverName,
+	}, nil
 }

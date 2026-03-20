@@ -3,24 +3,38 @@ package models
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type ClientConfig struct {
-	ServerIp          string `mapstructure:"server_ip"`
-	ServerPort        int    `mapstructure:"server_port"`
-	ServerNetworkType string `mapstructure:"server_network_type"`
-	ResolverScheme    string `mapstructure:"resolver_scheme"`
+	// passthrough/mdns
+	ResolverScheme string `mapstructure:"resolver_scheme"`
 
-	ChunkSizeInBytes int    `mapstructure:"chunk_size_in_bytes"`
-	ServiceName      string `mapstructure:"service_name"`
+	// для passthrough
+	ServerAddress string `mapstructure:"server_address"`
+
+	//для mdns
+	ServerServiceName string `mapstructure:"server_service_name"`
+	ServerInterfaces  string `mapstructure:"server_interfaces"`
+
+	// общие
+	ServerPort           int    `mapstructure:"server_port"`
+	ServerNetworkType    string `mapstructure:"server_network_type"`
+	LoadBalancingPolicy  string `mapstructure:"load_balancing_policy"`
+	ShouldUseHealthCheck bool   `mapstructure:"should_use_health_check"`
+
+	ChunkSizeInBytes int `mapstructure:"chunk_size_in_bytes"`
 }
 
 func (cc *ClientConfig) Validate() error {
+	if cc.GetServerAddress() == "" && cc.ResolverScheme == "passthrough" {
+		return ErrAddressToConnectIsEmpty
+	}
 	if cc.ServerPort < 0 || cc.ServerPort > 65535 {
-		return ErrClientPortIsInvalid
+		return ErrPortToConnectIsInvalid
 	}
 	if cc.ServerNetworkType == "" {
-		return ErrClientNetworkTypeIsEmpty
+		return ErrNetworkToConnectTypeIsEmpty
 	}
 	if cc.ResolverScheme == "" {
 		return ErrClientResolverSchemeIsEmpty
@@ -29,12 +43,25 @@ func (cc *ClientConfig) Validate() error {
 		return ErrChunkSizeIsInvalid
 	}
 
+	if cc.ResolverScheme == "mdns" && cc.ServerServiceName == "" {
+		if cc.ServerAddress == "" {
+			return ErrAddressToConnectIsEmpty
+		}
+		if cc.ServerAddress == "" {
+			return ErrAddressToConnectIsEmpty
+		}
+	}
+
 	return nil
 }
 
 func (cc *ClientConfig) GetServerAddress() string {
-	if cc.ServerIp == "" {
+	if cc.ServerAddress == "" {
 		return ""
 	}
-	return fmt.Sprintf("%s:%s", cc.ServerIp, strconv.Itoa(cc.ServerPort))
+	return fmt.Sprintf("%s:%s", cc.ServerAddress, strconv.Itoa(cc.ServerPort))
+}
+
+func (cc *ClientConfig) GetInterfaces() []string {
+	return strings.Split(cc.ServerInterfaces, ";")
 }

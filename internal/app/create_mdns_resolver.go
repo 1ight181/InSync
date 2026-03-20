@@ -8,7 +8,7 @@ import (
 	mdns "insync/internal/infrastructure/mdns"
 )
 
-func createMDnsResolver(
+func createMDnsBrowser(
 	serviceType string,
 	domain string,
 	interfaces []string,

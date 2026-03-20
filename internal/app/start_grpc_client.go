@@ -2,7 +2,7 @@ package app
 
 import (
 	"context"
-	cltmng "insync/internal/transport/grpc/client"
+	"insync/internal/transport/grpc/client"
 	"log/slog"
 )
 
@@ -12,10 +12,13 @@ func startGrpcClient(
 	caCertPath string,
 
 	networkType string,
-	serverAddresses []string,
+	serverAddress string,
+	serviceName string,
+	serverName string,
+
 	resolverScheme string,
 
-	serviceName string,
+	loadBalancingPolicy string,
 
 	ctx context.Context,
 
@@ -24,16 +27,20 @@ func startGrpcClient(
 	logger *slog.Logger,
 
 ) error {
-	clientManagerOpts := cltmng.GrpcClientManagerOptions{
+
+	grpcClientOptions := client.GrpcClientOptions{
 		CertPath:   certPath,
 		KeyPath:    keyPath,
 		CaCertPath: caCertPath,
 
-		NetworkType:     networkType,
-		ServerAddresses: serverAddresses,
-		ResolverScheme:  resolverScheme,
+		NetworkType:   networkType,
+		ServerAddress: serverAddress,
+		ServiceName:   serviceName,
+		ServerName:    serverName,
 
-		ServiceName: serviceName,
+		ResolverScheme: resolverScheme,
+
+		LoadBalancingPolicy: loadBalancingPolicy,
 
 		Ctx: ctx,
 
@@ -42,9 +49,8 @@ func startGrpcClient(
 		Logger: logger,
 	}
 
-	grpcClientManager := cltmng.NewGrpcClientManager(clientManagerOpts)
-	grpcClient, err := grpcClientManager.GetClient()
-	if err != nil {
+	grpcClient := client.NewGrpcClient(grpcClientOptions)
+	if err := grpcClient.Start(); err != nil {
 		return err
 	}
 

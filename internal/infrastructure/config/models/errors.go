@@ -4,17 +4,18 @@ import "errors"
 
 // Ошибки валидации конфигурации сервера
 var (
-	ErrServerIpIsEmpty          = errors.New("IP сервера не может быть пустым")
 	ErrServerPortIsInvalid      = errors.New("Порт сервера должен быть целым числом в диапозоне от 0 до 65535")
 	ErrServerNetworkTypeIsEmpty = errors.New("Тип сети сервера не может быть пустым")
 )
 
 // Ошибки валидации конфигурации клиента
 var (
-	ErrClientPortIsInvalid         = errors.New("Порт клиента должен быть целым числом в диапозоне от 0 до 65535")
-	ErrClientNetworkTypeIsEmpty    = errors.New("Тип сети клиента не может быть пустым")
+	ErrAddressToConnectIsEmpty     = errors.New("Адрес сервера, к которому нужно подключиться, не может быть пустым")
+	ErrPortToConnectIsInvalid      = errors.New("Порт сервера, к которому нужно подключиться, должен быть целым числом в диапозоне от 0 до 65535")
+	ErrNetworkToConnectTypeIsEmpty = errors.New("Тип сети сервера, к которому нужно подключиться, не может быть пустым")
 	ErrClientResolverSchemeIsEmpty = errors.New("Схема резолвера не может быть пустой")
 	ErrChunkSizeIsInvalid          = errors.New("Размер чанка должен быть положительным целым числом")
+	ErrMdnsServiceNameIsEmpty      = errors.New("Название сервиса mDNS не может быть пустым при использовании схемы mdns")
 )
 
 // Ошибки валидации конфигурации базы данных
@@ -58,12 +59,11 @@ var (
 
 // Ошибки валидации конфигурации mDNS
 var (
-	ErrMdnsSelfInstanceNameIsEmpty   = errors.New("Самоназвание экземпляра mDNS не может быть пустым")
-	ErrMdnsInstanceNameToSyncIsEmpty = errors.New("Имя экземпляра mDNS к которому производится подключение для синхронизации не может быть пустым")
-	ErrMdnsServiceTypeIsEmpty        = errors.New("Тип сервиса mDNS не может быть пустым")
-	ErrMdnsDomainIsEmpty             = errors.New("Домен mDNS не может быть пустым")
-	ErrMdnsPortIsInvalid             = errors.New("Порт mDNS должен быть целым числом в диапозоне от 0 до 65535")
-	ErrMdnsInterfacesIsEmpty         = errors.New("Список интерфейсов mDNS не может быть пустым")
+	ErrMdnsInstanceNameIsEmpty = errors.New("Название экземпляра сервера mDNS не может быть пустым")
+	ErrMdnsServiceTypeIsEmpty  = errors.New("Тип сервиса mDNS не может быть пустым")
+	ErrMdnsDomainIsEmpty       = errors.New("Домен mDNS не может быть пустым")
+	ErrMdnsPortIsInvalid       = errors.New("Порт mDNS должен быть целым числом в диапозоне от 0 до 65535")
+	ErrMdnsInterfacesIsEmpty   = errors.New("Список интерфейсов mDNS не может быть пустым")
 )
 
 type ServerCertFileDoesNotExistError struct {
