@@ -2,21 +2,19 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
 	"insync/internal/domain"
 	"insync/internal/transport/grpc/insyncpb"
 	"io"
 	"net"
+	"os"
 	"runtime/debug"
 	"strings"
 	"sync/atomic"
-
-	"github.com/adityak368/mdnsresolver"
-
-	"crypto/tls"
-	"crypto/x509"
-	"errors"
-	"os"
+	"time"
 
 	"log/slog"
 
@@ -24,10 +22,11 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	ifaces "insync/internal/interfaces"
+	reslvr "insync/internal/transport/grpc/client/resolver"
 )
 
 const (
-	resolverSchemeSeparator = ":///"
+	resolverSchemeSeparator = "://"
 )
 
 type GrpcClient struct {
@@ -42,6 +41,9 @@ type GrpcClient struct {
 	serverName        string
 
 	resolverScheme string
+
+	// опциональный список интерфейсов, которые будут использоваться для работы mdns клиента
+	mdnsResolverIfaces []string
 
 	loadBalancingPolicy string
 
@@ -72,6 +74,8 @@ type GrpcClientOptions struct {
 
 	ResolverScheme string
 
+	MdnsResolverIfaces []string
+
 	LoadBalancingPolicy string
 
 	ShouldUseHealthCheck bool
@@ -90,9 +94,10 @@ func NewGrpcClient(opts GrpcClientOptions) ifaces.IClient {
 
 		opts.NetworkType == "" ||
 		opts.ServerAddress == "" ||
-		opts.ResolverScheme == "" ||
-
 		opts.ServiceName == "" ||
+		opts.ServerName == "" ||
+
+		opts.ResolverScheme == "" ||
 
 		opts.LoadBalancingPolicy == "" ||
 
@@ -110,9 +115,12 @@ func NewGrpcClient(opts GrpcClientOptions) ifaces.IClient {
 
 		serverNetworkType: opts.NetworkType,
 		serverAddress:     opts.ServerAddress,
-		resolverScheme:    opts.ResolverScheme,
-
 		serverServiceName: opts.ServiceName,
+		serverName:        opts.ServerName,
+
+		resolverScheme: opts.ResolverScheme,
+
+		mdnsResolverIfaces: opts.MdnsResolverIfaces,
 
 		loadBalancingPolicy: opts.LoadBalancingPolicy,
 
@@ -171,14 +179,26 @@ func (gc *GrpcClient) Start() error {
 		serviceConfig,
 	)
 
-	withResolvers := grpc.WithResolvers(mdnsresolver.NewBuilder())
-
 	address := fmt.Sprintf("%s%s%s", gc.resolverScheme, resolverSchemeSeparator, gc.serverAddress)
 
 	if ctx.Err() != nil {
 		gc.isStarted.Store(false)
 		return ctx.Err()
 	}
+
+	builderOptions := reslvr.BuilderOptions{
+		ResolverIfaces:              gc.mdnsResolverIfaces,
+		BackgroundListenTimeout:     time.Second * 30,
+		ShouldResolveIpv6:           true,
+		ShouldDisableResolverOnIdle: true,
+		ShouldReportError:           true,
+	}
+
+	resolver := reslvr.NewBuilder(
+		builderOptions,
+	)
+
+	withResolvers := grpc.WithResolvers(resolver)
 
 	conn, err := grpc.NewClient(
 		address,

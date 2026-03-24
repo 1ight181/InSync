@@ -6,6 +6,7 @@ import (
 
 	"insync/internal/domain"
 	ifaces "insync/internal/interfaces"
+	shared "insync/internal/shared"
 
 	"github.com/grandcat/zeroconf"
 )
@@ -50,7 +51,7 @@ func NewMDnsBrowser(opts MDnsBrowserOptions) ifaces.IMdnsBrowser {
 func (b *MDnsBrowser) Browse() (chan domain.Node, error) {
 	b.logger.Info("запуск MDnsResolver...")
 
-	ifaces, err := getNetworkInterfacesByName(b.interfaces)
+	ifaces, err := shared.GetNetworkInterfacesByName(b.interfaces)
 	if err != nil {
 		return nil, err
 	}

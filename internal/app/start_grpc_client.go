@@ -18,6 +18,8 @@ func startGrpcClient(
 
 	resolverScheme string,
 
+	mdnsResolverIfaces []string,
+
 	loadBalancingPolicy string,
 
 	ctx context.Context,
@@ -39,6 +41,8 @@ func startGrpcClient(
 		ServerName:    serverName,
 
 		ResolverScheme: resolverScheme,
+
+		MdnsResolverIfaces: mdnsResolverIfaces,
 
 		LoadBalancingPolicy: loadBalancingPolicy,
 

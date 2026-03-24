@@ -7,6 +7,8 @@ import (
 
 	ifaces "insync/internal/interfaces"
 
+	shared "insync/internal/shared"
+
 	"github.com/grandcat/zeroconf"
 )
 
@@ -62,7 +64,7 @@ func (ms *MDnsServer) Start() error {
 	}
 
 	ms.logger.Info("Запуск mDNS сервера...")
-	interfaces, err := getNetworkInterfacesByName(ms.interfaces)
+	interfaces, err := shared.GetNetworkInterfacesByName(ms.interfaces)
 	if err != nil {
 		ms.isStarted.Store(false)
 		return err

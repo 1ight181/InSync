@@ -10,12 +10,11 @@ import (
 )
 
 const (
-	exitTimeoutSeconds     = 5
-	moduleAtrributeName    = "module"
-	mDnsModuleName         = "mdns"
-	mDnsResolverModuleName = "mdns_resolver"
-	grpcServerModuleName   = "grpc_server"
-	grpcClientModuleName   = "grpc_client"
+	exitTimeoutSeconds   = 5
+	moduleAtrributeName  = "module"
+	mDnsModuleName       = "mdns"
+	grpcServerModuleName = "grpc_server"
+	grpcClientModuleName = "grpc_client"
 )
 
 func RunApp() {
@@ -83,6 +82,8 @@ func RunApp() {
 		clientConfig.ServerServiceName,
 		mDnsConfig.InstanceName,
 		clientConfig.ResolverScheme,
+
+		mDnsConfig.GetInterfaces(),
 
 		clientConfig.LoadBalancingPolicy,
 

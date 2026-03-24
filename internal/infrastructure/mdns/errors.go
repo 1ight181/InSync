@@ -20,19 +20,6 @@ func (e FailedToGetAddressesError) Unwrap() error {
 	return e.Err
 }
 
-type FailedToGetNetworkInterfaceByNameError struct {
-	Err       error
-	Interface string
-}
-
-func (e FailedToGetNetworkInterfaceByNameError) Error() string {
-	return fmt.Sprintf("Не удалось получить интерфейс по имени %s: %v", e.Interface, e.Err)
-}
-
-func (e FailedToGetNetworkInterfaceByNameError) Unwrap() error {
-	return e.Err
-}
-
 type FailedToStartMDnsServerError struct {
 	Err error
 }
