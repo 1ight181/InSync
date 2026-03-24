@@ -11,12 +11,12 @@ server:
 
 client:
     resolver_scheme: "mdns"
-    server_address: ""
-    server_service_name: "insincpb.FileSyncService"
+    server_address: "_grpc._tcp/server.local"
+    server_service_name: "insync.server.local"
     server_interfaces: ""
     server_port: 50051
     server_network_type: "tcp"
-    load_balancing_policy: "round_robin"
+    load_balancing_policy: "pick_first"
     should_use_health_check: true
     chunk_size_in_bytes: 1024
     rpc_retry_policy:
