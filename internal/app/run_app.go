@@ -81,13 +81,15 @@ func RunApp() {
 		clientConfig.ServerNetworkType,
 		clientConfig.ServerAddress,
 		clientConfig.ServerServiceName,
-		mDnsConfig.InstanceName,
+		mDnsConfig.GetFullServerName(),
 		clientConfig.ResolverScheme,
 
 		mDnsConfig.GetInterfaces(),
 
 		clientConfig.LoadBalancingPolicy,
 		clientConfig.ShouldUseHealthCheck,
+
+		clientConfig.RpcTimeout,
 
 		clientConfig.RpcRetryPolicy.MaxAttempts,
 		clientConfig.RpcRetryPolicy.InitialBackoffSeconds,

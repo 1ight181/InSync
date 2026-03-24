@@ -33,11 +33,13 @@ func createLogger(
 	logHandlers = append(logHandlers, terminalOutputHandler)
 
 	if shouldLogToFile {
-		logFile, err := os.Create(logFilePath)
+		logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			return nil, err
 		}
-		fileOutputHandler := slog.NewJSONHandler(logFile, nil)
+		fileOutputHandler := slog.NewJSONHandler(logFile, &slog.HandlerOptions{
+			Level: slogLogLevel,
+		})
 
 		logHandlers = append(logHandlers, fileOutputHandler)
 	}

@@ -2,17 +2,16 @@ package resolver
 
 import (
 	"context"
+	"log/slog"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/grandcat/zeroconf"
-	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/resolver"
 
 	shared "insync/internal/shared"
 )
-
-var logger = grpclog.Component("mdns")
 
 const (
 	scheme                         = "mdns"
@@ -29,6 +28,8 @@ type mdnsBuilder struct {
 	shouldResolveIpv6           bool
 	shouldDisableResolverOnIdle bool
 	shouldReportError           bool
+	logger                      *slog.Logger
+	loggerCtx                   context.Context
 }
 
 type BuilderOptions struct {
@@ -37,18 +38,22 @@ type BuilderOptions struct {
 	ShouldResolveIpv6           bool
 	ShouldDisableResolverOnIdle bool
 	ShouldReportError           bool
+	Logger                      *slog.Logger
 }
 
 func NewBuilder(opts BuilderOptions) resolver.Builder {
 	if opts.BackgroundListenTimeout == 0 {
 		opts.BackgroundListenTimeout = defaultBackgroundListenTimeout
 	}
+	loggerCtx := context.Background()
 	return &mdnsBuilder{
 		resolverIfaces:              opts.ResolverIfaces,
 		backgroundListenTimeout:     opts.BackgroundListenTimeout,
 		shouldResolveIpv6:           opts.ShouldResolveIpv6,
 		shouldDisableResolverOnIdle: opts.ShouldDisableResolverOnIdle,
 		shouldReportError:           opts.ShouldReportError,
+		logger:                      opts.Logger,
+		loggerCtx:                   loggerCtx,
 	}
 }
 
@@ -69,11 +74,29 @@ func (b *mdnsBuilder) Build(target resolver.Target, clientConn resolver.ClientCo
 	} else {
 		ifaces, err = shared.GetNetworkInterfacesByName(resolverIfaces)
 		if err != nil && len(ifaces) == 0 {
-			logger.Warningf("Some or all of the interfaces were not successfully parsed, falling back to all interfaces: %v", err)
+			b.logger.LogAttrs(
+				b.loggerCtx,
+				slog.LevelWarn,
+				"Ни один интерфейс не был успешно загружен, фоллбэк на все интерфейсы",
+				slog.String("error", err.Error()),
+			)
 			ifaces, err = net.Interfaces()
 			if err != nil {
 				return nil, err
 			}
+		} else if err != nil && len(ifaces) > 0 {
+			successfullyLoadedIfaces := make([]string, 0, len(ifaces))
+			for _, iface := range ifaces {
+				successfullyLoadedIfaces = append(successfullyLoadedIfaces, iface.Name)
+			}
+			b.logger.LogAttrs(
+				b.loggerCtx,
+				slog.LevelWarn,
+				"Не все интерфейсы были успешно загружены",
+				slog.String("error", err.Error()),
+				slog.String("all_ifaces", strings.Join(resolverIfaces, ",")),
+				slog.String("successfully_loaded_ifaces", strings.Join(successfullyLoadedIfaces, ",")),
+			)
 		}
 	}
 
@@ -93,6 +116,7 @@ func (b *mdnsBuilder) Build(target resolver.Target, clientConn resolver.ClientCo
 		ShouldResolveIpv6:           b.shouldResolveIpv6,
 		ShouldDisableResolverOnIdle: b.shouldDisableResolverOnIdle,
 		ShouldReportError:           b.shouldReportError,
+		Logger:                      b.logger,
 	}
 
 	mdnsResolver := newMdnsResolver(mdnsResolverOptions)

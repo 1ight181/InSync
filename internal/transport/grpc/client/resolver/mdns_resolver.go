@@ -2,8 +2,10 @@ package resolver
 
 import (
 	"context"
+	"log/slog"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,6 +26,9 @@ type mdnsResolver struct {
 	backgroundListenTimeout     time.Duration
 	shouldReportError           bool
 
+	logger    *slog.Logger
+	loggerCtx context.Context
+
 	resolveNowChan chan struct{}
 	entries        chan *zeroconf.ServiceEntry
 	wg             sync.WaitGroup
@@ -41,11 +46,14 @@ type mdnsResolverOptions struct {
 	ShouldDisableResolverOnIdle bool
 	BackgroundListenTimeout     time.Duration
 	ShouldReportError           bool
+
+	Logger *slog.Logger
 }
 
 func newMdnsResolver(opts mdnsResolverOptions) *mdnsResolver {
 	resolveNowChan := make(chan struct{}, 1)
 	entries := make(chan *zeroconf.ServiceEntry)
+	loggerCtx := context.Background()
 	return &mdnsResolver{
 		targetInfo: opts.TargetInfo,
 		clientConn: opts.ClientConn,
@@ -58,6 +66,9 @@ func newMdnsResolver(opts mdnsResolverOptions) *mdnsResolver {
 		shouldResolveIpv6:           opts.ShouldResolveIpv6,
 		shouldDisableResolverOnIdle: opts.ShouldDisableResolverOnIdle,
 		shouldReportError:           opts.ShouldReportError,
+
+		logger:    opts.Logger,
+		loggerCtx: loggerCtx,
 
 		resolveNowChan: resolveNowChan,
 		entries:        entries,
@@ -72,6 +83,7 @@ func (r *mdnsResolver) Close() {
 }
 
 func (r *mdnsResolver) ResolveNow(options resolver.ResolveNowOptions) {
+	r.logger.LogAttrs(r.loggerCtx, slog.LevelDebug, "получен запрос на ResolveNow")
 	select {
 	case r.resolveNowChan <- struct{}{}:
 	default:
@@ -116,6 +128,7 @@ func (r *mdnsResolver) lookup() {
 				return
 
 			case <-lookupCtx.Done():
+				r.logger.LogAttrs(r.loggerCtx, slog.LevelDebug, "резолвер остановлен по простою")
 				if lookupCancel != nil {
 					lookupCancel()
 				}
@@ -150,8 +163,23 @@ func (r *mdnsResolver) watcher() {
 					for _, ip := range ipv6 {
 						addr := net.JoinHostPort(ip.String(), strconv.Itoa(entry.Port))
 						addrs = append(addrs, resolver.Address{Addr: addr})
+
 					}
 				}
+
+				logAddrs := make([]string, 0, len(addrs))
+				for _, addr := range addrs {
+					logAddrs = append(logAddrs, addr.Addr)
+				}
+				r.logger.LogAttrs(
+					r.loggerCtx,
+					slog.LevelDebug,
+					"Найдены адреса",
+					slog.String("addrs", strings.Join(logAddrs, ", ")),
+					slog.String("mdns_domain", r.targetInfo.domain),
+					slog.String("mdns_service_name", r.targetInfo.serviceName),
+					slog.String("mdns_instance_name", r.targetInfo.instanceName),
+				)
 
 				state := resolver.State{Addresses: addrs}
 				err := r.clientConn.UpdateState(state)

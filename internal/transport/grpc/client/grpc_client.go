@@ -67,6 +67,7 @@ type GrpcClient struct {
 	loadBalancingPolicy  string
 	shouldUseHealthCheck bool
 
+	rpcTimeout       time.Duration
 	retryPolicy      *RpcRetryPolicy
 	connectionConfig *ConnectionConfig
 
@@ -101,6 +102,7 @@ type GrpcClientOptions struct {
 	LoadBalancingPolicy  string
 	ShouldUseHealthCheck bool
 
+	RpcTimeout       time.Duration
 	RpcRetryPolicy   *RpcRetryPolicy
 	ConnectionConfig *ConnectionConfig
 
@@ -153,6 +155,7 @@ func NewGrpcClient(opts GrpcClientOptions) ifaces.IClient {
 		loadBalancingPolicy:  opts.LoadBalancingPolicy,
 		shouldUseHealthCheck: opts.ShouldUseHealthCheck,
 
+		rpcTimeout:       opts.RpcTimeout,
 		retryPolicy:      opts.RpcRetryPolicy,
 		connectionConfig: opts.ConnectionConfig,
 
@@ -183,11 +186,13 @@ func (gc *GrpcClient) Start() (err error) {
 
 	address := gc.createAddress()
 
+	gc.logger.LogAttrs(gc.loggerCtx, slog.LevelDebug, "Клиент подключается по адресу:", slog.String("address", address))
+
 	transportCreds, err := gc.createTransportCreds()
 	if err != nil {
 		return err
 	}
-	withCreds := grpc.WithTransportCredentials(transportCreds)
+	withTransportCreds := grpc.WithTransportCredentials(transportCreds)
 
 	networkAwareDialer := gc.createNetworkAwareDialer()
 	withContextDialer := grpc.WithContextDialer(networkAwareDialer)
@@ -196,6 +201,8 @@ func (gc *GrpcClient) Start() (err error) {
 	withDefaultServiceConf := grpc.WithDefaultServiceConfig(
 		serviceConfig,
 	)
+
+	gc.logger.LogAttrs(gc.loggerCtx, slog.LevelDebug, "Клиент будет запущен с следующим serviceConfig:", slog.String("serviceConfig", serviceConfig))
 
 	mdnsResolver := gc.createMdnsResolver()
 	withResolvers := grpc.WithResolvers(mdnsResolver)
@@ -217,7 +224,7 @@ func (gc *GrpcClient) Start() (err error) {
 
 	conn, err := grpc.NewClient(
 		address,
-		withCreds,
+		withTransportCreds,
 		withContextDialer,
 		withDefaultServiceConf,
 		withResolvers,
@@ -532,6 +539,7 @@ func (gc *GrpcClient) createServiceConfig() string {
         "loadBalancingPolicy": "%s"%s,
         "methodConfig": [{
             "name": [{"service": "%s"}],
+			"timeout": "%s",
             "retryPolicy": {
                 "MaxAttempts": %d,
                 "InitialBackoff": "%s",
@@ -539,11 +547,13 @@ func (gc *GrpcClient) createServiceConfig() string {
                 "BackoffMultiplier": %f,
                 "RetryableStatusCodes": %s
             }
+
         }]
     }`,
 		gc.loadBalancingPolicy,
 		healthCheckPart,
 		gc.serverServiceName,
+		gc.rpcTimeout,
 		gc.retryPolicy.MaxAttempts,
 		gc.retryPolicy.InitialBackoff,
 		gc.retryPolicy.MaxBackoff,
@@ -571,6 +581,7 @@ func (gc *GrpcClient) createMdnsResolver() resolver.Builder {
 		ShouldResolveIpv6:           true,
 		ShouldDisableResolverOnIdle: true,
 		ShouldReportError:           true,
+		Logger:                      gc.logger,
 	}
 
 	return mdnsresolver.NewBuilder(

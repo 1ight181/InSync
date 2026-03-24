@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"insync/internal/transport/grpc/client"
 	"log/slog"
@@ -23,6 +24,8 @@ func startGrpcClient(
 
 	loadBalancingPolicy string,
 	shouldUseHealthCheck bool,
+
+	rpcTimeout int,
 
 	// gRPC options
 	maxAttempts int,
@@ -78,8 +81,8 @@ func startGrpcClient(
 		LoadBalancingPolicy:  loadBalancingPolicy,
 		ShouldUseHealthCheck: shouldUseHealthCheck,
 
-		RpcRetryPolicy: &rpcRetryPolicy,
-
+		RpcTimeout:       time.Duration(rpcTimeout) * time.Second,
+		RpcRetryPolicy:   &rpcRetryPolicy,
 		ConnectionConfig: &connectionConfig,
 
 		Ctx: ctx,
@@ -101,6 +104,11 @@ func startGrpcClient(
 			panic("Не удалось остановить grpcClient")
 		}
 	}()
+
+	reader := bytes.NewReader([]byte("test"))
+	if err := grpcClient.PutFile(ctx, reader, "test", "test"); err != nil {
+		return err
+	}
 
 	return nil
 }

@@ -23,6 +23,8 @@ type ClientConfig struct {
 	LoadBalancingPolicy  string `mapstructure:"load_balancing_policy"`
 	ShouldUseHealthCheck bool   `mapstructure:"should_use_health_check"`
 
+	RpcTimeout int `mapstructure:"rpc_timeout"`
+
 	RpcRetryPolicy   RpcRetryPolicy   `mapstructure:"rpc_retry_policy"`
 	ConnectionConfig ConnectionConfig `mapstructure:"connection_config"`
 
@@ -47,6 +49,10 @@ func (cc *ClientConfig) Validate() error {
 	}
 	if cc.LoadBalancingPolicy == "" {
 		return ErrLoadBalancingPolicyIsEmpty
+	}
+
+	if cc.RpcTimeout <= 0 {
+		return ErrRpcTimeoutIsInvalid
 	}
 
 	if err := cc.RpcRetryPolicy.Validate(); err != nil {

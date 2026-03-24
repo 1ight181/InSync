@@ -11,14 +11,15 @@ server:
 
 client:
     resolver_scheme: "mdns"
-    server_address: "_grpc._tcp/server.local"
-    server_service_name: "insync.server.local"
+    server_address: "_grpc._tcp/server1.server.local"
+    server_service_name: "insincpb.FileSyncService"
     server_interfaces: ""
     server_port: 50051
     server_network_type: "tcp"
     load_balancing_policy: "pick_first"
     should_use_health_check: true
     chunk_size_in_bytes: 1024
+    rpc_timeout: 5
     rpc_retry_policy:
       max_attempts: 3
       initial_backoff_seconds: 1
@@ -66,10 +67,10 @@ logger:
   log_file_directory: "../logs"
   log_file_name: "logs"
   log_file_extension: "txt"
-  log_level: "info"
+  log_level: "debug"
 
 mdns_server:
-  instance_name: "server"
+  instance_name: "server1.server"
   service_type: "_grpc._tcp"
   domain: "local"
   port: 50051

@@ -4,6 +4,11 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
+)
+
+var (
+	AllowedLogLevels = map[string]struct{}{"DEBUG": {}, "INFO": {}, "WARN": {}, "ERROR": {}}
 )
 
 type LoggerConfig struct {
@@ -14,7 +19,7 @@ type LoggerConfig struct {
 	LogLevel         string `mapstructure:"log_level"`
 }
 
-func (lc LoggerConfig) Validate() error {
+func (lc *LoggerConfig) Validate() error {
 	if lc.LogFileDirectory == "" {
 		return ErrLogFileDirectoryIsEmpty
 	}
@@ -30,14 +35,16 @@ func (lc LoggerConfig) Validate() error {
 		return &LogFileDoesNotExistError{Err: err}
 	}
 
-	if lc.LogLevel == "" {
-		return ErrLogLevelIsEmpty
+	lc.LogLevel = strings.ToUpper(lc.LogLevel)
+
+	if _, ok := AllowedLogLevels[lc.LogLevel]; !ok {
+		return ErrInvalidLogLevel
 	}
 
 	return nil
 }
 
-func (lc LoggerConfig) GetLogFilePath() string {
+func (lc *LoggerConfig) GetLogFilePath() string {
 	normalizedDir := filepath.FromSlash(lc.LogFileDirectory)
 	return filepath.Join(normalizedDir, lc.LogFileName+"."+lc.LogFileExtension)
 }

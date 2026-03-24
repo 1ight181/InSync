@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -31,4 +32,8 @@ func (mc *MdnsServerConfig) Validate() error {
 
 func (mc *MdnsServerConfig) GetInterfaces() []string {
 	return strings.Split(mc.Interfaces, ";")
+}
+
+func (mc *MdnsServerConfig) GetFullServerName() string {
+	return fmt.Sprintf("%s.%s", mc.InstanceName, mc.Domain)
 }

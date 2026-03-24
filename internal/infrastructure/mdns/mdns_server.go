@@ -19,8 +19,9 @@ type MDnsServer struct {
 	port         int
 	interfaces   []string
 
-	logger *slog.Logger
-	ctx    context.Context
+	logger    *slog.Logger
+	loggerCtx context.Context
+	ctx       context.Context
 
 	server    *zeroconf.Server
 	isStarted atomic.Bool
@@ -46,6 +47,7 @@ func NewMDnsServer(opts MDnsServerOptions) ifaces.IMDnsServer {
 		opts.Ctx == nil {
 		panic("Все поля MDnsServerOptions должны быть заполнены")
 	}
+	loggerCtx := context.Background()
 	return &MDnsServer{
 		instanceName: opts.InstanceName,
 		serviceType:  opts.ServiceType,
@@ -53,6 +55,7 @@ func NewMDnsServer(opts MDnsServerOptions) ifaces.IMDnsServer {
 		port:         opts.Port,
 		interfaces:   opts.Interfaces,
 		logger:       opts.Logger,
+		loggerCtx:    loggerCtx,
 		ctx:          opts.Ctx,
 	}
 }
@@ -71,7 +74,7 @@ func (ms *MDnsServer) Start() error {
 	}
 
 	ms.logger.LogAttrs(
-		ms.ctx,
+		ms.loggerCtx,
 		slog.LevelDebug,
 		"Загружены интерфейсы для MDnsServer",
 		slog.Any("interfaces", interfaces),

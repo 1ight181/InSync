@@ -17,6 +17,7 @@ var (
 	ErrChunkSizeIsInvalid          = errors.New("Размер чанка должен быть положительным целым числом")
 	ErrMdnsServiceNameIsEmpty      = errors.New("Название сервиса mDNS не может быть пустым при использовании схемы mdns")
 	ErrLoadBalancingPolicyIsEmpty  = errors.New("Политика балансировки не может быть пустой")
+	ErrRpcTimeoutIsInvalid         = errors.New("Таймаут RPC должен быть положительным целым числом")
 )
 
 // Ошибки валидации конфигурации RpcRetryPolicy
@@ -27,7 +28,7 @@ var (
 	ErrInvalidBackoffMultiplier     = errors.New("Множитель времени ожидания должен быть положительным целым числом")
 )
 
-//
+// Ошибки валидации конфигурации Backoff
 var (
 	ErrInvalidBaseDelaySeconds         = errors.New("Базовое время задержки должно быть положительным целым числом")
 	ErrInvalidMultiplier               = errors.New("Множитель задержки должен быть положительным целым числом")
@@ -49,7 +50,7 @@ var (
 	ErrLogFileDirectoryIsEmpty = errors.New("Директория для логов не может быть пустой")
 	ErrLogFileNameIsEmpty      = errors.New("Имя файла логов не может быть пустым")
 	ErrLogFileExtensionIsEmpty = errors.New("Расширение файла логов не может быть пустым")
-	ErrLogLevelIsEmpty         = errors.New("Уровень логирования не может быть пустым")
+	ErrInvalidLogLevel         = errors.New("Уровень логирования может быть только DEBUG, INFO, WARN, ERROR")
 )
 
 // Ошибки валидации конфигурации TLS

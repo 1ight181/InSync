@@ -25,16 +25,14 @@ func (multiHandler CombinedHandler) Enabled(ctx context.Context, level slog.Leve
 }
 
 func (multiHandler CombinedHandler) Handle(ctx context.Context, record slog.Record) error {
-	var err error
+	var resultErr error
 	for _, singleHandler := range multiHandler.handlerList {
-		err := singleHandler.Handle(ctx, record)
-		if err != nil {
-			return multierr.Append(nil, err)
+		if err := singleHandler.Handle(ctx, record); err != nil {
+			resultErr = multierr.Append(resultErr, err)
 		}
-
 	}
+	return resultErr
 
-	return err
 }
 
 func (multiHandler CombinedHandler) WithAttrs(attributes []slog.Attr) slog.Handler {
