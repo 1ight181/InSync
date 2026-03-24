@@ -78,7 +78,8 @@ func startGrpcClient(
 		LoadBalancingPolicy:  loadBalancingPolicy,
 		ShouldUseHealthCheck: shouldUseHealthCheck,
 
-		RpcRetryPolicy:   &rpcRetryPolicy,
+		RpcRetryPolicy: &rpcRetryPolicy,
+
 		ConnectionConfig: &connectionConfig,
 
 		Ctx: ctx,

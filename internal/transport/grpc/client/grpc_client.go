@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"runtime/debug"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -100,8 +101,7 @@ type GrpcClientOptions struct {
 	LoadBalancingPolicy  string
 	ShouldUseHealthCheck bool
 
-	RpcRetryPolicy *RpcRetryPolicy
-
+	RpcRetryPolicy   *RpcRetryPolicy
 	ConnectionConfig *ConnectionConfig
 
 	Ctx context.Context
@@ -519,8 +519,17 @@ func (gc *GrpcClient) createTransportCreds() (credentials.TransportCredentials, 
 }
 
 func (gc *GrpcClient) createServiceConfig() string {
+
+	retryableCodes := strings.Join(gc.retryPolicy.RetryableStatusCodes, `","`)
+	retryableCodes = fmt.Sprintf(`["%s"]`, retryableCodes)
+
+	healthCheckPart := ""
+	if gc.shouldUseHealthCheck {
+		healthCheckPart = fmt.Sprintf(`, "healthCheckConfig": { "serviceName": "%s" }`, gc.serverServiceName)
+	}
+
 	return fmt.Sprintf(`{
-        "loadBalancingPolicy": "%s",
+        "loadBalancingPolicy": "%s"%s,
         "methodConfig": [{
             "name": [{"service": "%s"}],
             "retryPolicy": {
@@ -533,12 +542,13 @@ func (gc *GrpcClient) createServiceConfig() string {
         }]
     }`,
 		gc.loadBalancingPolicy,
+		healthCheckPart,
 		gc.serverServiceName,
 		gc.retryPolicy.MaxAttempts,
 		gc.retryPolicy.InitialBackoff,
 		gc.retryPolicy.MaxBackoff,
 		gc.retryPolicy.BackoffMultiplier,
-		gc.retryPolicy.RetryableStatusCodes,
+		retryableCodes,
 	)
 }
 
