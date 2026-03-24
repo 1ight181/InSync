@@ -64,6 +64,7 @@ func RunApp() {
 
 		serverConfig.NetworkType,
 		serverConfig.GetAddress(),
+		serverConfig.ServiceName,
 
 		appCtx,
 		serverLogger,

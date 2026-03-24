@@ -73,7 +73,8 @@ type GrpcClient struct {
 
 	chunkSizeInBytes int
 
-	logger *slog.Logger
+	logger    *slog.Logger
+	loggerCtx context.Context
 
 	clientConn *grpc.ClientConn
 
@@ -134,6 +135,7 @@ func NewGrpcClient(opts GrpcClientOptions) ifaces.IClient {
 		opts.Logger == nil {
 		panic("Все поля GrpcClientOption должны быть заполнены")
 	}
+	loggerCtx := context.Background()
 	return &GrpcClient{
 		certPath:   opts.CertPath,
 		keyPath:    opts.KeyPath,
@@ -158,7 +160,8 @@ func NewGrpcClient(opts GrpcClientOptions) ifaces.IClient {
 
 		chunkSizeInBytes: opts.ChunkSizeInBytes,
 
-		logger: opts.Logger,
+		logger:    opts.Logger,
+		loggerCtx: loggerCtx,
 	}
 }
 
@@ -327,7 +330,7 @@ func (gc *GrpcClient) GetFile(ctx context.Context, rootName, relativePath string
 				pipeWriter.CloseWithError(ctx.Err())
 				if err := getFileResponseStream.CloseSend(); err != nil {
 					gc.logger.LogAttrs(
-						gc.ctx,
+						gc.loggerCtx,
 						slog.LevelWarn,
 						"Ошибка при закрытии стрима методом CloseSend при выполнении GetFile",
 						slog.String("error", err.Error()),
@@ -341,7 +344,7 @@ func (gc *GrpcClient) GetFile(ctx context.Context, rootName, relativePath string
 
 		if err := pipeWriter.Close(); err != nil {
 			gc.logger.LogAttrs(
-				gc.ctx,
+				gc.loggerCtx,
 				slog.LevelWarn,
 				"Ошибка при закрытии пайпа методом Close при выполнении GetFile",
 				slog.String("error", err.Error()),
@@ -388,7 +391,7 @@ func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName, rel
 		if err != nil {
 			if closeErr := putFileStream.CloseSend(); closeErr != nil {
 				gc.logger.LogAttrs(
-					gc.ctx,
+					gc.loggerCtx,
 					slog.LevelError,
 					"Ошибка при закрытии потока PutFile после получения ошибки от чтения файла",
 					slog.String("readError", err.Error()),
@@ -483,7 +486,7 @@ func (gc *GrpcClient) createTransportCreds() (credentials.TransportCredentials, 
 	}
 
 	gc.logger.LogAttrs(
-		gc.ctx,
+		gc.loggerCtx,
 		slog.LevelDebug,
 		"Сертификат клиента успешно загружен",
 		slog.String("certPath", gc.certPath),
@@ -501,7 +504,7 @@ func (gc *GrpcClient) createTransportCreds() (credentials.TransportCredentials, 
 	}
 
 	gc.logger.LogAttrs(
-		gc.ctx,
+		gc.loggerCtx,
 		slog.LevelDebug,
 		"CA сертификат успешно загружен для клиента",
 		slog.String("caCertPath", gc.caCertPath),

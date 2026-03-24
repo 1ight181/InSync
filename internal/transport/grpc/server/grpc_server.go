@@ -25,12 +25,12 @@ type GrpcServer struct {
 
 	networkType string
 	address     string
-
 	serviceName string
 
 	ctx context.Context
 
-	logger *slog.Logger
+	logger    *slog.Logger
+	loggerCtx context.Context
 
 	server *grpc.Server
 
@@ -46,6 +46,7 @@ type GrpcServerOptions struct {
 
 	NetworkType string
 	Address     string
+	ServiceName string
 
 	Ctx context.Context
 
@@ -59,12 +60,14 @@ func NewGrpcServer(opts GrpcServerOptions) ifaces.IServer {
 
 		opts.NetworkType == "" ||
 		opts.Address == "" ||
+		opts.ServiceName == "" ||
 
 		opts.Ctx == nil ||
 
 		opts.Logger == nil {
 		panic("Все поля GrpcServerOption должны быть заполнены")
 	}
+	loggerCtx := context.Background()
 	return &GrpcServer{
 		certPath:   opts.CertPath,
 		keyPath:    opts.KeyPath,
@@ -72,21 +75,23 @@ func NewGrpcServer(opts GrpcServerOptions) ifaces.IServer {
 
 		networkType: opts.NetworkType,
 		address:     opts.Address,
+		serviceName: opts.ServiceName,
 
 		ctx: opts.Ctx,
 
-		logger: opts.Logger,
+		logger:    opts.Logger,
+		loggerCtx: loggerCtx,
 	}
 }
 
-func (gs *GrpcServer) createServerTlsConfig() (*tls.Config, error) {
+func (gs *GrpcServer) createTransportCreds() (credentials.TransportCredentials, error) {
 	cert, err := tls.LoadX509KeyPair(gs.certPath, gs.keyPath)
 	if err != nil {
 		return nil, err
 	}
 
 	gs.logger.LogAttrs(
-		gs.ctx,
+		gs.loggerCtx,
 		slog.LevelDebug,
 		"Сертификат сервера успешно загружен",
 		slog.String("certPath", gs.certPath),
@@ -105,62 +110,68 @@ func (gs *GrpcServer) createServerTlsConfig() (*tls.Config, error) {
 	}
 
 	gs.logger.LogAttrs(
-		gs.ctx,
+		gs.loggerCtx,
 		slog.LevelDebug,
 		"CA сертификат успешно загружен для сервера",
 		slog.String("caCertPath", gs.caCertPath),
 	)
 
-	return &tls.Config{
+	return credentials.NewTLS(&tls.Config{
 		Certificates: []tls.Certificate{cert},
 		ClientCAs:    caCertPool,
 		ClientAuth:   tls.RequireAndVerifyClientCert,
-	}, nil
+	}), nil
 }
 
 // Start блокирует выполнение, поэтому его нужно запускать в отдельной горутине. Он будет работать до тех пор, пока сервер не будет остановлен через метод Stop.
-func (gs *GrpcServer) Start() error {
-	if gs.isStarted.Swap(true) {
+func (gs *GrpcServer) Start() (err error) {
+	if !gs.isStarted.CompareAndSwap(false, true) {
 		gs.logger.Warn("Попытка запустить сервер, который уже запущен")
 		return ErrServerAlreadyStarted
 	}
-	defer gs.isStarted.Store(false)
-
-	ctx := gs.ctx
-	if ctx.Err() != nil {
-		return ServerStartError{Err: ctx.Err()}
-	}
+	defer func() {
+		if err != nil {
+			gs.isStarted.Store(false)
+		}
+	}()
 
 	gs.logger.Info("Запуск gRPC сервера...")
-	tlsConfig, err := gs.createServerTlsConfig()
+
+	transportCreds, err := gs.createTransportCreds()
 	if err != nil {
-		return ServerStartError{Err: err}
+		return err
 	}
+	withTransportCreds := grpc.Creds(transportCreds)
 
-	listener, err := net.Listen(gs.networkType, gs.address)
-	if err != nil {
-		return ServerStartError{Err: err}
-	}
-
-	transportCreds := credentials.NewTLS(tlsConfig)
-	serverOptsWithCreds := grpc.Creds(transportCreds)
-
-	server := grpc.NewServer(serverOptsWithCreds)
+	server := grpc.NewServer(withTransportCreds)
 	gs.server = server
+	insyncpb.RegisterFileSyncServiceServer(server, gs)
 
 	healthServer := health.NewServer()
 	gs.healthServer = healthServer
-
 	grpc_health_v1.RegisterHealthServer(server, healthServer)
 
-	insyncpb.RegisterFileSyncServiceServer(server, gs)
+	listener, err := net.Listen(gs.networkType, gs.address)
+	if err != nil {
+		return err
+	}
 
-	if ctx.Err() != nil {
-		return ServerStartError{Err: ctx.Err()}
+	ctx := gs.ctx
+	if err := ctx.Err(); err != nil {
+		return err
 	}
-	if err := server.Serve(listener); err != nil && err != grpc.ErrServerStopped {
-		return ServerStartError{Err: err}
-	}
+
+	go func() {
+		defer gs.isStarted.Store(false)
+		if err := server.Serve(listener); err != nil && err != grpc.ErrServerStopped {
+			gs.logger.LogAttrs(
+				gs.loggerCtx,
+				slog.LevelError,
+				"Произошла ошибка при запуске gRPC сервера",
+				slog.String("err", err.Error()),
+			)
+		}
+	}()
 
 	healthServer.SetServingStatus(gs.serviceName, grpc_health_v1.HealthCheckResponse_SERVING)
 

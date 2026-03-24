@@ -18,10 +18,11 @@ func startGrpcServer(
 
 	networkType string,
 	address string,
+	serviceName string,
 
 	ctx context.Context,
 	logger *slog.Logger,
-) {
+) error {
 	grpcServerOpts := serv.GrpcServerOptions{
 		CertPath:   certPath,
 		KeyPath:    keyPath,
@@ -29,6 +30,7 @@ func startGrpcServer(
 
 		NetworkType: networkType,
 		Address:     address,
+		ServiceName: serviceName,
 
 		Ctx: ctx,
 
@@ -36,12 +38,10 @@ func startGrpcServer(
 	}
 
 	grpcServer := serv.NewGrpcServer(grpcServerOpts)
-	go func() {
-		err := grpcServer.Start()
-		if err != nil {
-			panic("Не удалось запустить grpcServer")
-		}
-	}()
+	err := grpcServer.Start()
+	if err != nil {
+		return err
+	}
 
 	go func() {
 		<-ctx.Done()
@@ -53,4 +53,6 @@ func startGrpcServer(
 			logger.Warn("Не удалось коректно остановить grpcServer")
 		}
 	}()
+
+	return nil
 }
