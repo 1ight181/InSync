@@ -23,6 +23,9 @@ type ClientConfig struct {
 	LoadBalancingPolicy  string `mapstructure:"load_balancing_policy"`
 	ShouldUseHealthCheck bool   `mapstructure:"should_use_health_check"`
 
+	RpcRetryPolicy   RpcRetryPolicy   `mapstructure:"rpc_retry_policy"`
+	ConnectionConfig ConnectionConfig `mapstructure:"connection_config"`
+
 	ChunkSizeInBytes int `mapstructure:"chunk_size_in_bytes"`
 }
 
@@ -41,6 +44,17 @@ func (cc *ClientConfig) Validate() error {
 	}
 	if cc.ChunkSizeInBytes <= 0 {
 		return ErrChunkSizeIsInvalid
+	}
+	if cc.LoadBalancingPolicy == "" {
+		return ErrLoadBalancingPolicyIsEmpty
+	}
+
+	if err := cc.RpcRetryPolicy.Validate(); err != nil {
+		return err
+	}
+
+	if err := cc.ConnectionConfig.Validate(); err != nil {
+		return err
 	}
 
 	if cc.ResolverScheme == "mdns" && cc.ServerServiceName == "" {

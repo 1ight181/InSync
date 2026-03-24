@@ -12,22 +12,40 @@ import (
 	"net"
 	"os"
 	"runtime/debug"
-	"strings"
 	"sync/atomic"
 	"time"
 
 	"log/slog"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/credentials"
 
 	ifaces "insync/internal/interfaces"
-	reslvr "insync/internal/transport/grpc/client/resolver"
+	mdnsresolver "insync/internal/transport/grpc/client/resolver"
+
+	resolver "google.golang.org/grpc/resolver"
 )
 
 const (
 	resolverSchemeSeparator = "://"
 )
+
+type RpcRetryPolicy struct {
+	MaxAttempts          int
+	InitialBackoff       time.Duration
+	MaxBackoff           time.Duration
+	BackoffMultiplier    float64
+	RetryableStatusCodes []string
+}
+
+type ConnectionConfig struct {
+	BaseDelay         time.Duration
+	Multiplier        float64
+	MaxDelay          time.Duration
+	Jitter            float64
+	MinConnectTimeout time.Duration
+}
 
 type GrpcClient struct {
 	certPath string
@@ -45,9 +63,11 @@ type GrpcClient struct {
 	// опциональный список интерфейсов, которые будут использоваться для работы mdns клиента
 	mdnsResolverIfaces []string
 
-	loadBalancingPolicy string
+	loadBalancingPolicy  string
+	shouldUseHealthCheck bool
 
-	ShouldUseHealthCheck bool
+	retryPolicy      *RpcRetryPolicy
+	connectionConfig *ConnectionConfig
 
 	ctx context.Context
 
@@ -76,9 +96,12 @@ type GrpcClientOptions struct {
 
 	MdnsResolverIfaces []string
 
-	LoadBalancingPolicy string
-
+	LoadBalancingPolicy  string
 	ShouldUseHealthCheck bool
+
+	RpcRetryPolicy *RpcRetryPolicy
+
+	ConnectionConfig *ConnectionConfig
 
 	Ctx context.Context
 
@@ -101,6 +124,9 @@ func NewGrpcClient(opts GrpcClientOptions) ifaces.IClient {
 
 		opts.LoadBalancingPolicy == "" ||
 
+		opts.RpcRetryPolicy == nil ||
+		opts.ConnectionConfig == nil ||
+
 		opts.Ctx == nil ||
 
 		opts.ChunkSizeInBytes <= 0 ||
@@ -122,7 +148,11 @@ func NewGrpcClient(opts GrpcClientOptions) ifaces.IClient {
 
 		mdnsResolverIfaces: opts.MdnsResolverIfaces,
 
-		loadBalancingPolicy: opts.LoadBalancingPolicy,
+		loadBalancingPolicy:  opts.LoadBalancingPolicy,
+		shouldUseHealthCheck: opts.ShouldUseHealthCheck,
+
+		retryPolicy:      opts.RpcRetryPolicy,
+		connectionConfig: opts.ConnectionConfig,
 
 		ctx: opts.Ctx,
 
@@ -135,70 +165,52 @@ func NewGrpcClient(opts GrpcClientOptions) ifaces.IClient {
 // Start устанавливает защищенное TLS соединение с gRPC сервером и создает gRPC клиент для взаимодействия с сервером.
 // Если клиент уже запущен, возвращается ошибка.
 // Этот метод должен быть вызван до использования клиента для выполнения RPC вызовов.
-func (gc *GrpcClient) Start() error {
-	if gc.isStarted.Swap(true) {
+func (gc *GrpcClient) Start() (err error) {
+	defer func() {
+		if err != nil {
+			gc.isStarted.Store(false)
+		}
+	}()
+	if !gc.isStarted.CompareAndSwap(false, true) {
 		gc.logger.Warn("Попытка запустить клиент, который уже запущен")
 		return ErrClientAlreadyStarted
 	}
 
 	gc.logger.Info("Запуск gRPC клиента...")
 
-	ctx := gc.ctx
-	if ctx.Err() != nil {
-		gc.isStarted.Store(false)
-		return ctx.Err()
-	}
+	address := gc.createAddress()
 
-	tlsConfig, err := gc.createClientTlsConfig()
+	transportCreds, err := gc.createTransportCreds()
 	if err != nil {
-		gc.isStarted.Store(false)
 		return err
 	}
-
-	transportCreds := credentials.NewTLS(tlsConfig)
 	withCreds := grpc.WithTransportCredentials(transportCreds)
 
-	baseDialer := &net.Dialer{}
-	networkAwareDialer := func(ctx context.Context, addr string) (net.Conn, error) {
-		return baseDialer.DialContext(ctx, gc.serverNetworkType, addr)
-	}
+	networkAwareDialer := gc.createNetworkAwareDialer()
 	withContextDialer := grpc.WithContextDialer(networkAwareDialer)
 
-	stringBuilder := &strings.Builder{}
-	stringBuilder.WriteString("{\"loadBalancingPolicy\": \"")
-	stringBuilder.WriteString(gc.loadBalancingPolicy)
-	if gc.ShouldUseHealthCheck {
-		stringBuilder.WriteString(", \"healthCheckConfig\": { \"serviceName\":")
-		stringBuilder.WriteString(gc.serverServiceName)
-		stringBuilder.WriteString("\"}")
-	}
-	stringBuilder.WriteString("}")
-
-	serviceConfig := stringBuilder.String()
+	serviceConfig := gc.createServiceConfig()
 	withDefaultServiceConf := grpc.WithDefaultServiceConfig(
 		serviceConfig,
 	)
 
-	address := fmt.Sprintf("%s%s%s", gc.resolverScheme, resolverSchemeSeparator, gc.serverAddress)
+	mdnsResolver := gc.createMdnsResolver()
+	withResolvers := grpc.WithResolvers(mdnsResolver)
 
+	withConnectParams := grpc.WithConnectParams(grpc.ConnectParams{
+		Backoff: backoff.Config{
+			BaseDelay:  gc.connectionConfig.BaseDelay,
+			Multiplier: gc.connectionConfig.Multiplier,
+			MaxDelay:   gc.connectionConfig.MaxDelay,
+			Jitter:     gc.connectionConfig.Jitter,
+		},
+		MinConnectTimeout: gc.connectionConfig.MinConnectTimeout,
+	})
+
+	ctx := gc.ctx
 	if ctx.Err() != nil {
-		gc.isStarted.Store(false)
 		return ctx.Err()
 	}
-
-	builderOptions := reslvr.BuilderOptions{
-		ResolverIfaces:              gc.mdnsResolverIfaces,
-		BackgroundListenTimeout:     time.Second * 30,
-		ShouldResolveIpv6:           true,
-		ShouldDisableResolverOnIdle: true,
-		ShouldReportError:           true,
-	}
-
-	resolver := reslvr.NewBuilder(
-		builderOptions,
-	)
-
-	withResolvers := grpc.WithResolvers(resolver)
 
 	conn, err := grpc.NewClient(
 		address,
@@ -206,9 +218,9 @@ func (gc *GrpcClient) Start() error {
 		withContextDialer,
 		withDefaultServiceConf,
 		withResolvers,
+		withConnectParams,
 	)
 	if err != nil {
-		gc.isStarted.Store(false)
 		return err
 	}
 
@@ -222,7 +234,7 @@ func (gc *GrpcClient) Start() error {
 
 // Stop закрывает gRPC соединение с сервером. Если клиент не запущен, возвращается ошибка. Этот метод должен быть вызван для корректного завершения работы клиента и освобождения ресурсов.
 func (gc *GrpcClient) Stop() error {
-	if !gc.isStarted.Swap(false) {
+	if !gc.isStarted.CompareAndSwap(true, false) {
 		gc.logger.Warn("Попытка остановить клиент, который не запущен")
 		return ErrClientAlreadyStopped
 	}
@@ -247,7 +259,7 @@ func (gc *GrpcClient) GetFileList(ctx context.Context, rootName string) ([]domai
 		return nil, err
 	}
 
-	var fileList []domain.FileMetadata
+	fileList := make([]domain.FileMetadata, 0, len(getFileListResponse.Files))
 	for _, file := range getFileListResponse.Files {
 		fileMetadata := domain.FileMetadata{
 			FileUuid:     file.FileUuid,
@@ -287,7 +299,7 @@ func (gc *GrpcClient) GetFile(ctx context.Context, rootName, relativePath string
 				break
 			}
 			if err != nil {
-				if err := pipeWriter.CloseWithError(err); errors.Is(err, io.ErrClosedPipe) {
+				if closeErr := pipeWriter.CloseWithError(err); errors.Is(closeErr, io.ErrClosedPipe) {
 					gc.logger.Warn(
 						"Попытка повторно закрыть пайп методом CloseWithError при выполнении GetFile, который уже был закрыт",
 					)
@@ -295,14 +307,35 @@ func (gc *GrpcClient) GetFile(ctx context.Context, rootName, relativePath string
 				return
 			}
 
-			_, err = pipeWriter.Write(getFileResponse.Chunk.Data)
-			if err != nil {
-				if err := pipeWriter.CloseWithError(err); errors.Is(err, io.ErrClosedPipe) {
-					gc.logger.Warn(
-						"Попытка повторно закрыть пайп методом CloseWithError при выполнении GetFile, который уже был закрыт",
+			writeCompleted := make(chan struct{})
+
+			go func() {
+				defer close(writeCompleted)
+				_, writeErr := pipeWriter.Write(getFileResponse.Chunk.Data)
+				if writeErr != nil {
+					if closeErr := pipeWriter.CloseWithError(writeErr); errors.Is(closeErr, io.ErrClosedPipe) {
+						gc.logger.Warn(
+							"Попытка повторно закрыть пайп методом CloseWithError при выполнении GetFile, который уже был закрыт",
+						)
+					}
+					return
+				}
+			}()
+
+			select {
+			case <-ctx.Done():
+				pipeWriter.CloseWithError(ctx.Err())
+				if err := getFileResponseStream.CloseSend(); err != nil {
+					gc.logger.LogAttrs(
+						gc.ctx,
+						slog.LevelWarn,
+						"Ошибка при закрытии стрима методом CloseSend при выполнении GetFile",
+						slog.String("error", err.Error()),
+						slog.String("trace", string(debug.Stack())),
 					)
 				}
 				return
+			case <-writeCompleted:
 			}
 		}
 
@@ -385,7 +418,7 @@ func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName, rel
 	if err != nil {
 		return err
 	}
-	if !putFileResponse.Success || putFileResponse.Message != "" {
+	if !putFileResponse.Success {
 		return PutFileFailedError{
 			Message: putFileResponse.Message,
 		}
@@ -409,7 +442,7 @@ func (gc *GrpcClient) DeleteFile(ctx context.Context, rootName, relativePath str
 	if err != nil {
 		return err
 	}
-	if !deleteFileResponse.Success && deleteFileResponse.Message != "" {
+	if !deleteFileResponse.Success {
 		return DeleteFileFailedError{
 			Message: deleteFileResponse.Message,
 		}
@@ -434,7 +467,7 @@ func (gc *GrpcClient) RenameFile(ctx context.Context, rootName, fileUuid, relati
 	if err != nil {
 		return err
 	}
-	if !renameFileResponse.Success && renameFileResponse.Message != "" {
+	if !renameFileResponse.Success {
 		return RenameFileFailedError{
 			Message: renameFileResponse.Message,
 		}
@@ -443,7 +476,7 @@ func (gc *GrpcClient) RenameFile(ctx context.Context, rootName, fileUuid, relati
 	return nil
 }
 
-func (gc *GrpcClient) createClientTlsConfig() (*tls.Config, error) {
+func (gc *GrpcClient) createTransportCreds() (credentials.TransportCredentials, error) {
 	cert, err := tls.LoadX509KeyPair(gc.certPath, gc.keyPath)
 	if err != nil {
 		return nil, err
@@ -474,10 +507,60 @@ func (gc *GrpcClient) createClientTlsConfig() (*tls.Config, error) {
 		slog.String("caCertPath", gc.caCertPath),
 	)
 
-	return &tls.Config{
+	return credentials.NewTLS(&tls.Config{
 		Certificates:       []tls.Certificate{cert},
 		RootCAs:            caCertPool,
 		InsecureSkipVerify: false,
 		ServerName:         gc.serverName,
-	}, nil
+	}), nil
+}
+
+func (gc *GrpcClient) createServiceConfig() string {
+	return fmt.Sprintf(`{
+        "loadBalancingPolicy": "%s",
+        "methodConfig": [{
+            "name": [{"service": "%s"}],
+            "retryPolicy": {
+                "MaxAttempts": %d,
+                "InitialBackoff": "%s",
+                "MaxBackoff": "%s",
+                "BackoffMultiplier": %f,
+                "RetryableStatusCodes": %s
+            }
+        }]
+    }`,
+		gc.loadBalancingPolicy,
+		gc.serverServiceName,
+		gc.retryPolicy.MaxAttempts,
+		gc.retryPolicy.InitialBackoff,
+		gc.retryPolicy.MaxBackoff,
+		gc.retryPolicy.BackoffMultiplier,
+		gc.retryPolicy.RetryableStatusCodes,
+	)
+}
+
+func (gc *GrpcClient) createNetworkAwareDialer() func(context.Context, string) (net.Conn, error) {
+	baseDialer := &net.Dialer{}
+	networkAwareDialer := func(ctx context.Context, addr string) (net.Conn, error) {
+		return baseDialer.DialContext(ctx, gc.serverNetworkType, addr)
+	}
+	return networkAwareDialer
+}
+
+func (gc *GrpcClient) createAddress() string {
+	return fmt.Sprintf("%s%s%s", gc.resolverScheme, resolverSchemeSeparator, gc.serverAddress)
+}
+
+func (gc *GrpcClient) createMdnsResolver() resolver.Builder {
+	builderOptions := mdnsresolver.BuilderOptions{
+		ResolverIfaces:              gc.mdnsResolverIfaces,
+		BackgroundListenTimeout:     time.Second * 30,
+		ShouldResolveIpv6:           true,
+		ShouldDisableResolverOnIdle: true,
+		ShouldReportError:           true,
+	}
+
+	return mdnsresolver.NewBuilder(
+		builderOptions,
+	)
 }

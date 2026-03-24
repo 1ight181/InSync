@@ -16,6 +16,24 @@ var (
 	ErrClientResolverSchemeIsEmpty = errors.New("Схема резолвера не может быть пустой")
 	ErrChunkSizeIsInvalid          = errors.New("Размер чанка должен быть положительным целым числом")
 	ErrMdnsServiceNameIsEmpty      = errors.New("Название сервиса mDNS не может быть пустым при использовании схемы mdns")
+	ErrLoadBalancingPolicyIsEmpty  = errors.New("Политика балансировки не может быть пустой")
+)
+
+// Ошибки валидации конфигурации RpcRetryPolicy
+var (
+	ErrInvalidMaxAttempts           = errors.New("Максимальное количество попыток должно быть положительным целым числом")
+	ErrInvalidInitialBackoffSeconds = errors.New("Начальное время ожидания должно быть положительным целым числом")
+	ErrInvalidMaxBackoffSeconds     = errors.New("Максимальное время ожидания должно быть положительным целым числом")
+	ErrInvalidBackoffMultiplier     = errors.New("Множитель времени ожидания должен быть положительным целым числом")
+)
+
+//
+var (
+	ErrInvalidBaseDelaySeconds         = errors.New("Базовое время задержки должно быть положительным целым числом")
+	ErrInvalidMultiplier               = errors.New("Множитель задержки должен быть положительным целым числом")
+	ErrInvalidMaxDelaySeconds          = errors.New("Максимальное время задержки должно быть положительным целым числом")
+	ErrInvalidJitter                   = errors.New("Разброс задержки должен быть положительным целым числом")
+	ErrInvalidMinConnectTimeoutSeconds = errors.New("Минимальное время ожидания соединения должно быть положительным целым числом")
 )
 
 // Ошибки валидации конфигурации базы данных

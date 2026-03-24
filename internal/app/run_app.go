@@ -86,6 +86,18 @@ func RunApp() {
 		mDnsConfig.GetInterfaces(),
 
 		clientConfig.LoadBalancingPolicy,
+		clientConfig.ShouldUseHealthCheck,
+
+		clientConfig.RpcRetryPolicy.MaxAttempts,
+		clientConfig.RpcRetryPolicy.InitialBackoffSeconds,
+		clientConfig.RpcRetryPolicy.MaxBackoffSeconds,
+		clientConfig.RpcRetryPolicy.BackoffMultiplier,
+
+		clientConfig.ConnectionConfig.BaseDelaySeconds,
+		clientConfig.ConnectionConfig.Multiplier,
+		clientConfig.ConnectionConfig.MaxDelaySeconds,
+		clientConfig.ConnectionConfig.Jitter,
+		clientConfig.ConnectionConfig.MinConnectTimeoutSeconds,
 
 		appCtx,
 

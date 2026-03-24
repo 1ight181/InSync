@@ -4,6 +4,7 @@ import (
 	"context"
 	"insync/internal/transport/grpc/client"
 	"log/slog"
+	"time"
 )
 
 func startGrpcClient(
@@ -21,6 +22,20 @@ func startGrpcClient(
 	mdnsResolverIfaces []string,
 
 	loadBalancingPolicy string,
+	shouldUseHealthCheck bool,
+
+	// gRPC options
+	maxAttempts int,
+	initialBackoff int,
+	maxBackoff int,
+	backoffMultiplier float64,
+
+	// Connection options
+	baseDelay int,
+	multiplier float64,
+	maxDelay int,
+	jitter float64,
+	minConnectTimeout int,
 
 	ctx context.Context,
 
@@ -29,6 +44,22 @@ func startGrpcClient(
 	logger *slog.Logger,
 
 ) error {
+
+	rpcRetryPolicy := client.RpcRetryPolicy{
+		MaxAttempts:          maxAttempts,
+		InitialBackoff:       time.Duration(initialBackoff) * time.Second,
+		MaxBackoff:           time.Duration(maxBackoff) * time.Second,
+		BackoffMultiplier:    backoffMultiplier,
+		RetryableStatusCodes: []string{"UNAVAILABLE", "RESOURCE_EXHAUSTED"},
+	}
+
+	connectionConfig := client.ConnectionConfig{
+		BaseDelay:         time.Duration(baseDelay) * time.Second,
+		Multiplier:        multiplier,
+		MaxDelay:          time.Duration(maxDelay) * time.Second,
+		Jitter:            jitter,
+		MinConnectTimeout: time.Duration(minConnectTimeout) * time.Second,
+	}
 
 	grpcClientOptions := client.GrpcClientOptions{
 		CertPath:   certPath,
@@ -44,7 +75,11 @@ func startGrpcClient(
 
 		MdnsResolverIfaces: mdnsResolverIfaces,
 
-		LoadBalancingPolicy: loadBalancingPolicy,
+		LoadBalancingPolicy:  loadBalancingPolicy,
+		ShouldUseHealthCheck: shouldUseHealthCheck,
+
+		RpcRetryPolicy:   &rpcRetryPolicy,
+		ConnectionConfig: &connectionConfig,
 
 		Ctx: ctx,
 
