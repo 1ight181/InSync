@@ -1,11 +1,11 @@
 package models
 
 type RpcRetryPolicy struct {
-	MaxAttempts           int
-	InitialBackoffSeconds int
-	MaxBackoffSeconds     int
-	BackoffMultiplier     float64
-	RetryableStatusCodes  []string
+	MaxAttempts           int      `mapstructure:"max_attempts"`
+	InitialBackoffSeconds int      `mapstructure:"initial_backoff_seconds"`
+	MaxBackoffSeconds     int      `mapstructure:"max_backoff_seconds"`
+	BackoffMultiplier     float64  `mapstructure:"backoff_multiplier"`
+	RetryableStatusCodes  []string `mapstructure:"retryable_status_codes"`
 }
 
 func (r *RpcRetryPolicy) Validate() error {

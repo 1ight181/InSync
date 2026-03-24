@@ -1,11 +1,11 @@
 package models
 
 type ConnectionConfig struct {
-	BaseDelaySeconds         int
-	Multiplier               float64
-	MaxDelaySeconds          int
-	Jitter                   float64
-	MinConnectTimeoutSeconds int
+	BaseDelaySeconds         int     `mapstructure:"base_delay_seconds"`
+	Multiplier               float64 `mapstructure:"multiplier"`
+	MaxDelaySeconds          int     `mapstructure:"max_delay_seconds"`
+	Jitter                   float64 `mapstructure:"jitter"`
+	MinConnectTimeoutSeconds int     `mapstructure:"min_connect_timeout_seconds"`
 }
 
 func (c *ConnectionConfig) Validate() error {
