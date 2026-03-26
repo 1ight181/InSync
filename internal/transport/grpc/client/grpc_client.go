@@ -284,7 +284,7 @@ func (gc *GrpcClient) GetFileList(ctx context.Context, rootName string) ([]domai
 	return fileList, nil
 }
 
-func (gc *GrpcClient) GetFile(ctx context.Context, rootName, relativePath string) (*io.PipeReader, error) {
+func (gc *GrpcClient) GetFile(ctx context.Context, rootName, relativePath string) (io.ReadCloser, error) {
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка получить файл, когда клиент не запущен")
 		return nil, ErrClientNotStarted
