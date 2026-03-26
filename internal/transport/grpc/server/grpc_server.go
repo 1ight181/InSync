@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"insync/internal/domain"
 	ifaces "insync/internal/interfaces"
 	"insync/internal/transport/grpc/insyncpb"
 	"io"
@@ -226,7 +227,14 @@ func (gs *GrpcServer) Stop(timeoutCtx context.Context) error {
 }
 
 func (gs *GrpcServer) GetFileList(ctx context.Context, request *insyncpb.GetFileListRequest) (*insyncpb.GetFileListResponse, error) {
-	files, err := gs.fileUseCase.GetFileList(ctx, request.RootName)
+	rootName := request.GetRootName()
+
+	validRootName, err := domain.NewRootName(rootName)
+	if err != nil {
+		return nil, err
+	}
+
+	files, err := gs.fileUseCase.GetFileList(ctx, validRootName)
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +257,17 @@ func (gs *GrpcServer) GetFile(request *insyncpb.GetFileRequest, stream grpc.Serv
 	rootName := request.GetRootName()
 	relativePath := request.GetRelativePath()
 
-	fileReader, err := gs.fileUseCase.GetFile(ctx, rootName, relativePath)
+	validRootName, err := domain.NewRootName(rootName)
+	if err != nil {
+		return err
+	}
+
+	validRelativePath, err := domain.NewRelativePath(relativePath)
+	if err != nil {
+		return err
+	}
+
+	fileReader, err := gs.fileUseCase.GetFile(ctx, validRootName, validRelativePath)
 	if err != nil {
 		return err
 	}
@@ -315,11 +333,20 @@ func (gs *GrpcServer) PutFile(stream grpc.ClientStreamingServer[insyncpb.PutFile
 	initMessage := initRequest.GetInit()
 
 	rootName := initMessage.GetRootName()
+	validRootName, err := domain.NewRootName(rootName)
+	if err != nil {
+		return err
+	}
+
 	relativePath := initMessage.GetRelativePath()
+	validRelativePath, err := domain.NewRelativePath(relativePath)
+	if err != nil {
+		return err
+	}
 
 	pipeReader, pipeWriter := io.Pipe()
 
-	err = gs.fileUseCase.PutFile(ctx, rootName, relativePath, pipeReader)
+	err = gs.fileUseCase.PutFile(ctx, validRootName, validRelativePath, pipeReader)
 	if err != nil {
 		return err
 	}
@@ -373,13 +400,29 @@ func (gs *GrpcServer) PutFile(stream grpc.ClientStreamingServer[insyncpb.PutFile
 
 func (gs *GrpcServer) DeleteFile(ctx context.Context, request *insyncpb.DeleteFileRequest) (*insyncpb.DeleteFileResponse, error) {
 	rootName := request.GetRootName()
-	relativePath := request.GetRelativePath()
-	err := gs.fileUseCase.DeleteFile(ctx, rootName, relativePath)
+	validRootName, err := domain.NewRootName(rootName)
 	if err != nil {
 		return &insyncpb.DeleteFileResponse{
 			Success: false,
 			Message: err.Error(),
-		}, nil
+		}, err
+	}
+
+	relativePath := request.GetRelativePath()
+	validRelativePath, err := domain.NewRelativePath(relativePath)
+	if err != nil {
+		return &insyncpb.DeleteFileResponse{
+			Success: false,
+			Message: err.Error(),
+		}, err
+	}
+
+	err = gs.fileUseCase.DeleteFile(ctx, validRootName, validRelativePath)
+	if err != nil {
+		return &insyncpb.DeleteFileResponse{
+			Success: false,
+			Message: err.Error(),
+		}, err
 	}
 
 	return &insyncpb.DeleteFileResponse{
@@ -388,9 +431,34 @@ func (gs *GrpcServer) DeleteFile(ctx context.Context, request *insyncpb.DeleteFi
 }
 
 func (gs *GrpcServer) RenameFile(ctx context.Context, request *insyncpb.RenameFileRequest) (*insyncpb.RenameFileResponse, error) {
+	rootName := request.GetRootName()
+	validRootName, err := domain.NewRootName(rootName)
+	if err != nil {
+		return &insyncpb.RenameFileResponse{
+			Success: false,
+			Message: err.Error(),
+		}, err
+	}
+
 	oldRelativePath := request.GetOldRelativePath()
+	validOldRelativePath, err := domain.NewRelativePath(oldRelativePath)
+	if err != nil {
+		return &insyncpb.RenameFileResponse{
+			Success: false,
+			Message: err.Error(),
+		}, err
+	}
+
 	newRelativePath := request.GetNewRelativePath()
-	err := gs.fileUseCase.RenameFile(ctx, request.RootName, oldRelativePath, newRelativePath)
+	validNewRelativePath, err := domain.NewRelativePath(newRelativePath)
+	if err != nil {
+		return &insyncpb.RenameFileResponse{
+			Success: false,
+			Message: err.Error(),
+		}, err
+	}
+
+	err = gs.fileUseCase.RenameFile(ctx, validRootName, validOldRelativePath, validNewRelativePath)
 	if err != nil {
 		return &insyncpb.RenameFileResponse{
 			Success: false,
