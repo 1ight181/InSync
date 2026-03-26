@@ -1,7 +1,6 @@
 package domain
 
 type FileMetadata struct {
-	FileUuid     string
 	RelativePath string
 	SizeBytes    uint32
 	ModifiedUnix uint32
