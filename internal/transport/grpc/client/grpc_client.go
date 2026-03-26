@@ -468,7 +468,6 @@ func (gc *GrpcClient) RenameFile(ctx context.Context, rootName, fileUuid, relati
 
 	renameFileRequest := &insyncpb.RenameFileRequest{
 		RootName:        rootName,
-		FileUuid:        fileUuid,
 		NewRelativePath: relativePath,
 	}
 
