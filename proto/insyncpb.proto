@@ -36,7 +36,6 @@ message GetFileResponse {
 }
 
 // Тип запроса и ответа для загрузки файла
-
 message PutFileInit {
     string root_name = 1;
     string relative_path = 2;
@@ -70,6 +69,7 @@ message DeleteFileResponse {
 // Тип запроса и ответа для переименования файла
 message RenameFileRequest {
     string root_name = 1;
+    string old_relative_path = 2;
     string new_relative_path = 3;
 }
 

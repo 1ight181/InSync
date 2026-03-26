@@ -272,7 +272,6 @@ func (gc *GrpcClient) GetFileList(ctx context.Context, rootName string) ([]domai
 	fileList := make([]domain.FileMetadata, 0, len(getFileListResponse.Files))
 	for _, file := range getFileListResponse.Files {
 		fileMetadata := domain.FileMetadata{
-			FileUuid:     file.FileUuid,
 			RelativePath: file.RelativePath,
 			IsDirectory:  file.IsDirectory,
 			SizeBytes:    file.SizeBytes,
