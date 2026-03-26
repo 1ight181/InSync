@@ -4,11 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
-	"insync/internal/domain"
 	ifaces "insync/internal/interfaces"
 	"insync/internal/transport/grpc/insyncpb"
-	"io"
 	"log/slog"
 	"net"
 	"os"
@@ -103,45 +100,6 @@ func NewGrpcServer(opts GrpcServerOptions) ifaces.IServer {
 	}
 }
 
-func (gs *GrpcServer) createTransportCreds() (credentials.TransportCredentials, error) {
-	cert, err := tls.LoadX509KeyPair(gs.certPath, gs.keyPath)
-	if err != nil {
-		return nil, err
-	}
-
-	gs.logger.LogAttrs(
-		gs.loggerCtx,
-		slog.LevelDebug,
-		"Сертификат сервера успешно загружен",
-		slog.String("certPath", gs.certPath),
-		slog.String("keyPath", gs.keyPath),
-	)
-
-	caCert, err := os.ReadFile(gs.caCertPath)
-	if err != nil {
-		return nil, err
-	}
-
-	caCertPool := x509.NewCertPool()
-	isOk := caCertPool.AppendCertsFromPEM(caCert)
-	if !isOk {
-		return nil, ErrFailedToAppendCa
-	}
-
-	gs.logger.LogAttrs(
-		gs.loggerCtx,
-		slog.LevelDebug,
-		"CA сертификат успешно загружен для сервера",
-		slog.String("caCertPath", gs.caCertPath),
-	)
-
-	return credentials.NewTLS(&tls.Config{
-		Certificates: []tls.Certificate{cert},
-		ClientCAs:    caCertPool,
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-	}), nil
-}
-
 // Start блокирует выполнение, поэтому его нужно запускать в отдельной горутине. Он будет работать до тех пор, пока сервер не будет остановлен через метод Stop.
 func (gs *GrpcServer) Start() (err error) {
 	if !gs.isStarted.CompareAndSwap(false, true) {
@@ -226,247 +184,41 @@ func (gs *GrpcServer) Stop(timeoutCtx context.Context) error {
 	return nil
 }
 
-func (gs *GrpcServer) GetFileList(ctx context.Context, request *insyncpb.GetFileListRequest) (*insyncpb.GetFileListResponse, error) {
-	rootName := request.GetRootName()
-
-	validRootName, err := domain.NewRootName(rootName)
+func (gs *GrpcServer) createTransportCreds() (credentials.TransportCredentials, error) {
+	cert, err := tls.LoadX509KeyPair(gs.certPath, gs.keyPath)
 	if err != nil {
 		return nil, err
 	}
 
-	files, err := gs.fileUseCase.GetFileList(ctx, validRootName)
+	gs.logger.LogAttrs(
+		gs.loggerCtx,
+		slog.LevelDebug,
+		"Сертификат сервера успешно загружен",
+		slog.String("certPath", gs.certPath),
+		slog.String("keyPath", gs.keyPath),
+	)
+
+	caCert, err := os.ReadFile(gs.caCertPath)
 	if err != nil {
 		return nil, err
 	}
 
-	pbFiles := make([]*insyncpb.FileMetadata, 0, len(files))
-	for _, file := range files {
-		pbFiles = append(pbFiles, DomainFileMetadataToPb(file))
+	caCertPool := x509.NewCertPool()
+	isOk := caCertPool.AppendCertsFromPEM(caCert)
+	if !isOk {
+		return nil, ErrFailedToAppendCa
 	}
 
-	response := &insyncpb.GetFileListResponse{
-		Files: pbFiles,
-	}
+	gs.logger.LogAttrs(
+		gs.loggerCtx,
+		slog.LevelDebug,
+		"CA сертификат успешно загружен для сервера",
+		slog.String("caCertPath", gs.caCertPath),
+	)
 
-	return response, nil
-}
-
-func (gs *GrpcServer) GetFile(request *insyncpb.GetFileRequest, stream grpc.ServerStreamingServer[insyncpb.GetFileResponse]) error {
-	ctx := stream.Context()
-
-	rootName := request.GetRootName()
-	relativePath := request.GetRelativePath()
-
-	validRootName, err := domain.NewRootName(rootName)
-	if err != nil {
-		return err
-	}
-
-	validRelativePath, err := domain.NewRelativePath(relativePath)
-	if err != nil {
-		return err
-	}
-
-	fileReader, err := gs.fileUseCase.GetFile(ctx, validRootName, validRelativePath)
-	if err != nil {
-		return err
-	}
-	defer fileReader.Close()
-
-readLabel:
-	for i := 0; ; i++ {
-		buffer := make([]byte, gs.chunkSizeInBytes)
-
-		readChan := make(chan struct {
-			numberOfBytes int
-			err           error
-		})
-
-		go func() {
-			numberOfBytes, err := fileReader.Read(buffer)
-			readChan <- struct {
-				numberOfBytes int
-				err           error
-			}{
-				numberOfBytes: numberOfBytes,
-				err:           err,
-			}
-		}()
-
-		select {
-		case readResult := <-readChan:
-			numberOfBytes := readResult.numberOfBytes
-			err = readResult.err
-
-			if err == io.EOF {
-				break readLabel
-			}
-			if err != nil {
-				return err
-			}
-			err = stream.Send(&insyncpb.GetFileResponse{
-				Chunk: &insyncpb.FileChunk{
-					Index: uint32(i),
-					// обрезка буфера, чтобы не передавать нули на последней итерации
-					Data: buffer[:numberOfBytes],
-				},
-			})
-			if err != nil {
-				return err
-			}
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-
-	return nil
-}
-
-func (gs *GrpcServer) PutFile(stream grpc.ClientStreamingServer[insyncpb.PutFileRequest, insyncpb.PutFileResponse]) error {
-	ctx := stream.Context()
-
-	initRequest, err := stream.Recv()
-	if err != nil {
-		return err
-	}
-
-	initMessage := initRequest.GetInit()
-
-	rootName := initMessage.GetRootName()
-	validRootName, err := domain.NewRootName(rootName)
-	if err != nil {
-		return err
-	}
-
-	relativePath := initMessage.GetRelativePath()
-	validRelativePath, err := domain.NewRelativePath(relativePath)
-	if err != nil {
-		return err
-	}
-
-	pipeReader, pipeWriter := io.Pipe()
-
-	err = gs.fileUseCase.PutFile(ctx, validRootName, validRelativePath, pipeReader)
-	if err != nil {
-		return err
-	}
-	for {
-		request, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		errChan := make(chan error)
-
-		chunk := request.GetChunk()
-		chunkData := chunk.GetData()
-
-		go func() {
-			_, err = pipeWriter.Write(chunkData)
-			errChan <- err
-		}()
-
-		select {
-		case writeErr := <-errChan:
-			if writeErr != nil {
-				if err := pipeWriter.CloseWithError(writeErr); errors.Is(err, io.ErrClosedPipe) {
-					gs.logger.LogAttrs(
-						gs.loggerCtx,
-						slog.LevelWarn,
-						"Попытка повторно закрыть пайп методом CloseWithError при выполнении PutFile, который уже был закрыт",
-						slog.String("writeErr", writeErr.Error()),
-					)
-				}
-				return writeErr
-			}
-		case <-ctx.Done():
-			ctxErr := ctx.Err()
-			if err := pipeWriter.CloseWithError(ctxErr); errors.Is(err, io.ErrClosedPipe) {
-				gs.logger.LogAttrs(
-					gs.loggerCtx,
-					slog.LevelWarn,
-					"Попытка повторно закрыть пайп методом CloseWithError при выполнении PutFile, который уже был закрыт",
-					slog.String("ctxErr", ctxErr.Error()),
-				)
-			}
-			return ctxErr
-		}
-	}
-
-	return nil
-}
-
-func (gs *GrpcServer) DeleteFile(ctx context.Context, request *insyncpb.DeleteFileRequest) (*insyncpb.DeleteFileResponse, error) {
-	rootName := request.GetRootName()
-	validRootName, err := domain.NewRootName(rootName)
-	if err != nil {
-		return &insyncpb.DeleteFileResponse{
-			Success: false,
-			Message: err.Error(),
-		}, err
-	}
-
-	relativePath := request.GetRelativePath()
-	validRelativePath, err := domain.NewRelativePath(relativePath)
-	if err != nil {
-		return &insyncpb.DeleteFileResponse{
-			Success: false,
-			Message: err.Error(),
-		}, err
-	}
-
-	err = gs.fileUseCase.DeleteFile(ctx, validRootName, validRelativePath)
-	if err != nil {
-		return &insyncpb.DeleteFileResponse{
-			Success: false,
-			Message: err.Error(),
-		}, err
-	}
-
-	return &insyncpb.DeleteFileResponse{
-		Success: true,
-	}, nil
-}
-
-func (gs *GrpcServer) RenameFile(ctx context.Context, request *insyncpb.RenameFileRequest) (*insyncpb.RenameFileResponse, error) {
-	rootName := request.GetRootName()
-	validRootName, err := domain.NewRootName(rootName)
-	if err != nil {
-		return &insyncpb.RenameFileResponse{
-			Success: false,
-			Message: err.Error(),
-		}, err
-	}
-
-	oldRelativePath := request.GetOldRelativePath()
-	validOldRelativePath, err := domain.NewRelativePath(oldRelativePath)
-	if err != nil {
-		return &insyncpb.RenameFileResponse{
-			Success: false,
-			Message: err.Error(),
-		}, err
-	}
-
-	newRelativePath := request.GetNewRelativePath()
-	validNewRelativePath, err := domain.NewRelativePath(newRelativePath)
-	if err != nil {
-		return &insyncpb.RenameFileResponse{
-			Success: false,
-			Message: err.Error(),
-		}, err
-	}
-
-	err = gs.fileUseCase.RenameFile(ctx, validRootName, validOldRelativePath, validNewRelativePath)
-	if err != nil {
-		return &insyncpb.RenameFileResponse{
-			Success: false,
-			Message: err.Error(),
-		}, nil
-	}
-
-	return &insyncpb.RenameFileResponse{
-		Success: true,
-	}, nil
+	return credentials.NewTLS(&tls.Config{
+		Certificates: []tls.Certificate{cert},
+		ClientCAs:    caCertPool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+	}), nil
 }
