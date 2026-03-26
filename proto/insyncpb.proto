@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package insyncpb;
 
-option go_package = "internal/insyncpb;insyncpb";
+option go_package = "internal/transport/grpc/insyncpb;insyncpb";
 
 
 // Тип файла для передачи метаданных о файлах и директориях
