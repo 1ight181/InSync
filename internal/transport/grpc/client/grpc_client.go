@@ -322,6 +322,13 @@ func (gc *GrpcClient) GetFile(ctx context.Context, rootName, relativePath string
 				defer close(writeCompleted)
 				_, writeErr := pipeWriter.Write(getFileResponse.Chunk.Data)
 				if writeErr != nil {
+					getFileResponseStream.CloseSend()
+					gc.logger.LogAttrs(
+						gc.loggerCtx,
+						slog.LevelError,
+						"Ошибка при записи данных в пайп методом Write при выполнении GetFile",
+						slog.String("error", writeErr.Error()),
+					)
 					if closeErr := pipeWriter.CloseWithError(writeErr); errors.Is(closeErr, io.ErrClosedPipe) {
 						gc.logger.Warn(
 							"Попытка повторно закрыть пайп методом CloseWithError при выполнении GetFile, который уже был закрыт",
@@ -333,14 +340,11 @@ func (gc *GrpcClient) GetFile(ctx context.Context, rootName, relativePath string
 
 			select {
 			case <-ctx.Done():
-				pipeWriter.CloseWithError(ctx.Err())
-				if err := getFileResponseStream.CloseSend(); err != nil {
-					gc.logger.LogAttrs(
-						gc.loggerCtx,
-						slog.LevelWarn,
-						"Ошибка при закрытии стрима методом CloseSend при выполнении GetFile",
-						slog.String("error", err.Error()),
-						slog.String("trace", string(debug.Stack())),
+				getFileResponseStream.CloseSend()
+
+				if closeErr := pipeWriter.CloseWithError(ctx.Err()); errors.Is(closeErr, io.ErrClosedPipe) {
+					gc.logger.Warn(
+						"Попытка повторно закрыть пайп методом CloseWithError при выполнении GetFile, который уже был закрыт",
 					)
 				}
 				return
@@ -387,40 +391,56 @@ func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName, rel
 		return err
 	}
 
-	buf := make([]byte, gc.chunkSizeInBytes)
+	buffer := make([]byte, gc.chunkSizeInBytes)
 
+readLabel:
 	for i := 0; ; i++ {
-		numberOfBytes, err := file.Read(buf)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			if closeErr := putFileStream.CloseSend(); closeErr != nil {
-				gc.logger.LogAttrs(
-					gc.loggerCtx,
-					slog.LevelError,
-					"Ошибка при закрытии потока PutFile после получения ошибки от чтения файла",
-					slog.String("readError", err.Error()),
-					slog.String("closeSendError", closeErr.Error()),
-					slog.String("trace", string(debug.Stack())),
-				)
+		readChan := make(chan struct {
+			numberOfBytes int
+			err           error
+		})
+
+		go func() {
+			numberOfBytes, err := file.Read(buffer)
+			readChan <- struct {
+				numberOfBytes int
+				err           error
+			}{
+				numberOfBytes: numberOfBytes,
+				err:           err,
 			}
-			return err
-		}
+		}()
 
-		chunkMessage := &insyncpb.PutFileRequest{
-			Payload: &insyncpb.PutFileRequest_Chunk{
-				Chunk: &insyncpb.FileChunk{
-					Index: uint32(i),
-					Data:  buf[:numberOfBytes],
+		select {
+		case <-ctx.Done():
+			putFileStream.CloseSend()
+			return ctx.Err()
+		case readResult := <-readChan:
+			numberOfBytes := readResult.numberOfBytes
+			err = readResult.err
+			if numberOfBytes == 0 && err == io.EOF {
+				break readLabel
+			}
+			if err != nil {
+				putFileStream.CloseSend()
+				return err
+			}
+
+			chunkMessage := &insyncpb.PutFileRequest{
+				Payload: &insyncpb.PutFileRequest_Chunk{
+					Chunk: &insyncpb.FileChunk{
+						Index: uint32(i),
+						Data:  buffer[:numberOfBytes],
+					},
 				},
-			},
+			}
+
+			err = putFileStream.Send(chunkMessage)
+			if err != nil {
+				return err
+			}
 		}
 
-		err = putFileStream.Send(chunkMessage)
-		if err != nil {
-			return err
-		}
 	}
 
 	putFileResponse, err := putFileStream.CloseAndRecv()
