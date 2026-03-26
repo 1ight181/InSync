@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -34,9 +35,9 @@ const (
 type FileSyncServiceClient interface {
 	GetFileList(ctx context.Context, in *GetFileListRequest, opts ...grpc.CallOption) (*GetFileListResponse, error)
 	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetFileResponse], error)
-	PutFile(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[PutFileRequest, PutFileResponse], error)
-	DeleteFile(ctx context.Context, in *DeleteFileRequest, opts ...grpc.CallOption) (*DeleteFileResponse, error)
-	RenameFile(ctx context.Context, in *RenameFileRequest, opts ...grpc.CallOption) (*RenameFileResponse, error)
+	PutFile(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[PutFileRequest, emptypb.Empty], error)
+	DeleteFile(ctx context.Context, in *DeleteFileRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	RenameFile(ctx context.Context, in *RenameFileRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type fileSyncServiceClient struct {
@@ -76,22 +77,22 @@ func (c *fileSyncServiceClient) GetFile(ctx context.Context, in *GetFileRequest,
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type FileSyncService_GetFileClient = grpc.ServerStreamingClient[GetFileResponse]
 
-func (c *fileSyncServiceClient) PutFile(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[PutFileRequest, PutFileResponse], error) {
+func (c *fileSyncServiceClient) PutFile(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[PutFileRequest, emptypb.Empty], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &FileSyncService_ServiceDesc.Streams[1], FileSyncService_PutFile_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[PutFileRequest, PutFileResponse]{ClientStream: stream}
+	x := &grpc.GenericClientStream[PutFileRequest, emptypb.Empty]{ClientStream: stream}
 	return x, nil
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type FileSyncService_PutFileClient = grpc.ClientStreamingClient[PutFileRequest, PutFileResponse]
+type FileSyncService_PutFileClient = grpc.ClientStreamingClient[PutFileRequest, emptypb.Empty]
 
-func (c *fileSyncServiceClient) DeleteFile(ctx context.Context, in *DeleteFileRequest, opts ...grpc.CallOption) (*DeleteFileResponse, error) {
+func (c *fileSyncServiceClient) DeleteFile(ctx context.Context, in *DeleteFileRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteFileResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, FileSyncService_DeleteFile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -99,9 +100,9 @@ func (c *fileSyncServiceClient) DeleteFile(ctx context.Context, in *DeleteFileRe
 	return out, nil
 }
 
-func (c *fileSyncServiceClient) RenameFile(ctx context.Context, in *RenameFileRequest, opts ...grpc.CallOption) (*RenameFileResponse, error) {
+func (c *fileSyncServiceClient) RenameFile(ctx context.Context, in *RenameFileRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RenameFileResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, FileSyncService_RenameFile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -117,9 +118,9 @@ func (c *fileSyncServiceClient) RenameFile(ctx context.Context, in *RenameFileRe
 type FileSyncServiceServer interface {
 	GetFileList(context.Context, *GetFileListRequest) (*GetFileListResponse, error)
 	GetFile(*GetFileRequest, grpc.ServerStreamingServer[GetFileResponse]) error
-	PutFile(grpc.ClientStreamingServer[PutFileRequest, PutFileResponse]) error
-	DeleteFile(context.Context, *DeleteFileRequest) (*DeleteFileResponse, error)
-	RenameFile(context.Context, *RenameFileRequest) (*RenameFileResponse, error)
+	PutFile(grpc.ClientStreamingServer[PutFileRequest, emptypb.Empty]) error
+	DeleteFile(context.Context, *DeleteFileRequest) (*emptypb.Empty, error)
+	RenameFile(context.Context, *RenameFileRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedFileSyncServiceServer()
 }
 
@@ -136,13 +137,13 @@ func (UnimplementedFileSyncServiceServer) GetFileList(context.Context, *GetFileL
 func (UnimplementedFileSyncServiceServer) GetFile(*GetFileRequest, grpc.ServerStreamingServer[GetFileResponse]) error {
 	return status.Error(codes.Unimplemented, "method GetFile not implemented")
 }
-func (UnimplementedFileSyncServiceServer) PutFile(grpc.ClientStreamingServer[PutFileRequest, PutFileResponse]) error {
+func (UnimplementedFileSyncServiceServer) PutFile(grpc.ClientStreamingServer[PutFileRequest, emptypb.Empty]) error {
 	return status.Error(codes.Unimplemented, "method PutFile not implemented")
 }
-func (UnimplementedFileSyncServiceServer) DeleteFile(context.Context, *DeleteFileRequest) (*DeleteFileResponse, error) {
+func (UnimplementedFileSyncServiceServer) DeleteFile(context.Context, *DeleteFileRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteFile not implemented")
 }
-func (UnimplementedFileSyncServiceServer) RenameFile(context.Context, *RenameFileRequest) (*RenameFileResponse, error) {
+func (UnimplementedFileSyncServiceServer) RenameFile(context.Context, *RenameFileRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method RenameFile not implemented")
 }
 func (UnimplementedFileSyncServiceServer) mustEmbedUnimplementedFileSyncServiceServer() {}
@@ -196,11 +197,11 @@ func _FileSyncService_GetFile_Handler(srv interface{}, stream grpc.ServerStream)
 type FileSyncService_GetFileServer = grpc.ServerStreamingServer[GetFileResponse]
 
 func _FileSyncService_PutFile_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(FileSyncServiceServer).PutFile(&grpc.GenericServerStream[PutFileRequest, PutFileResponse]{ServerStream: stream})
+	return srv.(FileSyncServiceServer).PutFile(&grpc.GenericServerStream[PutFileRequest, emptypb.Empty]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type FileSyncService_PutFileServer = grpc.ClientStreamingServer[PutFileRequest, PutFileResponse]
+type FileSyncService_PutFileServer = grpc.ClientStreamingServer[PutFileRequest, emptypb.Empty]
 
 func _FileSyncService_DeleteFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DeleteFileRequest)

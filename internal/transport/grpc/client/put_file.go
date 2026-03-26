@@ -4,6 +4,10 @@ import (
 	"context"
 	"insync/internal/transport/grpc/insyncpb"
 	"io"
+
+	"google.golang.org/protobuf/types/known/emptypb"
+
+	"google.golang.org/grpc"
 )
 
 func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName, relativePath string) error {
@@ -17,17 +21,11 @@ func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName, rel
 		return err
 	}
 
-	initMessage := &insyncpb.PutFileRequest{
-		Payload: &insyncpb.PutFileRequest_Init{
-			Init: &insyncpb.PutFileInit{
-				RootName:     rootName,
-				RelativePath: relativePath,
-			},
-		},
-	}
-
-	err = putFileStream.Send(initMessage)
-	if err != nil {
+	if err := gc.sendInitMessage(
+		rootName,
+		relativePath,
+		putFileStream,
+	); err != nil {
 		return err
 	}
 
@@ -83,15 +81,23 @@ readLabel:
 
 	}
 
-	putFileResponse, err := putFileStream.CloseAndRecv()
+	_, err = putFileStream.CloseAndRecv()
 	if err != nil {
 		return err
 	}
-	if !putFileResponse.Success {
-		return PutFileFailedError{
-			Message: putFileResponse.Message,
-		}
-	}
 
 	return nil
+}
+
+func (gc *GrpcClient) sendInitMessage(rootName, relativePath string, putFileStream grpc.ClientStreamingClient[insyncpb.PutFileRequest, emptypb.Empty]) error {
+	initMessage := &insyncpb.PutFileRequest{
+		Payload: &insyncpb.PutFileRequest_Init{
+			Init: &insyncpb.PutFileInit{
+				RootName:     rootName,
+				RelativePath: relativePath,
+			},
+		},
+	}
+
+	return putFileStream.Send(initMessage)
 }

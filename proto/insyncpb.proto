@@ -4,6 +4,8 @@ package insyncpb;
 
 option go_package = "internal/transport/grpc/insyncpb;insyncpb";
 
+import "google/protobuf/empty.proto";
+
 
 // Тип файла для передачи метаданных о файлах и директориях
 message FileMetadata {
@@ -24,7 +26,6 @@ message GetFileListResponse {
     repeated FileMetadata files = 1;
 }
 
-
 // Тип для запроса и ответа при получении файла
 message GetFileRequest {
     string root_name = 1;
@@ -35,7 +36,7 @@ message GetFileResponse {
     FileChunk chunk = 1;
 }
 
-// Тип запроса и ответа для загрузки файла
+// Тип запроса для загрузки файла
 message PutFileInit {
     string root_name = 1;
     string relative_path = 2;
@@ -48,36 +49,19 @@ message PutFileRequest {
     }
 }
 
-message PutFileResponse {
-    bool success = 1;
-    string message = 2;
-}
-
-
-// Тип запроса и ответа для удаления файла
+// Тип запроса для удаления файла
 message DeleteFileRequest {
     string root_name = 1;
     string relative_path = 2;
 }
 
-message DeleteFileResponse {
-    bool success = 1;
-    string message = 2;
-}
 
-
-// Тип запроса и ответа для переименования файла
+// Тип запроса для переименования файла
 message RenameFileRequest {
     string root_name = 1;
     string old_relative_path = 2;
     string new_relative_path = 3;
 }
-
-message RenameFileResponse {
-    bool success = 1;
-    string message = 2;
-}
-
 
 // Чанк файла
 message FileChunk {
@@ -89,7 +73,7 @@ message FileChunk {
 service FileSyncService {
     rpc GetFileList(GetFileListRequest) returns (GetFileListResponse);
     rpc GetFile(GetFileRequest) returns (stream GetFileResponse);
-    rpc PutFile(stream PutFileRequest) returns (PutFileResponse);
-    rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
-    rpc RenameFile(RenameFileRequest) returns (RenameFileResponse);
+    rpc PutFile(stream PutFileRequest) returns (google.protobuf.Empty);
+    rpc DeleteFile(DeleteFileRequest) returns (google.protobuf.Empty);
+    rpc RenameFile(RenameFileRequest) returns (google.protobuf.Empty);
 }

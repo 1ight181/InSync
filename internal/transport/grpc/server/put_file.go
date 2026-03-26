@@ -7,10 +7,12 @@ import (
 	"io"
 	"log/slog"
 
+	"google.golang.org/protobuf/types/known/emptypb"
+
 	grpc "google.golang.org/grpc"
 )
 
-func (gs *GrpcServer) PutFile(stream grpc.ClientStreamingServer[insyncpb.PutFileRequest, insyncpb.PutFileResponse]) error {
+func (gs *GrpcServer) PutFile(stream grpc.ClientStreamingServer[insyncpb.PutFileRequest, emptypb.Empty]) error {
 	ctx := stream.Context()
 
 	initRequest, err := stream.Recv()
@@ -83,5 +85,7 @@ func (gs *GrpcServer) PutFile(stream grpc.ClientStreamingServer[insyncpb.PutFile
 		}
 	}
 
-	return nil
+	return stream.SendAndClose(
+		&emptypb.Empty{},
+	)
 }

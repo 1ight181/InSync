@@ -16,14 +16,9 @@ func (gc *GrpcClient) RenameFile(ctx context.Context, rootName, fileUuid, relati
 		NewRelativePath: relativePath,
 	}
 
-	renameFileResponse, err := gc.client.RenameFile(ctx, renameFileRequest)
+	_, err := gc.client.RenameFile(ctx, renameFileRequest)
 	if err != nil {
 		return err
-	}
-	if !renameFileResponse.Success {
-		return RenameFileFailedError{
-			Message: renameFileResponse.Message,
-		}
 	}
 
 	return nil
