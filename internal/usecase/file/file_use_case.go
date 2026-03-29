@@ -8,15 +8,15 @@ import (
 )
 
 type FileUseCase struct {
-	fileFinder ifaces.IFileFinder
+	fileManager ifaces.IFileManager
 }
 
 type FileUseCaseOptions struct {
-	FileFinder ifaces.IFileFinder
+	FileManager ifaces.IFileManager
 }
 
 func NewFileUseCase(opts FileUseCaseOptions) ifaces.IFileUseCase {
-	return &FileUseCase{fileFinder: opts.FileFinder}
+	return &FileUseCase{fileManager: opts.FileManager}
 }
 
 func (f *FileUseCase) GetFileList(ctx context.Context, rootName domain.RootName) ([]domain.FileMetadata, error) {
