@@ -5,15 +5,15 @@ import (
 	"path/filepath"
 )
 
-type PathResolver struct {
+type RootResolver struct {
 	rootCache interfaces.IRootCache
 }
 
-func NewPathResolver(rootCache interfaces.IRootCache) interfaces.IPathResolver {
-	return &PathResolver{rootCache: rootCache}
+func NewRootResolver(rootCache interfaces.IRootCache) interfaces.IRootResolver {
+	return &RootResolver{rootCache: rootCache}
 }
 
-func (p *PathResolver) ResolvePath(rootName string, relativePath string) (string, error) {
+func (p *RootResolver) ResolveRoot(rootName string, relativePath string) (string, error) {
 	rootPath, err := p.rootCache.GetRootCache(rootName)
 	if err != nil {
 		return "", err
