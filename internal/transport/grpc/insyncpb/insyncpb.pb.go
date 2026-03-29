@@ -25,11 +25,12 @@ const (
 // Тип файла для передачи метаданных о файлах и директориях
 type FileMetadata struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	RelativePath  string                 `protobuf:"bytes,1,opt,name=relative_path,json=relativePath,proto3" json:"relative_path,omitempty"`
-	SizeBytes     uint32                 `protobuf:"varint,2,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
-	ModifiedUnix  uint32                 `protobuf:"varint,3,opt,name=modified_unix,json=modifiedUnix,proto3" json:"modified_unix,omitempty"`
-	Hash          string                 `protobuf:"bytes,4,opt,name=hash,proto3" json:"hash,omitempty"`
-	IsDirectory   bool                   `protobuf:"varint,5,opt,name=is_directory,json=isDirectory,proto3" json:"is_directory,omitempty"`
+	RootName      string                 `protobuf:"bytes,1,opt,name=root_name,json=rootName,proto3" json:"root_name,omitempty"`
+	RelativePath  string                 `protobuf:"bytes,2,opt,name=relative_path,json=relativePath,proto3" json:"relative_path,omitempty"`
+	SizeBytes     uint32                 `protobuf:"varint,3,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	ModifiedUnix  uint32                 `protobuf:"varint,4,opt,name=modified_unix,json=modifiedUnix,proto3" json:"modified_unix,omitempty"`
+	Hash          string                 `protobuf:"bytes,5,opt,name=hash,proto3" json:"hash,omitempty"`
+	IsDirectory   bool                   `protobuf:"varint,6,opt,name=is_directory,json=isDirectory,proto3" json:"is_directory,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -62,6 +63,13 @@ func (x *FileMetadata) ProtoReflect() protoreflect.Message {
 // Deprecated: Use FileMetadata.ProtoReflect.Descriptor instead.
 func (*FileMetadata) Descriptor() ([]byte, []int) {
 	return file_proto_insyncpb_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *FileMetadata) GetRootName() string {
+	if x != nil {
+		return x.RootName
+	}
+	return ""
 }
 
 func (x *FileMetadata) GetRelativePath() string {
@@ -591,14 +599,15 @@ var File_proto_insyncpb_proto protoreflect.FileDescriptor
 
 const file_proto_insyncpb_proto_rawDesc = "" +
 	"\n" +
-	"\x14proto/insyncpb.proto\x12\binsyncpb\x1a\x1bgoogle/protobuf/empty.proto\"\xae\x01\n" +
-	"\fFileMetadata\x12#\n" +
-	"\rrelative_path\x18\x01 \x01(\tR\frelativePath\x12\x1d\n" +
+	"\x14proto/insyncpb.proto\x12\binsyncpb\x1a\x1bgoogle/protobuf/empty.proto\"\xcb\x01\n" +
+	"\fFileMetadata\x12\x1b\n" +
+	"\troot_name\x18\x01 \x01(\tR\brootName\x12#\n" +
+	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\x12\x1d\n" +
 	"\n" +
-	"size_bytes\x18\x02 \x01(\rR\tsizeBytes\x12#\n" +
-	"\rmodified_unix\x18\x03 \x01(\rR\fmodifiedUnix\x12\x12\n" +
-	"\x04hash\x18\x04 \x01(\tR\x04hash\x12!\n" +
-	"\fis_directory\x18\x05 \x01(\bR\visDirectory\"1\n" +
+	"size_bytes\x18\x03 \x01(\rR\tsizeBytes\x12#\n" +
+	"\rmodified_unix\x18\x04 \x01(\rR\fmodifiedUnix\x12\x12\n" +
+	"\x04hash\x18\x05 \x01(\tR\x04hash\x12!\n" +
+	"\fis_directory\x18\x06 \x01(\bR\visDirectory\"1\n" +
 	"\x12GetFileListRequest\x12\x1b\n" +
 	"\troot_name\x18\x01 \x01(\tR\brootName\"C\n" +
 	"\x13GetFileListResponse\x12,\n" +
