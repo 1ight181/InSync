@@ -5,13 +5,13 @@ import (
 	"insync/internal/transport/grpc/insyncpb"
 )
 
-func DomainFileMetadataToPb(fileMetadata domain.FileMetadata) *insyncpb.FileMetadata {
+func DomainFileMetadataToPb(fileInfo domain.FileInfo) *insyncpb.FileMetadata {
 	return &insyncpb.FileMetadata{
-		RootName:     fileMetadata.RootName,
-		RelativePath: fileMetadata.RelativePath,
-		IsDirectory:  fileMetadata.IsDirectory,
-		SizeBytes:    fileMetadata.SizeBytes,
-		ModifiedUnix: fileMetadata.ModifiedUnix,
-		Hash:         fileMetadata.Hash,
+		RootName:     fileInfo.RootName,
+		RelativePath: fileInfo.RelativePath,
+		IsDirectory:  fileInfo.Metadata.IsDirectory,
+		SizeBytes:    fileInfo.Metadata.SizeBytes,
+		ModifiedUnix: fileInfo.Metadata.ModifiedUnix,
+		Hash:         fileInfo.Metadata.Hash,
 	}
 }
