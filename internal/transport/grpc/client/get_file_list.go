@@ -4,12 +4,11 @@ import (
 	"context"
 	"insync/internal/domain"
 	"insync/internal/transport/grpc/insyncpb"
-	"log/slog"
 
 	"go.uber.org/multierr"
 )
 
-func (gc *GrpcClient) GetFileList(ctx context.Context, rootName string) ([]domain.FileInfo, error) {
+func (gc *GrpcClient) GetFileList(ctx context.Context, rootName string) ([]domain.FileEntry, error) {
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка получить список файлов, когда клиент не запущен")
 		return nil, ErrClientNotStarted
@@ -23,34 +22,27 @@ func (gc *GrpcClient) GetFileList(ctx context.Context, rootName string) ([]domai
 	}
 
 	var resultErr error
-	fileList := make([]domain.FileInfo, 0, len(getFileListResponse.Files))
+	fileList := make([]domain.FileEntry, 0, len(getFileListResponse.Files))
 	for _, file := range getFileListResponse.Files {
-		fileMetadata := domain.NewFileMetadata(
-			file.ModifiedUnix,
-			file.SizeBytes,
-			file.IsDirectory,
-			file.Hash,
-		)
+		fileMetadata := domain.FileMetadata{
+			ModifiedUnix: file.ModifiedUnix,
+			SizeBytes:    file.SizeBytes,
+			IsDirectory:  file.IsDirectory,
+		}
 
-		fileInfo, err := domain.NewFileInfo(
-			file.RootName,
-			file.RelativePath,
-			fileMetadata,
-		)
+		fileInfo, err := domain.NewFileInfo(fileMetadata, file.Hash)
 		if err != nil {
-			gc.logger.LogAttrs(
-				gc.loggerCtx,
-				slog.LevelWarn,
-				"Получен некоректный fileMetadata от сервера, пропуск файла",
-				slog.String("rootName", file.RootName),
-				slog.String("relativePath", file.RelativePath),
-				slog.String("hash", file.Hash),
-			)
 			resultErr = multierr.Append(resultErr, err)
 			continue
 		}
 
-		fileList = append(fileList, fileInfo)
+		fileEntry, err := domain.NewFileEntry(rootName, file.RelativePath, fileInfo)
+		if err != nil {
+			resultErr = multierr.Append(resultErr, err)
+			continue
+		}
+
+		fileList = append(fileList, fileEntry)
 	}
 
 	if resultErr != nil {

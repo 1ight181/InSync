@@ -3,25 +3,20 @@ package domain
 import "errors"
 
 type FileInfo struct {
-	RootName     string
-	RelativePath string
-	Metadata     FileMetadata
+	Metadata FileMetadata
+	Hash     string
 }
 
 var (
-	ErrInvalidFileInfo = errors.New("FileInfo должен содержать валидные данные, включая непустой Hash, RelativePath, RootName")
+	ErrInvalidHash = errors.New("Hash не может быть пустой строкой")
 )
 
-func NewFileInfo(rootName, relativePath string, metadata FileMetadata) (FileInfo, error) {
-	if metadata.Hash == "" ||
-		relativePath == "" ||
-		rootName == "" {
-		return FileInfo{}, ErrInvalidFileInfo
+func NewFileInfo(metadata FileMetadata, hash string) (FileInfo, error) {
+	if hash == "" {
+		return FileInfo{}, ErrInvalidHash
 	}
-
 	return FileInfo{
-		RootName:     rootName,
-		RelativePath: relativePath,
-		Metadata:     metadata,
+		Metadata: metadata,
+		Hash:     hash,
 	}, nil
 }

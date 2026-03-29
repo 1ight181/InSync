@@ -3,7 +3,7 @@ package interfaces
 import "insync/internal/domain"
 
 type IFileManager interface {
-	GetFileList(rootName string) ([]domain.FileInfo, error)
+	GetFileList(rootName string) ([]domain.FileEntry, error)
 	DeleteFile(rootName string, relativePath string) error
 	PutFile(rootName string, relativePath string, fileData []byte) error
 	RenameFile(rootName string, oldRelativePath string, newRelativePath string) error

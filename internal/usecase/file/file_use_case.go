@@ -19,7 +19,7 @@ func NewFileUseCase(opts FileUseCaseOptions) ifaces.IFileUseCase {
 	return &FileUseCase{fileManager: opts.FileManager}
 }
 
-func (f *FileUseCase) GetFileList(ctx context.Context, rootName domain.RootName) ([]domain.FileInfo, error) {
+func (f *FileUseCase) GetFileList(ctx context.Context, rootName domain.RootName) ([]domain.FileEntry, error) {
 	return nil, nil
 }
 

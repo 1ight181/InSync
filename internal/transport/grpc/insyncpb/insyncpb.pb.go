@@ -23,7 +23,7 @@ const (
 )
 
 // Тип файла для передачи метаданных о файлах и директориях
-type FileMetadata struct {
+type FileEntry struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RootName      string                 `protobuf:"bytes,1,opt,name=root_name,json=rootName,proto3" json:"root_name,omitempty"`
 	RelativePath  string                 `protobuf:"bytes,2,opt,name=relative_path,json=relativePath,proto3" json:"relative_path,omitempty"`
@@ -35,20 +35,20 @@ type FileMetadata struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *FileMetadata) Reset() {
-	*x = FileMetadata{}
+func (x *FileEntry) Reset() {
+	*x = FileEntry{}
 	mi := &file_proto_insyncpb_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *FileMetadata) String() string {
+func (x *FileEntry) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*FileMetadata) ProtoMessage() {}
+func (*FileEntry) ProtoMessage() {}
 
-func (x *FileMetadata) ProtoReflect() protoreflect.Message {
+func (x *FileEntry) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_insyncpb_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -60,47 +60,47 @@ func (x *FileMetadata) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use FileMetadata.ProtoReflect.Descriptor instead.
-func (*FileMetadata) Descriptor() ([]byte, []int) {
+// Deprecated: Use FileEntry.ProtoReflect.Descriptor instead.
+func (*FileEntry) Descriptor() ([]byte, []int) {
 	return file_proto_insyncpb_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *FileMetadata) GetRootName() string {
+func (x *FileEntry) GetRootName() string {
 	if x != nil {
 		return x.RootName
 	}
 	return ""
 }
 
-func (x *FileMetadata) GetRelativePath() string {
+func (x *FileEntry) GetRelativePath() string {
 	if x != nil {
 		return x.RelativePath
 	}
 	return ""
 }
 
-func (x *FileMetadata) GetSizeBytes() uint32 {
+func (x *FileEntry) GetSizeBytes() uint32 {
 	if x != nil {
 		return x.SizeBytes
 	}
 	return 0
 }
 
-func (x *FileMetadata) GetModifiedUnix() uint32 {
+func (x *FileEntry) GetModifiedUnix() uint32 {
 	if x != nil {
 		return x.ModifiedUnix
 	}
 	return 0
 }
 
-func (x *FileMetadata) GetHash() string {
+func (x *FileEntry) GetHash() string {
 	if x != nil {
 		return x.Hash
 	}
 	return ""
 }
 
-func (x *FileMetadata) GetIsDirectory() bool {
+func (x *FileEntry) GetIsDirectory() bool {
 	if x != nil {
 		return x.IsDirectory
 	}
@@ -154,7 +154,7 @@ func (x *GetFileListRequest) GetRootName() string {
 
 type GetFileListResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Files         []*FileMetadata        `protobuf:"bytes,1,rep,name=files,proto3" json:"files,omitempty"`
+	Files         []*FileEntry           `protobuf:"bytes,1,rep,name=files,proto3" json:"files,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -189,7 +189,7 @@ func (*GetFileListResponse) Descriptor() ([]byte, []int) {
 	return file_proto_insyncpb_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *GetFileListResponse) GetFiles() []*FileMetadata {
+func (x *GetFileListResponse) GetFiles() []*FileEntry {
 	if x != nil {
 		return x.Files
 	}
@@ -599,8 +599,8 @@ var File_proto_insyncpb_proto protoreflect.FileDescriptor
 
 const file_proto_insyncpb_proto_rawDesc = "" +
 	"\n" +
-	"\x14proto/insyncpb.proto\x12\binsyncpb\x1a\x1bgoogle/protobuf/empty.proto\"\xcb\x01\n" +
-	"\fFileMetadata\x12\x1b\n" +
+	"\x14proto/insyncpb.proto\x12\binsyncpb\x1a\x1bgoogle/protobuf/empty.proto\"\xc8\x01\n" +
+	"\tFileEntry\x12\x1b\n" +
 	"\troot_name\x18\x01 \x01(\tR\brootName\x12#\n" +
 	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\x12\x1d\n" +
 	"\n" +
@@ -609,9 +609,9 @@ const file_proto_insyncpb_proto_rawDesc = "" +
 	"\x04hash\x18\x05 \x01(\tR\x04hash\x12!\n" +
 	"\fis_directory\x18\x06 \x01(\bR\visDirectory\"1\n" +
 	"\x12GetFileListRequest\x12\x1b\n" +
-	"\troot_name\x18\x01 \x01(\tR\brootName\"C\n" +
-	"\x13GetFileListResponse\x12,\n" +
-	"\x05files\x18\x01 \x03(\v2\x16.insyncpb.FileMetadataR\x05files\"R\n" +
+	"\troot_name\x18\x01 \x01(\tR\brootName\"@\n" +
+	"\x13GetFileListResponse\x12)\n" +
+	"\x05files\x18\x01 \x03(\v2\x13.insyncpb.FileEntryR\x05files\"R\n" +
 	"\x0eGetFileRequest\x12\x1b\n" +
 	"\troot_name\x18\x01 \x01(\tR\brootName\x12#\n" +
 	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\"<\n" +
@@ -657,7 +657,7 @@ func file_proto_insyncpb_proto_rawDescGZIP() []byte {
 
 var file_proto_insyncpb_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_proto_insyncpb_proto_goTypes = []any{
-	(*FileMetadata)(nil),        // 0: insyncpb.FileMetadata
+	(*FileEntry)(nil),           // 0: insyncpb.FileEntry
 	(*GetFileListRequest)(nil),  // 1: insyncpb.GetFileListRequest
 	(*GetFileListResponse)(nil), // 2: insyncpb.GetFileListResponse
 	(*GetFileRequest)(nil),      // 3: insyncpb.GetFileRequest
@@ -670,7 +670,7 @@ var file_proto_insyncpb_proto_goTypes = []any{
 	(*emptypb.Empty)(nil),       // 10: google.protobuf.Empty
 }
 var file_proto_insyncpb_proto_depIdxs = []int32{
-	0,  // 0: insyncpb.GetFileListResponse.files:type_name -> insyncpb.FileMetadata
+	0,  // 0: insyncpb.GetFileListResponse.files:type_name -> insyncpb.FileEntry
 	9,  // 1: insyncpb.GetFileResponse.chunk:type_name -> insyncpb.FileChunk
 	5,  // 2: insyncpb.PutFileRequest.init:type_name -> insyncpb.PutFileInit
 	9,  // 3: insyncpb.PutFileRequest.chunk:type_name -> insyncpb.FileChunk

@@ -19,9 +19,9 @@ func (gs *GrpcServer) GetFileList(ctx context.Context, request *insyncpb.GetFile
 		return nil, err
 	}
 
-	pbFiles := make([]*insyncpb.FileMetadata, 0, len(files))
+	pbFiles := make([]*insyncpb.FileEntry, 0, len(files))
 	for _, file := range files {
-		pbFiles = append(pbFiles, DomainFileMetadataToPb(file))
+		pbFiles = append(pbFiles, DomainFileEntryToPb(file))
 	}
 
 	response := &insyncpb.GetFileListResponse{
