@@ -1,13 +1,16 @@
 package rootcache
 
-import "sync"
+import (
+	"insync/internal/interfaces"
+	"sync"
+)
 
 type RootCache struct {
 	mu    sync.RWMutex
 	cache map[string]string
 }
 
-func NewRootCache() *RootCache {
+func NewRootCache() interfaces.IRootCache {
 	return &RootCache{
 		cache: make(map[string]string),
 	}
