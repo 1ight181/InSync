@@ -1,6 +1,8 @@
 package domain
 
+import "io"
+
 type ResourceContent struct {
-	Content []byte
-	Path    string
+	Path        string
+	OpenContent func(fullPath string) (io.ReadCloser, error)
 }

@@ -38,7 +38,9 @@ func NewHashManager(options HashManagerOptions) interfaces.IHashManager {
 	}
 }
 
-func (h *HashManager) ResolveHash(fullPath string, fileMetadata domain.FileMetadata, getContent func(string) ([]byte, error)) (string, error) {
+func (h *HashManager) ResolveHash(resourceContent domain.ResourceContent, fileMetadata domain.FileMetadata) (string, error) {
+	fullPath := resourceContent.Path
+
 	if _, isDirty := h.dirtyPaths[fullPath]; !isDirty {
 		if fileInfo, err := h.fileInfoCache.GetFileInfoCache(fullPath, fileMetadata); err == nil {
 			return fileInfo.Hash, nil
@@ -56,16 +58,6 @@ func (h *HashManager) ResolveHash(fullPath string, fileMetadata domain.FileMetad
 			"Путь является dirty",
 			slog.String("fullPath", fullPath),
 		)
-	}
-
-	content, err := getContent(fullPath)
-	if err != nil {
-		return "", err
-	}
-
-	resourceContent := domain.ResourceContent{
-		Content: content,
-		Path:    fullPath,
 	}
 
 	hash, err := h.hashCalculator.CalculateHash(resourceContent)
