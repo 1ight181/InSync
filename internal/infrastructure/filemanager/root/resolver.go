@@ -1,4 +1,4 @@
-package interfaces
+package root
 
 import (
 	interfaces "insync/internal/interfaces"
