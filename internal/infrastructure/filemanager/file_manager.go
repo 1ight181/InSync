@@ -53,26 +53,32 @@ func NewFileManager(opts FileManagerOptions) interfaces.IFileManager {
 		loggerCtx: opts.LoggerCtx,
 	}
 }
-func (f *FileManager) GetFileList(ctx context.Context, rootName string) ([]domain.FileEntry, error) {
-	resolvedRootPath, err := f.pathResolver.ResolveRoot(rootName, "")
+func (f *FileManager) GetFileList(ctx context.Context, rootName domain.RootName) ([]domain.FileEntry, error) {
+	root := rootName.String()
+	resolvedRootPath, err := f.pathResolver.ResolveRoot(root, "")
 	if err != nil {
 		return nil, err
 	}
 
-	return f.collectFileEntriesRecursive(ctx, rootName, resolvedRootPath, "")
+	return f.collectFileEntriesRecursive(ctx, root, resolvedRootPath, "")
 }
 
-func (f *FileManager) RenameFile(ctx context.Context, rootName string, oldRelativePath string, newRelativePath string) error {
+func (f *FileManager) RenameFile(ctx context.Context, rootName domain.RootName, oldRelativePath domain.RelativePath, newRelativePath domain.RelativePath) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
 
-	oldResolvedPath, err := f.pathResolver.ResolveRoot(rootName, oldRelativePath)
+	root := rootName.String()
+
+	oldRelPath := oldRelativePath.String()
+	newRelPath := newRelativePath.String()
+
+	oldResolvedPath, err := f.pathResolver.ResolveRoot(root, oldRelPath)
 	if err != nil {
 		return err
 	}
 
-	newResolvedPath, err := f.pathResolver.ResolveRoot(rootName, newRelativePath)
+	newResolvedPath, err := f.pathResolver.ResolveRoot(root, newRelPath)
 	if err != nil {
 		return err
 	}
@@ -84,12 +90,15 @@ func (f *FileManager) RenameFile(ctx context.Context, rootName string, oldRelati
 	return f.hashResolver.MarkDirty(newResolvedPath)
 }
 
-func (f *FileManager) DeleteFile(ctx context.Context, rootName string, relativePath string) error {
+func (f *FileManager) DeleteFile(ctx context.Context, rootName domain.RootName, relativePath domain.RelativePath) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
 
-	resolvedPath, err := f.pathResolver.ResolveRoot(rootName, relativePath)
+	root := rootName.String()
+	relPath := relativePath.String()
+
+	resolvedPath, err := f.pathResolver.ResolveRoot(root, relPath)
 	if err != nil {
 		return err
 	}
@@ -101,12 +110,15 @@ func (f *FileManager) DeleteFile(ctx context.Context, rootName string, relativeP
 	return f.hashResolver.MarkDirty(resolvedPath)
 }
 
-func (f *FileManager) GetFile(ctx context.Context, rootName string, relativePath string) (io.ReadCloser, error) {
+func (f *FileManager) GetFile(ctx context.Context, rootName domain.RootName, relativePath domain.RelativePath) (io.ReadCloser, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
 
-	resolvedPath, err := f.pathResolver.ResolveRoot(rootName, relativePath)
+	root := rootName.String()
+	relPath := relativePath.String()
+
+	resolvedPath, err := f.pathResolver.ResolveRoot(root, relPath)
 	if err != nil {
 		return nil, err
 	}
@@ -114,12 +126,15 @@ func (f *FileManager) GetFile(ctx context.Context, rootName string, relativePath
 	return f.openContentFile(resolvedPath)
 }
 
-func (f *FileManager) PutFile(ctx context.Context, rootName string, relativePath string, content io.Reader) error {
+func (f *FileManager) PutFile(ctx context.Context, rootName domain.RootName, relativePath domain.RelativePath, content io.Reader) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
 
-	resolvedPath, err := f.pathResolver.ResolveRoot(rootName, relativePath)
+	root := rootName.String()
+	relPath := relativePath.String()
+
+	resolvedPath, err := f.pathResolver.ResolveRoot(root, relPath)
 	if err != nil {
 		return err
 	}
