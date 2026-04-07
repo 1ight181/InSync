@@ -4,10 +4,10 @@ import (
 	"fmt"
 )
 
-type RootCacheNotFoundError struct {
+type RootNotFoundError struct {
 	RootName string
 }
 
-func (e RootCacheNotFoundError) Error() string {
+func (e RootNotFoundError) Error() string {
 	return fmt.Sprintf("root не найден для: %s", e.RootName)
 }
