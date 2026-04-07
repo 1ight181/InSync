@@ -53,16 +53,20 @@ func NewFileManager(opts FileManagerOptions) interfaces.IFileManager {
 		loggerCtx: opts.LoggerCtx,
 	}
 }
-func (f *FileManager) GetFileList(rootName string) ([]domain.FileEntry, error) {
+func (f *FileManager) GetFileList(ctx context.Context, rootName string) ([]domain.FileEntry, error) {
 	resolvedRootPath, err := f.pathResolver.ResolveRoot(rootName, "")
 	if err != nil {
 		return nil, err
 	}
 
-	return f.collectFileEntriesRecursive(rootName, resolvedRootPath, "")
+	return f.collectFileEntriesRecursive(ctx, rootName, resolvedRootPath, "")
 }
 
-func (f *FileManager) RenameFile(rootName string, oldRelativePath string, newRelativePath string) error {
+func (f *FileManager) RenameFile(ctx context.Context, rootName string, oldRelativePath string, newRelativePath string) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
 	oldResolvedPath, err := f.pathResolver.ResolveRoot(rootName, oldRelativePath)
 	if err != nil {
 		return err
@@ -80,7 +84,11 @@ func (f *FileManager) RenameFile(rootName string, oldRelativePath string, newRel
 	return f.hashResolver.MarkDirty(newResolvedPath)
 }
 
-func (f *FileManager) DeleteFile(rootName string, relativePath string) error {
+func (f *FileManager) DeleteFile(ctx context.Context, rootName string, relativePath string) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
 	resolvedPath, err := f.pathResolver.ResolveRoot(rootName, relativePath)
 	if err != nil {
 		return err
@@ -93,7 +101,11 @@ func (f *FileManager) DeleteFile(rootName string, relativePath string) error {
 	return f.hashResolver.MarkDirty(resolvedPath)
 }
 
-func (f *FileManager) GetFile(rootName string, relativePath string) (io.ReadCloser, error) {
+func (f *FileManager) GetFile(ctx context.Context, rootName string, relativePath string) (io.ReadCloser, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	resolvedPath, err := f.pathResolver.ResolveRoot(rootName, relativePath)
 	if err != nil {
 		return nil, err
@@ -102,7 +114,11 @@ func (f *FileManager) GetFile(rootName string, relativePath string) (io.ReadClos
 	return f.openContentFile(resolvedPath)
 }
 
-func (f *FileManager) PutFile(rootName string, relativePath string, content io.Reader) error {
+func (f *FileManager) PutFile(ctx context.Context, rootName string, relativePath string, content io.Reader) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
 	resolvedPath, err := f.pathResolver.ResolveRoot(rootName, relativePath)
 	if err != nil {
 		return err
@@ -113,7 +129,7 @@ func (f *FileManager) PutFile(rootName string, relativePath string, content io.R
 		return err
 	}
 
-	if err := f.moveTempToDestination(tempFilePath, resolvedPath); err != nil {
+	if err := f.moveTempToDestination(ctx, tempFilePath, resolvedPath); err != nil {
 		return err
 	}
 
@@ -145,7 +161,7 @@ func (f *FileManager) writeContentToTemp(content io.Reader) (string, error) {
 
 }
 
-func (f *FileManager) moveTempToDestination(tempFilePath string, destPath string) error {
+func (f *FileManager) moveTempToDestination(ctx context.Context, tempFilePath string, destPath string) error {
 	defer func() {
 		if err := f.fileSystem.Remove(tempFilePath); err != nil {
 			f.logger.LogAttrs(
@@ -158,11 +174,13 @@ func (f *FileManager) moveTempToDestination(tempFilePath string, destPath string
 	}()
 
 	if err := f.fileSystem.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
-
 		return err
 	}
 
 	if err := f.fileSystem.Rename(tempFilePath, destPath); err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		// fallback при ошибке перемещения между fs
 		srcFile, err := f.fileSystem.Open(tempFilePath)
 		if err != nil {
@@ -261,10 +279,15 @@ func (f *FileManager) createResourceContent(entryInfo fs.FileInfo, fullPath stri
 }
 
 func (f *FileManager) collectFileEntriesRecursive(
+	ctx context.Context,
 	rootName string,
 	currentAbsolutePath string,
 	currentRelativePath string,
 ) ([]domain.FileEntry, error) {
+
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 
 	directoryEntries, err := f.fileSystem.ReadDir(currentAbsolutePath)
 	if err != nil {
@@ -274,6 +297,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 	var collectedEntries []domain.FileEntry
 
 	for _, directoryEntry := range directoryEntries {
+
 		entryName := directoryEntry.Name()
 
 		nextAbsolutePath := filepath.Join(currentAbsolutePath, entryName)
@@ -281,6 +305,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 
 		if directoryEntry.IsDir() {
 			nestedEntries, err := f.collectFileEntriesRecursive(
+				ctx,
 				rootName,
 				nextAbsolutePath,
 				nextRelativePath,
