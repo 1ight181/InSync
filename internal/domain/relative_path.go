@@ -14,3 +14,7 @@ func NewRelativePath(path string) (RelativePath, error) {
 	}
 	return RelativePath(path), nil
 }
+
+func (rp RelativePath) String() string {
+	return string(rp)
+}

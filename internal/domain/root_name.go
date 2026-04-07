@@ -14,3 +14,7 @@ func NewRootName(name string) (RootName, error) {
 	}
 	return RootName(name), nil
 }
+
+func (r RootName) String() string {
+	return string(r)
+}
