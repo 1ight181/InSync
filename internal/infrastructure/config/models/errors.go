@@ -85,6 +85,10 @@ var (
 	ErrMdnsInterfacesIsEmpty   = errors.New("Список интерфейсов mDNS не может быть пустым")
 )
 
+var (
+	ErrTempDirIsEmpty = errors.New("Директория для временных файлов не может быть пустой")
+)
+
 type ServerCertFileDoesNotExistError struct {
 	FilePath string
 }

@@ -76,3 +76,6 @@ mdns_server:
   port: 50051
   # формат "eth0;wlan0"
   interfaces: ""
+
+file_manager:
+  temp_dir: "../temp"

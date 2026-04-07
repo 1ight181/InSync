@@ -2,12 +2,13 @@ package models
 
 // Реализует интерфейс ConfigModel
 type GeneralConfig struct {
-	DbConfig     DbConfig         `mapstructure:"db"`
-	ServerConfig ServerConfig     `mapstructure:"server"`
-	ClientConfig ClientConfig     `mapstructure:"client"`
-	LoggerConfig LoggerConfig     `mapstructure:"logger"`
-	TlsConfig    TlsConfig        `mapstructure:"tls"`
-	MDnsConfig   MdnsServerConfig `mapstructure:"mdns_server"`
+	DbConfig          DbConfig          `mapstructure:"db"`
+	ServerConfig      ServerConfig      `mapstructure:"server"`
+	ClientConfig      ClientConfig      `mapstructure:"client"`
+	LoggerConfig      LoggerConfig      `mapstructure:"logger"`
+	TlsConfig         TlsConfig         `mapstructure:"tls"`
+	MDnsConfig        MdnsServerConfig  `mapstructure:"mdns_server"`
+	FileManagerConfig FileManagerConfig `mapstructure:"file_manager"`
 }
 
 func (gc *GeneralConfig) Validate() error {
@@ -24,6 +25,9 @@ func (gc *GeneralConfig) Validate() error {
 		return err
 	}
 	if err := gc.TlsConfig.Validate(); err != nil {
+		return err
+	}
+	if err := gc.MDnsConfig.Validate(); err != nil {
 		return err
 	}
 
