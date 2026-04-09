@@ -2,8 +2,8 @@ package domain
 
 type SyncChange struct {
 	RootName        RootName
-	NewRelativePath RelativePath
 	OldRelativePath RelativePath
+	NewRelativePath RelativePath
 	ChangeType      SyncChangeType
 }
 
@@ -13,4 +13,5 @@ const (
 	Create SyncChangeType = iota
 	Delete
 	Rename
+	Move
 )

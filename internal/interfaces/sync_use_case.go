@@ -4,5 +4,5 @@ import "insync/internal/domain"
 
 type ISyncUseCase interface {
 	GetSyncChanges() []domain.SyncChange
-	ApplySyncChanges(changes []domain.SyncChange) error
+	ApplySyncChanges(changes []domain.SyncChange) (<-chan domain.ChangeEvent, error)
 }
