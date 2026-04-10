@@ -6,15 +6,13 @@ import (
 )
 
 type NodeNameResolver struct {
-	mDnsServerServiceType         string
-	mDnsServerDomain              string
-	mDnsServerInstanceNamePostfix string
+	mDnsServerServiceType string
+	mDnsServerDomain      string
 }
 
 type NodeNameResolverOptions struct {
-	MDnsServerServiceType         string
-	MDnsServerDomain              string
-	MDnsServerInstanceNamePostfix string
+	MDnsServerServiceType string
+	MDnsServerDomain      string
 }
 
 func NewNodeNameResolver(opts NodeNameResolverOptions) *NodeNameResolver {
@@ -22,12 +20,11 @@ func NewNodeNameResolver(opts NodeNameResolverOptions) *NodeNameResolver {
 		panic("Все поля NodeNameResolverOptions должны быть заполнены")
 	}
 	return &NodeNameResolver{
-		mDnsServerServiceType:         opts.MDnsServerServiceType,
-		mDnsServerDomain:              opts.MDnsServerDomain,
-		mDnsServerInstanceNamePostfix: opts.MDnsServerInstanceNamePostfix,
+		mDnsServerServiceType: opts.MDnsServerServiceType,
+		mDnsServerDomain:      opts.MDnsServerDomain,
 	}
 }
 
 func (r *NodeNameResolver) ResolveToMDnsUrl(nodeName domain.NodeName) string {
-	return fmt.Sprintf("%s.%s.%s.%s", r.mDnsServerServiceType, nodeName, r.mDnsServerInstanceNamePostfix, r.mDnsServerDomain)
+	return fmt.Sprintf("%s.%s.%s", r.mDnsServerServiceType, nodeName, r.mDnsServerDomain)
 }
