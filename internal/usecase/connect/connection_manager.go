@@ -1,6 +1,8 @@
 package connect
 
+import "insync/internal/domain"
+
 type IConnectionManager interface {
-	ConnectToNode(nodeName string) error
-	CurrentNodeName() (nodeName string, err error)
+	ConnectToNode(nodeName domain.NodeName) error
+	CurrentNodeName() (nodeName domain.NodeName, err error)
 }

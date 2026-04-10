@@ -1,5 +1,7 @@
 package connection
 
+import "insync/internal/domain"
+
 type INodeNameResolver interface {
-	Resolve(nodeName string) (string, error)
+	ResolveToMDnsUrl(nodeName domain.NodeName) (string, error)
 }

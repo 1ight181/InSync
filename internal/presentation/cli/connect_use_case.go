@@ -1,7 +1,9 @@
 package cli
 
+import "insync/internal/domain"
+
 type IConnectUseCase interface {
-	ConnectToNode(nodeName string) error
-	CurrentNode() (nodeName string, err error)
-	ShowNodes() (nodeNamesChan chan string, err error)
+	ConnectToNode(nodeName domain.NodeName) error
+	CurrentNodeName() (nodeName domain.NodeName)
+	ShowNodeNames() (nodeNamesChan chan string, err error)
 }

@@ -13,14 +13,15 @@ import (
 )
 
 const (
-	rootCmdName       = "root"
-	nodesCmdName      = "nodes"
-	addRootCmdName    = "add-root"
-	removeRootCmdName = "remove-root"
-	getRootsCmdName   = "get-roots"
-	connectCmdName    = "connect"
-	dryRunCmdName     = "dry-run"
-	syncCmdName       = "sync"
+	rootCmdName        = "root"
+	nodesCmdName       = "nodes"
+	currentNodeCmdName = "current-node"
+	addRootCmdName     = "add-root"
+	removeRootCmdName  = "remove-root"
+	getRootsCmdName    = "get-roots"
+	connectCmdName     = "connect"
+	dryRunCmdName      = "dry-run"
+	syncCmdName        = "sync"
 )
 
 const (
@@ -75,19 +76,29 @@ func NewCli(opts CliOptions) *Cli {
 
 func (c *Cli) Start() {
 	rootCmd := c.createRootCmd()
+
 	nodesCmd := c.createNodesCmd()
+	connectCmd := c.createConnectCmd()
+	currentNodeCmd := c.createCurrentNodeCmd()
+
 	addRootCmd := c.createAddRootCmd()
 	removeRootCmd := c.createRemoveRootCmd()
-	connectCmd := c.createConnectCmd()
+	getRootsCmd := c.createGetRootsCmd()
+
 	dryRunCmd := c.createDryRunCmd()
 	syncCmd := c.createSyncCmd()
 
-	rootCmd.AddCommand(dryRunCmd)
 	rootCmd.AddCommand(nodesCmd)
+	rootCmd.AddCommand(currentNodeCmd)
+
 	rootCmd.AddCommand(addRootCmd)
 	rootCmd.AddCommand(removeRootCmd)
+	rootCmd.AddCommand(getRootsCmd)
+
 	rootCmd.AddCommand(connectCmd)
+
 	rootCmd.AddCommand(syncCmd)
+	rootCmd.AddCommand(dryRunCmd)
 
 	cobraPrompt := cobraprompt.CobraPrompt{
 		RootCmd:                 rootCmd,
@@ -120,6 +131,15 @@ func (c *Cli) createNodesCmd() *cobra.Command {
 		Short: "Отобразить доступные для синхронизации узлы",
 		Args:  cobra.NoArgs,
 		Run:   c.nodesCmd,
+	}
+}
+
+func (c *Cli) createCurrentNodeCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   currentNodeCmdName,
+		Short: "Отобразить текущий узел",
+		Args:  cobra.NoArgs,
+		Run:   c.currentNodeCmd,
 	}
 }
 
@@ -191,6 +211,30 @@ func (c *Cli) createSyncCmd() *cobra.Command {
 	}
 }
 
+func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) {
+	c.logger.Debug("Выполнение команды nodes")
+	nodeNamesChan, err := c.connectUseCase.ShowNodeNames()
+	if err != nil {
+		c.logger.Error("Не удалось получить узлы", "error", err)
+		return
+	}
+
+	c.logger.Info("Доступные узлы:")
+
+	i := 1
+	for nodeName := range nodeNamesChan {
+		c.logger.Info(fmt.Sprintf("%d. %s", i, nodeName))
+		i++
+	}
+}
+
+func (c *Cli) currentNodeCmd(cmd *cobra.Command, args []string) {
+	c.logger.Debug("Выполнение команды current-node")
+
+	currentNode := c.connectUseCase.CurrentNodeName()
+	c.logger.Info(fmt.Sprintf("Текущий подключенный узел: %s", currentNode))
+}
+
 func (c *Cli) addRootCmd(cmd *cobra.Command, args []string) error {
 	c.logger.Debug("Выполнение команды add-root")
 
@@ -240,27 +284,14 @@ func (c *Cli) getRootsCmd(cmd *cobra.Command, args []string) {
 	}
 }
 
-func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) {
-	c.logger.Debug("Выполнение команды nodes")
-	nodeNamesChan, err := c.connectUseCase.ShowNodes()
-	if err != nil {
-		c.logger.Error("Не удалось получить узлы", "error", err)
-		return
-	}
-
-	c.logger.Info("Доступные узлы:")
-
-	i := 1
-	for nodeName := range nodeNamesChan {
-		c.logger.Info(fmt.Sprintf("%d. %s", i, nodeName))
-		i++
-	}
-}
-
 func (c *Cli) connectCmd(cmd *cobra.Command, args []string) error {
 	c.logger.Debug("Выполнение команды connect")
 
-	nodeName := args[0]
+	nodeName, err := domain.NewNodeName(args[0])
+	if err != nil {
+		c.logger.Error("Не удалось подключиться к узлу")
+		return err
+	}
 	c.logger.Info(fmt.Sprintf("Подключение к узлу %s", nodeName))
 
 	if err := c.connectUseCase.ConnectToNode(nodeName); err != nil {
@@ -389,7 +420,7 @@ func (c *Cli) suggestionFunc(annotationValue string, document *prompt.Document) 
 }
 
 func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
-	nodeNamesChan, err := c.connectUseCase.ShowNodes()
+	nodeNamesChan, err := c.connectUseCase.ShowNodeNames()
 	if err != nil {
 		return nil
 	}

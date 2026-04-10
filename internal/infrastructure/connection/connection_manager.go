@@ -2,6 +2,7 @@ package connection
 
 import (
 	"context"
+	"insync/internal/domain"
 	clt "insync/internal/infrastructure/client"
 	"insync/internal/interfaces"
 	"log/slog"
@@ -19,8 +20,9 @@ type ConnectionManager struct {
 	loggerCtx context.Context
 
 	clientConnector IClientConnector
-	client          interfaces.IClient
-	currentNodeName string
+	clientHolder    IClientHolder
+
+	currentNodeName domain.NodeName
 }
 
 type ConnectionManagerOptions struct {
@@ -54,21 +56,21 @@ func NewConnectionManager(opts ConnectionManagerOptions) *ConnectionManager {
 }
 
 func (c *ConnectionManager) CurrentClient() interfaces.IClient {
-	return c.client
+	return c.clientHolder.CurrentClient()
 }
 
-func (c *ConnectionManager) CurrentNodeName() string {
+func (c *ConnectionManager) CurrentNodeName() domain.NodeName {
 	return c.currentNodeName
 }
 
-func (c *ConnectionManager) ConnectToNode(nodeName string) error {
-	mdnsUrl, err := c.nodeNameResolver.ResolveToMDnsUrl(nodeName)
+func (c *ConnectionManager) ConnectToNode(nodeName domain.NodeName) error {
+	mDnsUrl, err := c.nodeNameResolver.ResolveToMDnsUrl(nodeName)
 	if err != nil {
 		return err
 	}
 
 	grpcConf := c.baseGrpcConf
-	grpcConf.ServerAddress = mdnsUrl
+	grpcConf.ServerAddress = mDnsUrl
 
 	grpcClientOpts := clt.GrpcClientOptions{
 		Conf:   grpcConf,
@@ -90,8 +92,26 @@ func (c *ConnectionManager) ConnectToNode(nodeName string) error {
 	}
 
 	c.clientConnector = newClient
-	c.client = newClient
+	c.clientHolder.SetClient(newClient)
 	c.currentNodeName = nodeName
+
+	c.logger.LogAttrs(
+		c.loggerCtx,
+		slog.LevelDebug,
+		"Успешное подключение к узлу",
+		slog.String("nodeName", nodeName.String()),
+		slog.String("mDnsUrl", mDnsUrl),
+	)
+
+	return nil
+}
+
+func (c *ConnectionManager) Close() error {
+	c.clientHolder.ReleaseClient()
+
+	if c.clientConnector != nil {
+		return c.clientConnector.Close()
+	}
 
 	return nil
 }
