@@ -1,5 +1,7 @@
 package sync
 
+import "insync/internal/domain"
+
 type SyncUseCase struct {
 	clientFabric IClientFabric
 }
@@ -15,4 +17,12 @@ func NewSyncUseCase(opts SyncUseCaseOptions) *SyncUseCase {
 	return &SyncUseCase{
 		clientFabric: opts.ClientFabric,
 	}
+}
+
+func (s *SyncUseCase) ApplySyncChanges(changes []domain.SyncChange) (<-chan domain.ChangeEvent, error) {
+	return make(<-chan domain.ChangeEvent), nil
+}
+
+func (s *SyncUseCase) GetSyncChanges(rootName domain.RootName) []domain.SyncChange {
+	return []domain.SyncChange{}
 }
