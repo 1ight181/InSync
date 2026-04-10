@@ -6,7 +6,8 @@ type GeneralConfig struct {
 	ServerConfig      ServerConfig      `mapstructure:"server"`
 	ClientConfig      ClientConfig      `mapstructure:"client"`
 	LoggerConfig      LoggerConfig      `mapstructure:"logger"`
-	MDnsConfig        MDnsServerConfig  `mapstructure:"mdns_server"`
+	MDnsServerConfig  MDnsServerConfig  `mapstructure:"mdns_server"`
+	MDnsBrowserConfig MDnsBrowserConfig `mapstructure:"mdns_browser"`
 	FileManagerConfig FileManagerConfig `mapstructure:"file_manager"`
 }
 
@@ -23,7 +24,13 @@ func (gc *GeneralConfig) Validate() error {
 	if err := gc.LoggerConfig.Validate(); err != nil {
 		return err
 	}
-	if err := gc.MDnsConfig.Validate(); err != nil {
+	if err := gc.MDnsServerConfig.Validate(); err != nil {
+		return err
+	}
+	if err := gc.MDnsBrowserConfig.Validate(); err != nil {
+		return err
+	}
+	if err := gc.FileManagerConfig.Validate(); err != nil {
 		return err
 	}
 
