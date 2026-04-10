@@ -10,8 +10,8 @@ import (
 )
 
 type MDnsNodeNamesBrowser struct {
-	serviceType string
-	domain      string
+	serverServiceType string
+	serverDomain      string
 
 	interfaces []string
 
@@ -22,27 +22,27 @@ type MDnsNodeNamesBrowser struct {
 }
 
 type MDnsNodeNamesBrowserOptions struct {
-	ServiceType string
-	Domain      string
-	Interfaces  []string
-	Logger      *slog.Logger
-	Ctx         context.Context
+	ServerServiceType string
+	ServerDomain      string
+	Interfaces        []string
+	Logger            *slog.Logger
+	Ctx               context.Context
 }
 
 func NewMDnsNodeNamesBrowser(opts MDnsNodeNamesBrowserOptions) *MDnsNodeNamesBrowser {
-	if opts.ServiceType == "" ||
-		opts.Domain == "" ||
+	if opts.ServerServiceType == "" ||
+		opts.ServerDomain == "" ||
 		opts.Interfaces == nil ||
 		opts.Logger == nil ||
 		opts.Ctx == nil {
 		panic("Все поля MDnsResolverOptions должны быть заполнены")
 	}
 	return &MDnsNodeNamesBrowser{
-		serviceType: opts.ServiceType,
-		domain:      opts.Domain,
-		interfaces:  opts.Interfaces,
-		logger:      opts.Logger,
-		ctx:         opts.Ctx,
+		serverServiceType: opts.ServerServiceType,
+		serverDomain:      opts.ServerDomain,
+		interfaces:        opts.Interfaces,
+		logger:            opts.Logger,
+		ctx:               opts.Ctx,
 	}
 }
 
@@ -64,7 +64,7 @@ func (b *MDnsNodeNamesBrowser) BrowseNodeNames() (chan string, error) {
 	b.entries = entries
 
 	go func() {
-		if err := resolver.Browse(b.ctx, b.serviceType, b.domain, entries); err != nil {
+		if err := resolver.Browse(b.ctx, b.serverServiceType, b.serverDomain, entries); err != nil {
 			b.logger.LogAttrs(
 				b.ctx,
 				slog.LevelError,
