@@ -3,7 +3,6 @@ package filemanager
 import (
 	"context"
 	"insync/internal/domain"
-	"insync/internal/interfaces"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -12,9 +11,10 @@ import (
 )
 
 type FileManager struct {
-	pathResolver interfaces.IRootResolver
-	hashResolver interfaces.IHashManager
-	fileSystem   interfaces.IFileSystem
+	pathResolver   IRootResolver
+	hashResolver   IHashManager
+	fileSystem     IFileSystem
+	pathTreeWriter IPathTreeWriter
 
 	tempDir string
 
@@ -23,9 +23,10 @@ type FileManager struct {
 }
 
 type FileManagerOptions struct {
-	PathResolver interfaces.IRootResolver
-	HashResolver interfaces.IHashManager
-	FileSystem   interfaces.IFileSystem
+	PathResolver   IRootResolver
+	HashResolver   IHashManager
+	FileSystem     IFileSystem
+	PathTreeWriter IPathTreeWriter
 
 	TempDir string
 
@@ -33,19 +34,21 @@ type FileManagerOptions struct {
 	LoggerCtx context.Context
 }
 
-func NewFileManager(opts FileManagerOptions) interfaces.IFileManager {
+func NewFileManager(opts FileManagerOptions) *FileManager {
 	if opts.PathResolver == nil ||
 		opts.HashResolver == nil ||
 		opts.FileSystem == nil ||
+		opts.PathTreeWriter == nil ||
 		opts.TempDir == "" ||
 		opts.Logger == nil ||
 		opts.LoggerCtx == nil {
 		panic("Все поля FileManagerOptions должны быть заполнены")
 	}
 	return &FileManager{
-		pathResolver: opts.PathResolver,
-		hashResolver: opts.HashResolver,
-		fileSystem:   opts.FileSystem,
+		pathResolver:   opts.PathResolver,
+		hashResolver:   opts.HashResolver,
+		fileSystem:     opts.FileSystem,
+		pathTreeWriter: opts.PathTreeWriter,
 
 		tempDir: opts.TempDir,
 
@@ -87,6 +90,14 @@ func (f *FileManager) RenameFile(ctx context.Context, rootName domain.RootName, 
 		return err
 	}
 
+	if err := f.pathTreeWriter.RemovePath(oldResolvedPath); err != nil {
+		return err
+	}
+
+	if err := f.pathTreeWriter.AddPath(newResolvedPath); err != nil {
+		return err
+	}
+
 	return f.hashResolver.MarkDirty(newResolvedPath)
 }
 
@@ -104,6 +115,10 @@ func (f *FileManager) DeleteFile(ctx context.Context, rootName domain.RootName, 
 	}
 
 	if err := f.fileSystem.Remove(resolvedPath); err != nil {
+		return err
+	}
+
+	if err := f.pathTreeWriter.RemovePath(resolvedPath); err != nil {
 		return err
 	}
 
@@ -145,6 +160,10 @@ func (f *FileManager) PutFile(ctx context.Context, rootName domain.RootName, rel
 	}
 
 	if err := f.moveTempToDestination(ctx, tempFilePath, resolvedPath); err != nil {
+		return err
+	}
+
+	if err := f.pathTreeWriter.AddPath(resolvedPath); err != nil {
 		return err
 	}
 

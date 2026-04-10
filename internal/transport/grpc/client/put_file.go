@@ -29,7 +29,7 @@ func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName, rel
 		return err
 	}
 
-	buffer := make([]byte, gc.chunkSizeInBytes)
+	buffer := make([]byte, gc.conf.ChunkSizeInBytes)
 
 readLabel:
 	for i := 0; ; i++ {

@@ -1,4 +1,4 @@
-package interfaces
+package filemanager
 
 import "insync/internal/domain"
 

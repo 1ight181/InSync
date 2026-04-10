@@ -3,7 +3,6 @@ package config
 import (
 	"context"
 	"insync/internal/infrastructure/config/models"
-	ifaces "insync/internal/interfaces"
 	"strings"
 
 	slog "log/slog"
@@ -34,7 +33,7 @@ type KoanfYamlEnvConfigLoaderOption struct {
 	Tag                string
 }
 
-func NewConfigLoader(opts KoanfYamlEnvConfigLoaderOption) ifaces.IConfigLoader[*models.GeneralConfig] {
+func NewConfigLoader(opts KoanfYamlEnvConfigLoaderOption) *KoanfYamlEnvConfigLoader {
 	if opts.KoanfDelimiter == "" ||
 		opts.YamlConfigFilePath == "" ||
 		opts.EnvPrefix == "" ||

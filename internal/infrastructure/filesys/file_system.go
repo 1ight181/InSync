@@ -2,7 +2,6 @@ package filesys
 
 import (
 	"context"
-	"insync/internal/interfaces"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -19,7 +18,7 @@ type FileSystemOptions struct {
 	Logger *slog.Logger
 }
 
-func NewFileSystem(opts FileSystemOptions) interfaces.IFileSystem {
+func NewFileSystem(opts FileSystemOptions) *FileSystem {
 	if opts.Logger == nil {
 		panic("Не все обязательные параметры были переданы при инициализации FileSystem")
 	}

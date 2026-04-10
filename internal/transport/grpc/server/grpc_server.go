@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	ifaces "insync/internal/interfaces"
 	"insync/internal/transport/grpc/insyncpb"
 	"log/slog"
 	"net"
@@ -20,7 +19,7 @@ import (
 type GrpcServer struct {
 	insyncpb.UnimplementedFileSyncServiceServer
 
-	fileUseCase ifaces.IFileUseCase
+	fileUseCase IFileUseCase
 
 	certPath   string
 	keyPath    string
@@ -45,7 +44,7 @@ type GrpcServer struct {
 }
 
 type GrpcServerOptions struct {
-	FileUseCase ifaces.IFileUseCase
+	FileUseCase IFileUseCase
 
 	CertPath   string
 	KeyPath    string
@@ -62,7 +61,7 @@ type GrpcServerOptions struct {
 	Logger *slog.Logger
 }
 
-func NewGrpcServer(opts GrpcServerOptions) ifaces.IServer {
+func NewGrpcServer(opts GrpcServerOptions) *GrpcServer {
 	if opts.FileUseCase == nil ||
 		opts.CertPath == "" ||
 		opts.KeyPath == "" ||

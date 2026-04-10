@@ -4,38 +4,48 @@ import (
 	"context"
 	"fmt"
 	"insync/internal/domain"
-	"insync/internal/interfaces"
 	"log/slog"
 
 	"github.com/spf13/cobra"
 )
 
 type Cli struct {
+	syncUseCase    ISyncUseCase
+	connectUseCase IConnectUseCase
+
+	rootUseCase *IRootUseCase
+
 	logger    *slog.Logger
 	loggerCtx context.Context
 
-	syncUseCase    interfaces.ISyncUseCase
-	connectUseCase interfaces.IConnectUseCase
+	ctx context.Context
 }
 
 type CliOptions struct {
+	SyncUseCase    ISyncUseCase
+	ConnectUseCase IConnectUseCase
+
 	Logger *slog.Logger
 
-	SyncUseCase    interfaces.ISyncUseCase
-	ConnectUseCase interfaces.IConnectUseCase
+	Ctx context.Context
 }
 
-func NewCli(opts CliOptions) interfaces.ICli {
-	if opts.Logger == nil {
+func NewCli(opts CliOptions) *Cli {
+	if opts.SyncUseCase == nil ||
+		opts.ConnectUseCase == nil ||
+		opts.Logger == nil ||
+		opts.Ctx == nil {
 		panic("Не все обязательные параметры были переданы при инициализации Cli")
 	}
 	loggerCtx := context.Background()
 	return &Cli{
+		syncUseCase:    opts.SyncUseCase,
+		connectUseCase: opts.ConnectUseCase,
+
 		logger:    opts.Logger,
 		loggerCtx: loggerCtx,
 
-		syncUseCase:    opts.SyncUseCase,
-		connectUseCase: opts.ConnectUseCase,
+		ctx: opts.Ctx,
 	}
 }
 
@@ -43,7 +53,7 @@ func (c *Cli) Start() error {
 	rootCmd := c.createRootCmd()
 	nodesCmd := c.createNodesCmd()
 	connectCmd := c.createConnectCmd()
-	dryRunCmd := c.createConnectCmd()
+	dryRunCmd := c.createDryRunCmd()
 	syncCmd := c.createSyncCmd()
 
 	rootCmd.AddCommand(dryRunCmd)
@@ -66,7 +76,7 @@ func (c *Cli) createNodesCmd() *cobra.Command {
 		Use:   "nodes",
 		Short: "Отобразить доступные для синхронизации узлы",
 		Args:  cobra.NoArgs,
-		Run:   c.nodesCommand,
+		Run:   c.nodesCmd,
 	}
 }
 
@@ -76,7 +86,7 @@ func (c *Cli) createConnectCmd() *cobra.Command {
 		Short: "Подключиться к узлу",
 		Long: `Подключиться к узлу. 
 		node-name - имя узла, к которому будет осуществляться подключение`,
-		RunE: c.connectCommand,
+		RunE: c.connectCmd,
 		Args: cobra.ExactArgs(1),
 	}
 }
@@ -85,7 +95,7 @@ func (c *Cli) createDryRunCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "dry-run root-name",
 		Short: "Показать, какие файлы/каталоги будут синхронизированы, без фактического выполнения синхронизации",
-		Run:   c.dryRunCommand,
+		Run:   c.dryRunCmd,
 		Args:  cobra.ExactArgs(1),
 	}
 }
@@ -94,32 +104,29 @@ func (c *Cli) createSyncCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "sync root-name",
 		Short: "Выполнить синхронизацию",
-		RunE:  c.syncCommand,
+		RunE:  c.syncCmd,
 		Args:  cobra.ExactArgs(1),
 	}
 }
 
-func (c *Cli) nodesCommand(cmd *cobra.Command, args []string) {
+func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) {
 	c.logger.Debug("Выполнение команды nodes")
-	nodes, err := c.connectUseCase.GetAllNodes()
+	nodeNamesChan, err := c.connectUseCase.ShowNodes()
 	if err != nil {
 		c.logger.Error("Не удалось получить узлы", "error", err)
 		return
 	}
 
-	if len(nodes) == 0 {
-		c.logger.Info("Нет доступных узлов")
-		return
-	}
-
 	c.logger.Info("Доступные узлы:")
 
-	for i, node := range nodes {
-		c.logger.Info(fmt.Sprintf("%d. %s", i+1, node.Name))
+	i := 1
+	for nodeName := range nodeNamesChan {
+		c.logger.Info(fmt.Sprintf("%d. %s", i, nodeName))
+		i++
 	}
 }
 
-func (c *Cli) connectCommand(cmd *cobra.Command, args []string) error {
+func (c *Cli) connectCmd(cmd *cobra.Command, args []string) error {
 	c.logger.Debug("Выполнение команды connect")
 
 	nodeName := args[0]
@@ -134,7 +141,7 @@ func (c *Cli) connectCommand(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (c *Cli) syncCommand(cmd *cobra.Command, args []string) error {
+func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 	c.logger.Debug("Выполнение команды sync")
 
 	changes := c.syncUseCase.GetSyncChanges()
@@ -156,7 +163,7 @@ func (c *Cli) syncCommand(cmd *cobra.Command, args []string) error {
 		if changeEventErr != nil {
 			return changeEventErr
 		}
-		c.logger.Info(fmt.Sprintf("Применено изменение %s:\n %s", c.changeToHumanReadable(changeEvent.Change)))
+		c.logger.Info(fmt.Sprintf("Применено изменение: %s\n", c.changeToHumanReadable(changeEvent.Change)))
 		if changeCount > changesLen {
 			c.logger.LogAttrs(
 				c.loggerCtx,
@@ -184,7 +191,7 @@ func (c *Cli) syncCommand(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (c *Cli) dryRunCommand(cmd *cobra.Command, args []string) {
+func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) {
 	c.logger.Debug("Выполнение команды dry-run")
 	changes := c.syncUseCase.GetSyncChanges()
 	changesLen := len(changes)

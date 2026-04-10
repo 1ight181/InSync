@@ -1,7 +1,6 @@
 package root
 
 import (
-	interfaces "insync/internal/interfaces"
 	"path/filepath"
 )
 
@@ -9,7 +8,7 @@ type RootResolver struct {
 	rootMap map[string]string
 }
 
-func NewRootResolver() interfaces.IRootResolver {
+func NewRootResolver() *RootResolver {
 	return &RootResolver{
 		rootMap: make(map[string]string),
 	}

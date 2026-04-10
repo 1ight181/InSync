@@ -4,14 +4,12 @@ import (
 	"context"
 	"log/slog"
 
-	"insync/internal/domain"
-	ifaces "insync/internal/interfaces"
 	shared "insync/internal/shared"
 
 	"github.com/grandcat/zeroconf"
 )
 
-type MDnsBrowser struct {
+type MDnsNodeNamesBrowser struct {
 	serviceType string
 	domain      string
 
@@ -23,7 +21,7 @@ type MDnsBrowser struct {
 	ctx    context.Context
 }
 
-type MDnsBrowserOptions struct {
+type MDnsNodeNamesBrowserOptions struct {
 	ServiceType string
 	Domain      string
 	Interfaces  []string
@@ -31,7 +29,7 @@ type MDnsBrowserOptions struct {
 	Ctx         context.Context
 }
 
-func NewMDnsBrowser(opts MDnsBrowserOptions) ifaces.IMdnsBrowser {
+func NewMDnsNodeNamesBrowser(opts MDnsNodeNamesBrowserOptions) *MDnsNodeNamesBrowser {
 	if opts.ServiceType == "" ||
 		opts.Domain == "" ||
 		opts.Interfaces == nil ||
@@ -39,7 +37,7 @@ func NewMDnsBrowser(opts MDnsBrowserOptions) ifaces.IMdnsBrowser {
 		opts.Ctx == nil {
 		panic("Все поля MDnsResolverOptions должны быть заполнены")
 	}
-	return &MDnsBrowser{
+	return &MDnsNodeNamesBrowser{
 		serviceType: opts.ServiceType,
 		domain:      opts.Domain,
 		interfaces:  opts.Interfaces,
@@ -48,7 +46,7 @@ func NewMDnsBrowser(opts MDnsBrowserOptions) ifaces.IMdnsBrowser {
 	}
 }
 
-func (b *MDnsBrowser) Browse() (chan domain.Node, error) {
+func (b *MDnsNodeNamesBrowser) BrowseNodeNames() (chan string, error) {
 	b.logger.Info("запуск MDnsResolver...")
 
 	ifaces, err := shared.GetNetworkInterfacesByName(b.interfaces)
@@ -76,19 +74,19 @@ func (b *MDnsBrowser) Browse() (chan domain.Node, error) {
 		}
 	}()
 
-	nodeChan := make(chan domain.Node)
+	nodeNamesChan := make(chan string)
 
 	go func() {
-		defer close(nodeChan)
-		b.sendToNodeChan(nodeChan)
+		defer close(nodeNamesChan)
+		b.sendToNodeNamesChan(nodeNamesChan)
 	}()
 
 	b.logger.Info("MDnsResolver успешно запущен")
 
-	return nodeChan, nil
+	return nodeNamesChan, nil
 }
 
-func (b *MDnsBrowser) sendToNodeChan(nodeChan chan domain.Node) {
+func (b *MDnsNodeNamesBrowser) sendToNodeNamesChan(nodeChan chan string) {
 	for {
 		select {
 		case <-b.ctx.Done():
@@ -98,25 +96,7 @@ func (b *MDnsBrowser) sendToNodeChan(nodeChan chan domain.Node) {
 				return
 			}
 
-			addresses := make([]domain.Address, 0, len(entry.AddrIPv4)+len(entry.AddrIPv6))
-			for _, ipv4 := range entry.AddrIPv4 {
-				addresses = append(addresses, domain.Address{
-					Ip:   ipv4.String(),
-					Port: entry.Port,
-				})
-			}
-
-			for _, ipv6 := range entry.AddrIPv6 {
-				addresses = append(addresses, domain.Address{
-					Ip:   ipv6.String(),
-					Port: entry.Port,
-				})
-			}
-
-			nodeChan <- domain.Node{
-				Name:      entry.Instance,
-				Addresses: addresses,
-			}
+			nodeChan <- entry.Instance
 		}
 	}
 }

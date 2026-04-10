@@ -5,13 +5,16 @@ import (
 	"encoding/hex"
 	"errors"
 	"insync/internal/domain"
-	"insync/internal/interfaces"
 	"io"
 )
 
+type IHashCalculator interface {
+	CalculateHash(content domain.ResourceContent) (string, error)
+}
+
 type HashCalculator struct{}
 
-func NewHashCalculator() interfaces.IHashCalculator {
+func NewHashCalculator() IHashCalculator {
 	return &HashCalculator{}
 }
 

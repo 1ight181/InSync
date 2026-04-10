@@ -2,9 +2,14 @@ package hash
 
 import (
 	"insync/internal/domain"
-	"insync/internal/interfaces"
 	"sync"
 )
+
+type IFileInfoCache interface {
+	LoadFileInfo(fileInfoSet map[string]domain.FileInfo) error
+	GetFileInfoCache(fullPath string, fileMetadata domain.FileMetadata) (domain.FileInfo, error)
+	SetFileInfoCache(fullPath string, fileInfo domain.FileInfo)
+}
 
 type FileInfoCache struct {
 	mu sync.RWMutex
@@ -12,10 +17,19 @@ type FileInfoCache struct {
 	cache map[string]domain.FileInfo
 }
 
-func NewHashCache() interfaces.IFileInfoCache {
+func NewHashCache() *FileInfoCache {
 	return &FileInfoCache{
 		cache: make(map[string]domain.FileInfo),
 	}
+}
+
+func (rc *FileInfoCache) LoadFileInfo(fileInfoSet map[string]domain.FileInfo) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	for fullPath, fileInfo := range fileInfoSet {
+		rc.cache[fullPath] = fileInfo
+	}
+	return nil
 }
 
 func (rc *FileInfoCache) GetFileInfoCache(fullPath string, fileMetadata domain.FileMetadata) (domain.FileInfo, error) {

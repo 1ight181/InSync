@@ -3,14 +3,13 @@ package hash
 import (
 	"context"
 	"insync/internal/domain"
-	"insync/internal/interfaces"
 	"log/slog"
 )
 
 type HashManager struct {
-	fileInfoCache  interfaces.IFileInfoCache
-	hashCalculator interfaces.IHashCalculator
-	pathTreeReader interfaces.IPathTreeReader
+	fileInfoCache  IFileInfoCache
+	hashCalculator IHashCalculator
+	pathTreeReader IPathTreeReader
 	dirtyPaths     map[string]struct{}
 
 	logger    *slog.Logger
@@ -18,15 +17,15 @@ type HashManager struct {
 }
 
 type HashManagerOptions struct {
-	FileInfoCache  interfaces.IFileInfoCache
-	HashCalculator interfaces.IHashCalculator
-	PathTreeReader interfaces.IPathTreeReader
+	FileInfoCache  IFileInfoCache
+	HashCalculator IHashCalculator
+	PathTreeReader IPathTreeReader
 
 	Logger    *slog.Logger
 	LoggerCtx context.Context
 }
 
-func NewHashManager(options HashManagerOptions) interfaces.IHashManager {
+func NewHashManager(options HashManagerOptions) *HashManager {
 	return &HashManager{
 		fileInfoCache:  options.FileInfoCache,
 		hashCalculator: options.HashCalculator,

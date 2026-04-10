@@ -5,8 +5,6 @@ import (
 	"log/slog"
 	"sync/atomic"
 
-	ifaces "insync/internal/interfaces"
-
 	shared "insync/internal/shared"
 
 	"github.com/grandcat/zeroconf"
@@ -37,7 +35,7 @@ type MDnsServerOptions struct {
 	Ctx          context.Context
 }
 
-func NewMDnsServer(opts MDnsServerOptions) ifaces.IMDnsServer {
+func NewMDnsServer(opts MDnsServerOptions) *MDnsServer {
 	if opts.InstanceName == "" ||
 		opts.ServiceType == "" ||
 		opts.Domain == "" ||

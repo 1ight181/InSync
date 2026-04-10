@@ -1,4 +1,4 @@
-package interfaces
+package cli
 
 import "insync/internal/domain"
 

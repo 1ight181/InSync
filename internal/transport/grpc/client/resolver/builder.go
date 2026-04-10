@@ -41,7 +41,7 @@ type BuilderOptions struct {
 	Logger                      *slog.Logger
 }
 
-func NewBuilder(opts BuilderOptions) resolver.Builder {
+func NewBuilder(opts BuilderOptions) *mdnsBuilder {
 	if opts.BackgroundListenTimeout == 0 {
 		opts.BackgroundListenTimeout = defaultBackgroundListenTimeout
 	}

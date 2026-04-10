@@ -1,21 +1,20 @@
-package usecase
+package file
 
 import (
 	"context"
 	"insync/internal/domain"
-	ifaces "insync/internal/interfaces"
 	"io"
 )
 
 type FileUseCase struct {
-	fileManager ifaces.IFileManager
+	fileManager IFileManager
 }
 
 type FileUseCaseOptions struct {
-	FileManager ifaces.IFileManager
+	FileManager IFileManager
 }
 
-func NewFileUseCase(opts FileUseCaseOptions) ifaces.IFileUseCase {
+func NewFileUseCase(opts FileUseCaseOptions) *FileUseCase {
 	return &FileUseCase{fileManager: opts.FileManager}
 }
 
