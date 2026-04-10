@@ -2,15 +2,14 @@ package connection
 
 import (
 	"context"
+	clt "insync/internal/infrastructure/client"
 	"insync/internal/interfaces"
-	"insync/internal/transport/grpc/client"
-	clt "insync/internal/transport/grpc/client"
 	"log/slog"
 )
 
 type ConnectionManager struct {
 	nodeNameResolver INodeNameResolver
-	baseGrpcConf     *client.GrpcConf
+	baseGrpcConf     *clt.GrpcConf
 
 	ctx context.Context
 
@@ -26,7 +25,7 @@ type ConnectionManager struct {
 
 type ConnectionManagerOptions struct {
 	NodeNameResolver INodeNameResolver
-	BaseGrpcConf     *client.GrpcConf
+	BaseGrpcConf     *clt.GrpcConf
 
 	Ctx context.Context
 

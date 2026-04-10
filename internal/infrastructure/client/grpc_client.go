@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/credentials"
 
-	mdnsresolver "insync/internal/transport/grpc/client/resolver"
+	mdnsresolver "insync/internal/infrastructure/client/resolver"
 
 	resolver "google.golang.org/grpc/resolver"
 )
