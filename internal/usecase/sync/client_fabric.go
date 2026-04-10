@@ -1,4 +1,4 @@
-package synch
+package sync
 
 import "insync/internal/interfaces"
 
