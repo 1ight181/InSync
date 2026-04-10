@@ -29,6 +29,8 @@ type ClientConfig struct {
 	ConnectionConfig ConnectionConfig `mapstructure:"connection_config"`
 
 	ChunkSizeInBytes int `mapstructure:"chunk_size_in_bytes"`
+
+	TlsConfig ClientTlsConfig `mapstructure:"tls"`
 }
 
 func (cc *ClientConfig) Validate() error {

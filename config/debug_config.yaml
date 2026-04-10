@@ -3,11 +3,27 @@
 # DEBUG
 # Для прода задавать через env
 # Либо через config.yaml
+
+tls: &tls
+  ca_cert_dir: "../certs"
+  ca_cert_filename: "ca"
+  ca_cert_extension: ".crt"
+
 server:
   ip: ""
   port: 50051
   network_type: "tcp"
   service_name: "insincpb.FileSyncService"
+
+  tls:
+    <<: *tls
+    server_cert_dir: "../certs"
+    server_cert_filename: "server"
+    server_cert_extension: ".crt"
+
+    server_key_dir: "../certs"
+    server_key_filename: "server"
+    server_key_extension: ".key"
 
 client:
     resolver_scheme: "mdns"
@@ -20,6 +36,7 @@ client:
     should_use_health_check: true
     chunk_size_in_bytes: 1024
     rpc_timeout: 5
+
     rpc_retry_policy:
       max_attempts: 3
       initial_backoff_seconds: 1
@@ -28,6 +45,7 @@ client:
       retryable_status_codes: 
         - "UNAVAILABLE"
         - "RESOURCE_EXHAUSTED"
+
     connection_config:
       base_delay_seconds: 1
       multiplier: 1.6
@@ -35,32 +53,21 @@ client:
       jitter: 0.2
       min_connect_timeout_seconds: 20
 
+    tls:
+      <<: *tls
+      client_cert_dir: "../certs"
+      client_cert_filename: "client"
+      client_cert_extension: ".crt"
+
+      client_key_dir: "../certs"
+      client_key_filename: "client"
+      client_key_extension: ".key"
+
 db:
   host: "db.example.com"
   port: 5432
   user: "dbuser"
   password: "securepassword"
-
-tls:
-  server_cert_dir: "../certs"
-  server_cert_filename: "server"
-  server_cert_extension: ".crt"
-
-  server_key_dir: "../certs"
-  server_key_filename: "server"
-  server_key_extension: ".key"
-
-  client_cert_dir: "../certs"
-  client_cert_filename: "client"
-  client_cert_extension: ".crt"
-
-  client_key_dir: "../certs"
-  client_key_filename: "client"
-  client_key_extension: ".key"
-
-  ca_cert_dir: "../certs"
-  ca_cert_filename: "ca"
-  ca_cert_extension: ".crt"
 
 logger:
   should_log_to_file: true
@@ -73,7 +80,7 @@ mdns_server:
   instance_name: "server1.server"
   service_type: "_grpc._tcp"
   domain: "local"
-  port: 50051
+  port: 5353
   # формат "eth0;wlan0"
   interfaces: ""
 

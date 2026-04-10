@@ -10,6 +10,8 @@ type ServerConfig struct {
 	Port        int    `mapstructure:"port"`
 	NetworkType string `mapstructure:"network_type"`
 	ServiceName string `mapstructure:"service_name"`
+
+	TlsConfig ServerTlsConfig `mapstructure:"tls"`
 }
 
 func (sc *ServerConfig) Validate() error {
