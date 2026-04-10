@@ -6,7 +6,7 @@ type GeneralConfig struct {
 	ServerConfig      ServerConfig      `mapstructure:"server"`
 	ClientConfig      ClientConfig      `mapstructure:"client"`
 	LoggerConfig      LoggerConfig      `mapstructure:"logger"`
-	MDnsConfig        MdnsServerConfig  `mapstructure:"mdns_server"`
+	MDnsConfig        MDnsServerConfig  `mapstructure:"mdns_server"`
 	FileManagerConfig FileManagerConfig `mapstructure:"file_manager"`
 }
 

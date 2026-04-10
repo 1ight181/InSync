@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-type MdnsServerConfig struct {
+type MDnsServerConfig struct {
 	InstanceName        string `mapstructure:"instance_name"`
 	InstanceNamePostfix string `mapstructure:"instance_name_postfix"`
 	ServiceType         string `mapstructure:"service_type"`
@@ -14,34 +14,34 @@ type MdnsServerConfig struct {
 	Interfaces          string `mapstructure:"interfaces"`
 }
 
-func (mc *MdnsServerConfig) Validate() error {
+func (mc *MDnsServerConfig) Validate() error {
 	if mc.InstanceName == "" {
-		return ErrMdnsInstanceNameIsEmpty
+		return ErrMDnsServerServiceTypeIsEmpty
 	}
 	if mc.InstanceNamePostfix == "" {
-		return ErrMdnsInstanceNamePostfixIsEmpty
+		return ErrMDnsServerInstanceNamePostfixIsEmpty
 	}
 	if mc.ServiceType == "" {
-		return ErrMdnsServiceTypeIsEmpty
+		return ErrMDnsServerServiceTypeIsEmpty
 	}
 	if mc.Domain == "" {
-		return ErrMdnsDomainIsEmpty
+		return ErrMDnsServerDomainIsEmpty
 	}
 	if mc.Port < 0 || mc.Port > 65535 {
-		return ErrMdnsPortIsInvalid
+		return ErrMDnsServerPortIsInvalid
 	}
 
 	return nil
 }
 
-func (mc *MdnsServerConfig) GetInterfaces() []string {
+func (mc *MDnsServerConfig) GetInterfaces() []string {
 	return strings.Split(mc.Interfaces, ";")
 }
 
-func (mc *MdnsServerConfig) GetFullServerName() string {
+func (mc *MDnsServerConfig) GetFullServerName() string {
 	return fmt.Sprintf("%s.%s", mc.InstanceName, mc.Domain)
 }
 
-func (mc *MdnsServerConfig) GetFullInstanceName() string {
+func (mc *MDnsServerConfig) GetFullInstanceName() string {
 	return fmt.Sprintf("%s.%s", mc.InstanceName, mc.InstanceNamePostfix)
 }

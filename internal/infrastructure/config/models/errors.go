@@ -15,7 +15,7 @@ var (
 	ErrNetworkToConnectTypeIsEmpty = errors.New("Тип сети сервера, к которому нужно подключиться, не может быть пустым")
 	ErrClientResolverSchemeIsEmpty = errors.New("Схема резолвера не может быть пустой")
 	ErrChunkSizeIsInvalid          = errors.New("Размер чанка должен быть положительным целым числом")
-	ErrMdnsServiceNameIsEmpty      = errors.New("Название сервиса mDNS не может быть пустым при использовании схемы mdns")
+	ErrMDnsServiceNameIsEmpty      = errors.New("Название сервиса mDNS не может быть пустым при использовании схемы mdns")
 	ErrLoadBalancingPolicyIsEmpty  = errors.New("Политика балансировки не может быть пустой")
 	ErrRpcTimeoutIsInvalid         = errors.New("Таймаут RPC должен быть положительным целым числом")
 )
@@ -76,14 +76,19 @@ var (
 	ErrCaCertExtensionIsEmpty = errors.New("Расширение файла сертификата CA не может быть пустым")
 )
 
-// Ошибки валидации конфигурации mDNS
+// Ошибки валидации конфигурации mDNS сервера
 var (
-	ErrMdnsInstanceNameIsEmpty        = errors.New("Название экземпляра сервера mDNS не может быть пустым")
-	ErrMdnsInstanceNamePostfixIsEmpty = errors.New("Постфикс названия экземпляра сервера mDNS не может быть пустым")
-	ErrMdnsServiceTypeIsEmpty         = errors.New("Тип сервиса mDNS не может быть пустым")
-	ErrMdnsDomainIsEmpty              = errors.New("Домен mDNS не может быть пустым")
-	ErrMdnsPortIsInvalid              = errors.New("Порт mDNS должен быть целым числом в диапозоне от 0 до 65535")
-	ErrMdnsInterfacesIsEmpty          = errors.New("Список интерфейсов mDNS не может быть пустым")
+	ErrMDnsServerInstanceNameIsEmpty        = errors.New("Название экземпляра сервера mDNS не может быть пустым")
+	ErrMDnsServerInstanceNamePostfixIsEmpty = errors.New("Постфикс названия экземпляра сервера mDNS не может быть пустым")
+	ErrMDnsServerServiceTypeIsEmpty         = errors.New("Тип сервиса mDNS не может быть пустым")
+	ErrMDnsServerDomainIsEmpty              = errors.New("Домен mDNS не может быть пустым")
+	ErrMDnsServerPortIsInvalid              = errors.New("Порт mDNS должен быть целым числом в диапозоне от 0 до 65535")
+)
+
+// Ошибки валидации конфигурации mDNS браузера
+var (
+	ErrMDnsBrowserServiceTypeIsEmpty = errors.New("Тип сервиса mDNS не может быть пустым")
+	ErrMDnsBrowserDomainIsEmpty      = errors.New("Домен mDNS не может быть пустым")
 )
 
 var (

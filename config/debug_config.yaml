@@ -81,7 +81,13 @@ mdns_server:
   instance_name_postfix: "server"
   service_type: "_grpc._tcp"
   domain: "local"
-  port: 5353
+  port: 50051
+  # формат "eth0;wlan0"
+  interfaces: ""
+
+mdns_browser:
+  service_type: "_grpc._tcp"
+  domain: "local"
   # формат "eth0;wlan0"
   interfaces: ""
 

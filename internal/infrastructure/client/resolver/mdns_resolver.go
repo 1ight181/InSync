@@ -50,7 +50,7 @@ type mdnsResolverOptions struct {
 	Logger *slog.Logger
 }
 
-func newMdnsResolver(opts mdnsResolverOptions) *mdnsResolver {
+func newMDnsResolver(opts mdnsResolverOptions) *mdnsResolver {
 	resolveNowChan := make(chan struct{}, 1)
 	entries := make(chan *zeroconf.ServiceEntry)
 	loggerCtx := context.Background()

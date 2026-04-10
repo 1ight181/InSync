@@ -119,7 +119,7 @@ func (b *mdnsBuilder) Build(target resolver.Target, clientConn resolver.ClientCo
 		Logger:                      b.logger,
 	}
 
-	mdnsResolver := newMdnsResolver(mdnsResolverOptions)
+	mdnsResolver := newMDnsResolver(mdnsResolverOptions)
 	mdnsResolver.Start()
 
 	return mdnsResolver, nil

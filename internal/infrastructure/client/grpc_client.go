@@ -57,7 +57,7 @@ type GrpcConf struct {
 	ResolverScheme string
 
 	// опциональный список интерфейсов, которые будут использоваться для работы mdns клиента
-	MdnsResolverIfaces []string
+	MDnsResolverIfaces []string
 
 	LoadBalancingPolicy  string
 	ShouldUseHealthCheck bool
@@ -164,7 +164,7 @@ func (gc *GrpcClient) Connect() (err error) {
 
 	gc.logger.LogAttrs(gc.loggerCtx, slog.LevelDebug, "Клиент будет запущен с следующим serviceConfig:", slog.String("serviceConfig", serviceConfig))
 
-	mdnsResolver := gc.createMdnsResolver()
+	mdnsResolver := gc.createMDnsResolver()
 	withResolvers := grpc.WithResolvers(mdnsResolver)
 
 	withConnectParams := grpc.WithConnectParams(grpc.ConnectParams{
@@ -304,9 +304,9 @@ func (gc *GrpcClient) createAddress() string {
 	return fmt.Sprintf("%s%s%s", gc.conf.ResolverScheme, resolverSchemeSeparator, gc.conf.ServerAddress)
 }
 
-func (gc *GrpcClient) createMdnsResolver() resolver.Builder {
+func (gc *GrpcClient) createMDnsResolver() resolver.Builder {
 	builderOptions := mdnsresolver.BuilderOptions{
-		ResolverIfaces:              gc.conf.MdnsResolverIfaces,
+		ResolverIfaces:              gc.conf.MDnsResolverIfaces,
 		BackgroundListenTimeout:     time.Second * 30,
 		ShouldResolveIpv6:           true,
 		ShouldDisableResolverOnIdle: true,

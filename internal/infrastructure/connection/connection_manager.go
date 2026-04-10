@@ -62,7 +62,7 @@ func (c *ConnectionManager) CurrentNodeName() string {
 }
 
 func (c *ConnectionManager) ConnectToNode(nodeName string) error {
-	mdnsUrl, err := c.nodeNameResolver.Resolve(nodeName)
+	mdnsUrl, err := c.nodeNameResolver.ResolveToMDnsUrl(nodeName)
 	if err != nil {
 		return err
 	}
