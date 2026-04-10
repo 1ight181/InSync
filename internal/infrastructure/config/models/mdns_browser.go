@@ -5,17 +5,21 @@ import (
 )
 
 type MDnsBrowserConfig struct {
-	ServiceType string `mapstructure:"service_type"`
-	Domain      string `mapstructure:"domain"`
-	Interfaces  string `mapstructure:"interfaces"`
+	ServerServiceType         string `mapstructure:"server_service_type"`
+	ServerInstanceNamePostfix string `mapstructure:"server_instance_name_postfix"`
+	ServerDomain              string `mapstructure:"server_domain"`
+	Interfaces                string `mapstructure:"interfaces"`
 }
 
 func (mc *MDnsBrowserConfig) Validate() error {
-	if mc.ServiceType == "" {
-		return ErrMDnsBrowserServiceTypeIsEmpty
+	if mc.ServerServiceType == "" {
+		return ErrMDnsBrowserServerServiceTypeIsEmpty
 	}
-	if mc.Domain == "" {
-		return ErrMDnsBrowserDomainIsEmpty
+	if mc.ServerInstanceNamePostfix == "" {
+		return ErrMDnsBrowserServerInstanceNamePostfixIsEmpty
+	}
+	if mc.ServerDomain == "" {
+		return ErrMDnsBrowserServerDomainIsEmpty
 	}
 
 	return nil

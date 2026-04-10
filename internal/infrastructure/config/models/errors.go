@@ -87,8 +87,9 @@ var (
 
 // Ошибки валидации конфигурации mDNS браузера
 var (
-	ErrMDnsBrowserServiceTypeIsEmpty = errors.New("Тип сервиса mDNS не может быть пустым")
-	ErrMDnsBrowserDomainIsEmpty      = errors.New("Домен mDNS не может быть пустым")
+	ErrMDnsBrowserServerServiceTypeIsEmpty         = errors.New("Тип сервиса сервера mDNSв браузере не может быть пустым")
+	ErrMDnsBrowserServerInstanceNamePostfixIsEmpty = errors.New("Постфикс названия экземпляра сервера mDNS в браузере не может быть пустым")
+	ErrMDnsBrowserServerDomainIsEmpty              = errors.New("Домен сервера mDNS в браузере не может быть пустым")
 )
 
 var (

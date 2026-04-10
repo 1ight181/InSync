@@ -86,8 +86,9 @@ mdns_server:
   interfaces: ""
 
 mdns_browser:
-  service_type: "_grpc._tcp"
-  domain: "local"
+  server_service_type: "_grpc._tcp"
+  server_instance_name_postfix: "server"
+  server_domain: "local"
   # формат "eth0;wlan0"
   interfaces: ""
 
