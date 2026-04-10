@@ -1,32 +1,16 @@
 package filesys
 
 import (
-	"context"
 	"io"
 	"io/fs"
-	"log/slog"
 	"os"
 	"path/filepath"
 )
 
-type FileSystem struct {
-	logger    *slog.Logger
-	loggerCtx context.Context
-}
+type FileSystem struct{}
 
-type FileSystemOptions struct {
-	Logger *slog.Logger
-}
-
-func NewFileSystem(opts FileSystemOptions) *FileSystem {
-	if opts.Logger == nil {
-		panic("Не все обязательные параметры были переданы при инициализации FileSystem")
-	}
-	loggerCtx := context.Background()
-	return &FileSystem{
-		logger:    opts.Logger,
-		loggerCtx: loggerCtx,
-	}
+func NewFileSystem() *FileSystem {
+	return &FileSystem{}
 }
 
 func (f *FileSystem) ReadDir(fullPath string) ([]fs.DirEntry, error) {

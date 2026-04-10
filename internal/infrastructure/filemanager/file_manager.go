@@ -12,7 +12,7 @@ import (
 
 type FileManager struct {
 	rootResolver   IRootResolver
-	hashResolver   IHashManager
+	hashManager    IHashManager
 	fileSystem     IFileSystem
 	pathTreeWriter IPathTreeWriter
 
@@ -24,7 +24,7 @@ type FileManager struct {
 
 type FileManagerOptions struct {
 	RootResolver   IRootResolver
-	HashResolver   IHashManager
+	HashManager    IHashManager
 	FileSystem     IFileSystem
 	PathTreeWriter IPathTreeWriter
 
@@ -36,7 +36,7 @@ type FileManagerOptions struct {
 
 func NewFileManager(opts FileManagerOptions) *FileManager {
 	if opts.RootResolver == nil ||
-		opts.HashResolver == nil ||
+		opts.HashManager == nil ||
 		opts.FileSystem == nil ||
 		opts.PathTreeWriter == nil ||
 		opts.TempDir == "" ||
@@ -46,7 +46,7 @@ func NewFileManager(opts FileManagerOptions) *FileManager {
 	}
 	return &FileManager{
 		rootResolver:   opts.RootResolver,
-		hashResolver:   opts.HashResolver,
+		hashManager:    opts.HashManager,
 		fileSystem:     opts.FileSystem,
 		pathTreeWriter: opts.PathTreeWriter,
 
@@ -98,7 +98,7 @@ func (f *FileManager) RenameFile(ctx context.Context, rootName domain.RootName, 
 		return err
 	}
 
-	return f.hashResolver.MarkDirty(newResolvedPath)
+	return f.hashManager.MarkDirty(newResolvedPath)
 }
 
 func (f *FileManager) DeleteFile(ctx context.Context, rootName domain.RootName, relativePath domain.RelativePath) error {
@@ -122,7 +122,7 @@ func (f *FileManager) DeleteFile(ctx context.Context, rootName domain.RootName, 
 		return err
 	}
 
-	return f.hashResolver.MarkDirty(resolvedPath)
+	return f.hashManager.MarkDirty(resolvedPath)
 }
 
 func (f *FileManager) GetFile(ctx context.Context, rootName domain.RootName, relativePath domain.RelativePath) (io.ReadCloser, error) {
@@ -167,7 +167,7 @@ func (f *FileManager) PutFile(ctx context.Context, rootName domain.RootName, rel
 		return err
 	}
 
-	return f.hashResolver.MarkDirty(resolvedPath)
+	return f.hashManager.MarkDirty(resolvedPath)
 }
 
 func (f *FileManager) writeContentToTemp(content io.Reader) (string, error) {
