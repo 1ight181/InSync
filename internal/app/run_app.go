@@ -3,6 +3,19 @@ package app
 import (
 	"context"
 	"fmt"
+	clt "insync/internal/infrastructure/client"
+	conn "insync/internal/infrastructure/connection"
+	"insync/internal/infrastructure/filemanager"
+	"insync/internal/infrastructure/filemanager/hash"
+	"insync/internal/infrastructure/filesys"
+	node "insync/internal/infrastructure/nodename"
+	pathtree "insync/internal/infrastructure/pathtree"
+	root "insync/internal/infrastructure/root"
+	cli "insync/internal/presentation/cli"
+	server "insync/internal/transport/grpc/server"
+	connusecase "insync/internal/usecase/connect"
+	fileusecase "insync/internal/usecase/file"
+	syncusecase "insync/internal/usecase/sync"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,11 +23,17 @@ import (
 )
 
 const (
-	exitTimeoutSeconds   = 5
-	moduleAtrributeName  = "module"
-	mDnsModuleName       = "mdns"
-	grpcServerModuleName = "grpc_server"
-	grpcClientModuleName = "grpc_client"
+	exitTimeoutSeconds                   = 5
+	grpcServerGracefulStopTimeoutSeconds = 3
+	moduleAtrributeName                  = "module"
+	mDnsServerModuleName                 = "mdns_server"
+	mDnsBrowserModuleName                = "mdns_browser"
+	grpcServerModuleName                 = "grpc_server"
+	grpcClientModuleName                 = "grpc_client"
+	connectionManagerModuleName          = "connection_manager"
+	cliModuleName                        = "cli"
+	fileManagerModuleName                = "file_manager"
+	hashManagerModuleName                = "hash_manager"
 )
 
 func RunApp() {
@@ -38,91 +57,196 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать логгер: %v", err))
 	}
 
-	mDnsLogger := logger.With(moduleAtrributeName, mDnsModuleName)
-	mDnsConfig := config.MDnsConfig
+	mDnsServerLogger := logger.With(moduleAtrributeName, mDnsServerModuleName)
+	mDnsServerConfig := config.MDnsServerConfig
 
 	if err := startMDnsServer(
-		mDnsConfig.InstanceName,
-		mDnsConfig.ServiceType,
-		mDnsConfig.Domain,
-		mDnsConfig.Port,
-		mDnsConfig.GetInterfaces(),
-		mDnsLogger,
+		mDnsServerConfig.InstanceName,
+		mDnsServerConfig.ServiceType,
+		mDnsServerConfig.Domain,
+		mDnsServerConfig.Port,
+		mDnsServerConfig.GetInterfaces(),
+		mDnsServerLogger,
 		appCtx,
 	); err != nil {
 		panic(fmt.Sprintf("Не удалось запустить mDNS сервер: %v", err))
 	}
 
-	tlsConfig := config.TlsConfig
+	rootResolverOpts := root.NewRootResolver()
+	fileSystemOpts := filesys.NewFileSystem()
+	pathTree := pathtree.NewPathTree()
+	fileInfoCache := hash.NewFileInfoCache()
+	hashCalc := hash.NewHashCalculator()
+
+	hashManagerLogger := logger.With(moduleAtrributeName, hashManagerModuleName)
+
+	hashManagerOpts := hash.HashManagerOptions{
+		FileInfoCache:  fileInfoCache,
+		HashCalculator: hashCalc,
+		PathTreeReader: pathTree,
+		Logger:         hashManagerLogger,
+		LoggerCtx:      appCtx,
+	}
+
+	hashManager := hash.NewHashManager(hashManagerOpts)
+
+	fileManagerConfig := config.FileManagerConfig
+	fileManagerLogger := logger.With(moduleAtrributeName, fileManagerModuleName)
+
+	fileManagerOpts := filemanager.FileManagerOptions{
+		RootResolver:   rootResolverOpts,
+		HashManager:    hashManager,
+		FileSystem:     fileSystemOpts,
+		PathTreeWriter: pathTree,
+
+		TempDir:   fileManagerConfig.TempDir,
+		Logger:    fileManagerLogger,
+		LoggerCtx: appCtx,
+	}
+
+	fileManager := filemanager.NewFileManager(fileManagerOpts)
+
+	fileUseCaseOpts := fileusecase.FileUseCaseOptions{
+		FileManager: fileManager,
+	}
+
+	fileUseCase := fileusecase.NewFileUseCase(fileUseCaseOpts)
 
 	serverLogger := logger.With(moduleAtrributeName, grpcServerModuleName)
 	serverConfig := config.ServerConfig
-	startGrpcServer(
-		tlsConfig.GetServerCertPath(),
-		tlsConfig.GetServerKeyPath(),
-		tlsConfig.GetCaCertPath(),
+	grpcServerOpts := server.GrpcServerOptions{
+		FileUseCase: fileUseCase,
+		CertPath:    serverConfig.TlsConfig.GetServerCertPath(),
+		KeyPath:     serverConfig.TlsConfig.GetServerKeyPath(),
+		CaCertPath:  serverConfig.TlsConfig.GetCaCertPath(),
 
-		serverConfig.NetworkType,
-		serverConfig.GetAddress(),
-		serverConfig.ServiceName,
+		NetworkType: serverConfig.NetworkType,
+		Address:     serverConfig.Address,
+		ServiceName: serverConfig.ServiceName,
 
+		Ctx: appCtx,
+
+		Logger: serverLogger,
+	}
+
+	grpcServer := server.NewGrpcServer(grpcServerOpts)
+	err = grpcServer.Start()
+	if err != nil {
+		panic("Не удалось запустить gRPC сервер")
+	}
+
+	go func() {
+		<-appCtx.Done()
+		timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), grpcServerGracefulStopTimeoutSeconds*time.Second)
+		defer timeoutCancel()
+
+		err := grpcServer.Stop(timeoutCtx)
+		if err != nil {
+			logger.Warn("Не удалось коректно остановить grpcServer")
+		}
+	}()
+
+	mDnsBrowserConfig := config.MDnsBrowserConfig
+	mDnsBrowserLogger := logger.With(moduleAtrributeName, mDnsBrowserModuleName)
+
+	mDnsNodeNamesBrowser, err := createMDnsNodeNamesBrowser(
+		mDnsBrowserConfig.ServerServiceType,
+		mDnsBrowserConfig.ServerDomain,
+		mDnsBrowserConfig.GetInterfaces(),
+		mDnsBrowserLogger,
 		appCtx,
-		serverLogger,
 	)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать MDnsNodeNamesBrowser: %v", err))
+	}
 
 	clientConfig := config.ClientConfig
-
 	clientLogger := logger.With(moduleAtrributeName, grpcClientModuleName)
-	err = startGrpcClient(
-		tlsConfig.GetClientCertPath(),
-		tlsConfig.GetClientKeyPath(),
-		tlsConfig.GetCaCertPath(),
 
-		clientConfig.ServerNetworkType,
-		clientConfig.ServerAddress,
-		clientConfig.ServerServiceName,
-		mDnsConfig.GetFullServerName(),
-		clientConfig.ResolverScheme,
+	// В GrpcConf не передается ServerAddress, т.к. он добавляется в ConnectionManager при подключении к конкретному узлу
+	// Данная конфигурация является основой для подключения к любому узлу
+	grpcClientConf := clt.GrpcConf{
+		CertPath: clientConfig.TlsConfig.GetClientCertPath(),
+		KeyPath:  clientConfig.TlsConfig.GetClientKeyPath(),
 
-		mDnsConfig.GetInterfaces(),
+		CaCertPath: clientConfig.TlsConfig.GetCaCertPath(),
 
-		clientConfig.LoadBalancingPolicy,
-		clientConfig.ShouldUseHealthCheck,
+		ServerNetworkType: clientConfig.ServerNetworkType,
+		ServerAddress:     clientConfig.ServerAddress,
+		ServerServiceName: clientConfig.ServerServiceName,
 
-		clientConfig.RpcTimeout,
+		ResolverScheme:     clientConfig.ResolverScheme,
+		MDnsResolverIfaces: mDnsBrowserConfig.GetInterfaces(),
 
-		clientConfig.RpcRetryPolicy.MaxAttempts,
-		clientConfig.RpcRetryPolicy.InitialBackoffSeconds,
-		clientConfig.RpcRetryPolicy.MaxBackoffSeconds,
-		clientConfig.RpcRetryPolicy.BackoffMultiplier,
+		LoadBalancingPolicy:  clientConfig.LoadBalancingPolicy,
+		ShouldUseHealthCheck: clientConfig.ShouldUseHealthCheck,
 
-		clientConfig.ConnectionConfig.BaseDelaySeconds,
-		clientConfig.ConnectionConfig.Multiplier,
-		clientConfig.ConnectionConfig.MaxDelaySeconds,
-		clientConfig.ConnectionConfig.Jitter,
-		clientConfig.ConnectionConfig.MinConnectTimeoutSeconds,
+		RpcTimeout: time.Duration(clientConfig.RpcTimeout) * time.Second,
 
-		appCtx,
+		RetryPolicy: &clt.RpcRetryPolicy{
+			MaxAttempts:          clientConfig.RpcRetryPolicy.MaxAttempts,
+			InitialBackoff:       time.Duration(clientConfig.RpcRetryPolicy.InitialBackoffSeconds) * time.Second,
+			MaxBackoff:           time.Duration(clientConfig.RpcRetryPolicy.MaxBackoffSeconds) * time.Second,
+			BackoffMultiplier:    clientConfig.RpcRetryPolicy.BackoffMultiplier,
+			RetryableStatusCodes: clientConfig.RpcRetryPolicy.RetryableStatusCodes,
+		},
 
-		clientConfig.ChunkSizeInBytes,
+		ConnectionConfig: &clt.ConnectionConfig{
+			BaseDelay:         time.Duration(clientConfig.ConnectionConfig.BaseDelaySeconds) * time.Second,
+			Multiplier:        clientConfig.ConnectionConfig.Multiplier,
+			MaxDelay:          time.Duration(clientConfig.ConnectionConfig.MaxDelaySeconds) * time.Second,
+			Jitter:            clientConfig.ConnectionConfig.Jitter,
+			MinConnectTimeout: time.Duration(clientConfig.ConnectionConfig.MinConnectTimeoutSeconds) * time.Second,
+		},
 
-		clientLogger,
-	)
-	if err != nil {
-		panic(fmt.Sprintf("Не удалось запустить gRPC клиент: %v", err))
+		ChunkSizeInBytes: clientConfig.ChunkSizeInBytes,
 	}
 
-	// передавать в cli
-	_, err = createMDnsBrowser(
-		mDnsConfig.ServiceType,
-		mDnsConfig.Domain,
-		mDnsConfig.GetInterfaces(),
-		mDnsLogger,
-		appCtx,
-	)
-	if err != nil {
-		panic(fmt.Sprintf("Не удалось создать mDNS браузер: %v", err))
+	connectionManagerLogger := logger.With(moduleAtrributeName, connectionManagerModuleName)
+
+	nodeNameResolverOpts := node.NodeNameResolverOptions{
+		MDnsServerServiceType: mDnsBrowserConfig.ServerServiceType,
+		MDnsServerDomain:      mDnsBrowserConfig.ServerDomain,
 	}
+
+	nodeNameresolver := node.NewNodeNameResolver(nodeNameResolverOpts)
+
+	connectionManagerOpts := conn.ConnectionManagerOptions{
+		NodeNameResolver: nodeNameresolver,
+		BaseGrpcConf:     &grpcClientConf,
+		GrpcClientLogger: clientLogger,
+		Logger:           connectionManagerLogger,
+		Ctx:              appCtx,
+	}
+
+	connectionManager := conn.NewConnectionManager(connectionManagerOpts)
+
+	connectUseCaseOpts := connusecase.ConnectUseCaseOptions{
+		NodeNamesBrowser:  mDnsNodeNamesBrowser,
+		ConnectionManager: connectionManager,
+	}
+
+	connectUseCase := connusecase.NewConnectUseCase(connectUseCaseOpts)
+
+	syncUseCaseOpts := syncusecase.SyncUseCaseOptions{
+		ClientFabric: connectionManager,
+	}
+
+	syncUseCase := syncusecase.NewSyncUseCase(syncUseCaseOpts)
+
+	cliLogger := logger.With(moduleAtrributeName, cliModuleName)
+
+	cliInstanceOpts := cli.CliOptions{
+		SyncUseCase:    syncUseCase,
+		ConnectUseCase: connectUseCase,
+
+		Logger: cliLogger,
+
+		Ctx: appCtx,
+	}
+
+	cliInstance := cli.NewCli(cliInstanceOpts)
+	go func() { cliInstance.Start() }()
 
 	<-stopSignal
 	cancel()
