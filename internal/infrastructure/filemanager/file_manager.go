@@ -11,7 +11,7 @@ import (
 )
 
 type FileManager struct {
-	pathResolver   IRootResolver
+	rootResolver   IRootResolver
 	hashResolver   IHashManager
 	fileSystem     IFileSystem
 	pathTreeWriter IPathTreeWriter
@@ -23,7 +23,7 @@ type FileManager struct {
 }
 
 type FileManagerOptions struct {
-	PathResolver   IRootResolver
+	RootResolver   IRootResolver
 	HashResolver   IHashManager
 	FileSystem     IFileSystem
 	PathTreeWriter IPathTreeWriter
@@ -35,7 +35,7 @@ type FileManagerOptions struct {
 }
 
 func NewFileManager(opts FileManagerOptions) *FileManager {
-	if opts.PathResolver == nil ||
+	if opts.RootResolver == nil ||
 		opts.HashResolver == nil ||
 		opts.FileSystem == nil ||
 		opts.PathTreeWriter == nil ||
@@ -45,7 +45,7 @@ func NewFileManager(opts FileManagerOptions) *FileManager {
 		panic("Все поля FileManagerOptions должны быть заполнены")
 	}
 	return &FileManager{
-		pathResolver:   opts.PathResolver,
+		rootResolver:   opts.RootResolver,
 		hashResolver:   opts.HashResolver,
 		fileSystem:     opts.FileSystem,
 		pathTreeWriter: opts.PathTreeWriter,
@@ -58,7 +58,7 @@ func NewFileManager(opts FileManagerOptions) *FileManager {
 }
 func (f *FileManager) GetFileList(ctx context.Context, rootName domain.RootName) ([]domain.FileEntry, error) {
 	root := rootName.String()
-	resolvedRootPath, err := f.pathResolver.ResolveRoot(root, "")
+	resolvedRootPath, err := f.rootResolver.ResolveRoot(root, "")
 	if err != nil {
 		return nil, err
 	}
@@ -76,12 +76,12 @@ func (f *FileManager) RenameFile(ctx context.Context, rootName domain.RootName, 
 	oldRelPath := oldRelativePath.String()
 	newRelPath := newRelativePath.String()
 
-	oldResolvedPath, err := f.pathResolver.ResolveRoot(root, oldRelPath)
+	oldResolvedPath, err := f.rootResolver.ResolveRoot(root, oldRelPath)
 	if err != nil {
 		return err
 	}
 
-	newResolvedPath, err := f.pathResolver.ResolveRoot(root, newRelPath)
+	newResolvedPath, err := f.rootResolver.ResolveRoot(root, newRelPath)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (f *FileManager) DeleteFile(ctx context.Context, rootName domain.RootName, 
 	root := rootName.String()
 	relPath := relativePath.String()
 
-	resolvedPath, err := f.pathResolver.ResolveRoot(root, relPath)
+	resolvedPath, err := f.rootResolver.ResolveRoot(root, relPath)
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func (f *FileManager) GetFile(ctx context.Context, rootName domain.RootName, rel
 	root := rootName.String()
 	relPath := relativePath.String()
 
-	resolvedPath, err := f.pathResolver.ResolveRoot(root, relPath)
+	resolvedPath, err := f.rootResolver.ResolveRoot(root, relPath)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func (f *FileManager) PutFile(ctx context.Context, rootName domain.RootName, rel
 	root := rootName.String()
 	relPath := relativePath.String()
 
-	resolvedPath, err := f.pathResolver.ResolveRoot(root, relPath)
+	resolvedPath, err := f.rootResolver.ResolveRoot(root, relPath)
 	if err != nil {
 		return err
 	}
