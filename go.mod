@@ -3,13 +3,24 @@ module insync
 go 1.25.3
 
 require (
+	github.com/c-bata/go-prompt v0.2.6
 	github.com/knadh/koanf/parsers/yaml v1.1.0
 	github.com/knadh/koanf/providers/env v1.1.0
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/v2 v2.3.2
+	github.com/stromland/cobra-prompt v0.5.0
 	go.uber.org/multierr v1.11.0
 	google.golang.org/grpc v1.79.1
 	google.golang.org/protobuf v1.36.10
+)
+
+require (
+	github.com/mattn/go-colorable v0.1.11 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/mattn/go-runewidth v0.0.13 // indirect
+	github.com/mattn/go-tty v0.0.3 // indirect
+	github.com/pkg/term v1.2.0-beta.2 // indirect
+	github.com/rivo/uniseg v0.2.0 // indirect
 )
 
 require (

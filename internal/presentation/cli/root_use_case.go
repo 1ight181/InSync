@@ -1,6 +1,9 @@
 package cli
 
+import "insync/internal/domain"
+
 type IRootUseCase interface {
-	AddRoot(rootName string, rootPath string)
-	RemoveRoot(rootName string)
+	AddRoot(rootName domain.RootName, relativePath domain.RelativePath)
+	RemoveRoot(rootName domain.RootName)
+	GetRoots() []domain.RootName
 }

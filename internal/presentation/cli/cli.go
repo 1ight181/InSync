@@ -5,15 +5,36 @@ import (
 	"fmt"
 	"insync/internal/domain"
 	"log/slog"
+	"strings"
 
+	prompt "github.com/c-bata/go-prompt"
 	"github.com/spf13/cobra"
+	cobraprompt "github.com/stromland/cobra-prompt"
+)
+
+const (
+	rootCmdName       = "root"
+	nodesCmdName      = "nodes"
+	addRootCmdName    = "add-root"
+	removeRootCmdName = "remove-root"
+	getRootsCmdName   = "get-roots"
+	connectCmdName    = "connect"
+	dryRunCmdName     = "dry-run"
+	syncCmdName       = "sync"
+)
+
+const (
+	changeTypeCreate  = "CREATE"
+	changeTypeDelete  = "DELETE"
+	changeTypeRename  = "RENAME"
+	changeTypeMove    = "MOVE"
+	changeTypeUnknown = "UNKNOWN"
 )
 
 type Cli struct {
 	syncUseCase    ISyncUseCase
 	connectUseCase IConnectUseCase
-
-	rootUseCase *IRootUseCase
+	rootUseCase    IRootUseCase
 
 	logger    *slog.Logger
 	loggerCtx context.Context
@@ -24,6 +45,7 @@ type Cli struct {
 type CliOptions struct {
 	SyncUseCase    ISyncUseCase
 	ConnectUseCase IConnectUseCase
+	RootUseCase    IRootUseCase
 
 	Logger *slog.Logger
 
@@ -33,6 +55,7 @@ type CliOptions struct {
 func NewCli(opts CliOptions) *Cli {
 	if opts.SyncUseCase == nil ||
 		opts.ConnectUseCase == nil ||
+		opts.RootUseCase == nil ||
 		opts.Logger == nil ||
 		opts.Ctx == nil {
 		panic("Не все обязательные параметры были переданы при инициализации Cli")
@@ -41,6 +64,7 @@ func NewCli(opts CliOptions) *Cli {
 	return &Cli{
 		syncUseCase:    opts.SyncUseCase,
 		connectUseCase: opts.ConnectUseCase,
+		rootUseCase:    opts.RootUseCase,
 
 		logger:    opts.Logger,
 		loggerCtx: loggerCtx,
@@ -49,63 +73,170 @@ func NewCli(opts CliOptions) *Cli {
 	}
 }
 
-func (c *Cli) Start() error {
+func (c *Cli) Start() {
 	rootCmd := c.createRootCmd()
 	nodesCmd := c.createNodesCmd()
+	addRootCmd := c.createAddRootCmd()
+	removeRootCmd := c.createRemoveRootCmd()
 	connectCmd := c.createConnectCmd()
 	dryRunCmd := c.createDryRunCmd()
 	syncCmd := c.createSyncCmd()
 
 	rootCmd.AddCommand(dryRunCmd)
 	rootCmd.AddCommand(nodesCmd)
+	rootCmd.AddCommand(addRootCmd)
+	rootCmd.AddCommand(removeRootCmd)
 	rootCmd.AddCommand(connectCmd)
 	rootCmd.AddCommand(syncCmd)
 
-	return rootCmd.Execute()
+	cobraPrompt := cobraprompt.CobraPrompt{
+		RootCmd:                 rootCmd,
+		ShowHelpCommandAndFlags: true,
+		GoPromptOptions: []prompt.Option{
+			prompt.OptionTitle("InSync 0.1"),
+			prompt.OptionMaxSuggestion(5),
+			prompt.OptionPrefix("insync> "),
+			prompt.OptionInputTextColor(prompt.DarkGreen),
+			prompt.OptionSelectedSuggestionTextColor(prompt.Green),
+			prompt.OptionSuggestionTextColor(prompt.DarkGreen),
+		},
+
+		DynamicSuggestionsFunc: c.suggestionFunc,
+	}
+
+	cobraPrompt.Run()
 }
 
 func (c *Cli) createRootCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "insync",
+		Use:   rootCmdName,
 		Short: "InSync - инструмент для синхронизации файлов между различными хранилищами",
 	}
 }
 
 func (c *Cli) createNodesCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "nodes",
+		Use:   nodesCmdName,
 		Short: "Отобразить доступные для синхронизации узлы",
 		Args:  cobra.NoArgs,
 		Run:   c.nodesCmd,
 	}
 }
 
+func (c *Cli) createAddRootCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   fmt.Sprintf("%s root-name root-path", addRootCmdName),
+		Short: "Добавить корневой каталог",
+		Long: `Добавить корневой каталог. 
+		root-name - имя корневого каталога
+		root-path - путь к корневому каталогу`,
+		RunE: c.addRootCmd,
+	}
+}
+
+func (c *Cli) createRemoveRootCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   fmt.Sprintf("%s root-name", removeRootCmdName),
+		Short: "Удалить корневой каталог",
+		Long: `Удалить корневой каталог. 
+		root-name - имя корневого каталога`,
+		RunE: c.removeRootCmd,
+	}
+}
+
+func (c *Cli) createGetRootsCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   fmt.Sprintf("%s", getRootsCmdName),
+		Short: "Получить список корневых каталогов",
+		Args:  cobra.NoArgs,
+		Run:   c.getRootsCmd,
+	}
+}
+
 func (c *Cli) createConnectCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "connect node-name",
+		Use:   fmt.Sprintf("%s node-name", connectCmdName),
 		Short: "Подключиться к узлу",
 		Long: `Подключиться к узлу. 
 		node-name - имя узла, к которому будет осуществляться подключение`,
 		RunE: c.connectCmd,
 		Args: cobra.ExactArgs(1),
+		Annotations: map[string]string{
+			cobraprompt.DynamicSuggestionsAnnotation: connectCmdName,
+		},
 	}
 }
 
 func (c *Cli) createDryRunCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "dry-run root-name",
+		Use:   fmt.Sprintf("%s root-name", dryRunCmdName),
 		Short: "Показать, какие файлы/каталоги будут синхронизированы, без фактического выполнения синхронизации",
-		Run:   c.dryRunCmd,
+		RunE:  c.dryRunCmd,
 		Args:  cobra.ExactArgs(1),
+		Annotations: map[string]string{
+			cobraprompt.DynamicSuggestionsAnnotation: dryRunCmdName,
+		},
 	}
 }
 
 func (c *Cli) createSyncCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "sync root-name",
+		Use:   fmt.Sprintf("%s root-name", syncCmdName),
 		Short: "Выполнить синхронизацию",
 		RunE:  c.syncCmd,
 		Args:  cobra.ExactArgs(1),
+		Annotations: map[string]string{
+			cobraprompt.DynamicSuggestionsAnnotation: syncCmdName,
+		},
+	}
+}
+
+func (c *Cli) addRootCmd(cmd *cobra.Command, args []string) error {
+	c.logger.Debug("Выполнение команды add-root")
+
+	rootName, err := domain.NewRootName(args[0])
+	if err != nil {
+		c.logger.Error("Не удалось создать корневой каталог")
+		return err
+	}
+
+	rootRelativePath, err := domain.NewRelativePath(args[1])
+	if err != nil {
+		c.logger.Error("Не удалось создать корневой каталог")
+		return err
+	}
+
+	c.rootUseCase.AddRoot(rootName, rootRelativePath)
+
+	c.logger.Info(fmt.Sprintf("Корневой каталог %s добавлен", rootName))
+	return nil
+}
+
+func (c *Cli) removeRootCmd(cmd *cobra.Command, args []string) error {
+	c.logger.Debug("Выполнение команды remove-root")
+
+	rootName, err := domain.NewRootName(args[0])
+	if err != nil {
+		c.logger.Error("Не удалось создать удалить корневой каталог")
+		return err
+	}
+
+	c.rootUseCase.RemoveRoot(rootName)
+
+	c.logger.Info(fmt.Sprintf("Корневой каталог %s удален", rootName))
+
+	return nil
+}
+
+func (c *Cli) getRootsCmd(cmd *cobra.Command, args []string) {
+	c.logger.Debug("Выполнение команды get-roots")
+
+	roots := c.rootUseCase.GetRoots()
+
+	c.logger.Info("Список корневых каталогов:")
+
+	for i, root := range roots {
+		c.logger.Info(fmt.Sprintf("%d. %s", i+1, root))
 	}
 }
 
@@ -144,7 +275,13 @@ func (c *Cli) connectCmd(cmd *cobra.Command, args []string) error {
 func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 	c.logger.Debug("Выполнение команды sync")
 
-	changes := c.syncUseCase.GetSyncChanges()
+	rootName, err := domain.NewRootName(args[0])
+	if err != nil {
+		c.logger.Error("Не удалось выполнить sync")
+		return err
+	}
+
+	changes := c.syncUseCase.GetSyncChanges(rootName)
 	changesLen := len(changes)
 	if changesLen == 0 {
 		c.logger.Info("Нет изменений для синхронизации")
@@ -191,18 +328,29 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) {
+func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 	c.logger.Debug("Выполнение команды dry-run")
-	changes := c.syncUseCase.GetSyncChanges()
+	rootName, err := domain.NewRootName(args[0])
+	if err != nil {
+		c.logger.Error("Не удалось выполнить dry-run")
+		return err
+	}
+
+	changes := c.syncUseCase.GetSyncChanges(rootName)
 	changesLen := len(changes)
 	if changesLen == 0 {
 		c.logger.Info("Нет изменений для синхронизации")
 	}
+
 	changesHeader := c.getChangesHeader()
+
 	c.logger.Info(fmt.Sprintf("Всего изменений: %d\n%s", changesLen, changesHeader))
+
 	for i, change := range changes {
 		c.logger.Info(fmt.Sprintf("%d. %s", i+1, c.changeToHumanReadable(change)))
 	}
+
+	return nil
 }
 
 func (c *Cli) getChangesHeader() string {
@@ -212,15 +360,62 @@ func (c *Cli) getChangesHeader() string {
 func (c *Cli) changeToHumanReadable(s domain.SyncChange) string {
 	switch s.ChangeType {
 	case domain.Create:
-		return fmt.Sprintf("|CREATE|%s|%s|\n", s.RootName, s.NewRelativePath)
+		return fmt.Sprintf("|%s|%s|%s|\n", changeTypeCreate, s.RootName, s.NewRelativePath)
 	case domain.Delete:
-		return fmt.Sprintf("|DELETE|%s|%s|\n", s.RootName, s.OldRelativePath)
+		return fmt.Sprintf("|%s|%s|%s|\n", changeTypeDelete, s.RootName, s.OldRelativePath)
 	case domain.Rename:
-		return fmt.Sprintf("|RENAME|%s|%s|%s|\n", s.RootName, s.OldRelativePath, s.NewRelativePath)
+		return fmt.Sprintf("|%s|%s|%s|%s|\n", changeTypeRename, s.RootName, s.OldRelativePath, s.NewRelativePath)
 	case domain.Move:
-		return fmt.Sprintf("|MOVE|%s|%s|%s|\n", s.RootName, s.OldRelativePath, s.NewRelativePath)
+		return fmt.Sprintf("|%s|%s|%s|%s|\n", changeTypeMove, s.RootName, s.OldRelativePath, s.NewRelativePath)
 	default:
-		return "UNKNOWN CHANGE TYPE"
+		return changeTypeUnknown
 	}
 
+}
+
+func (c *Cli) suggestionFunc(annotationValue string, document *prompt.Document) []prompt.Suggest {
+	typedPrefix := document.TextBeforeCursor()
+
+	switch annotationValue {
+	case nodesCmdName:
+		c.nodeNameSuggestionFunc(typedPrefix)
+	case dryRunCmdName, syncCmdName:
+		c.rootNameSuggestionFunc(typedPrefix)
+	default:
+		return nil
+	}
+
+	return nil
+}
+
+func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
+	nodeNamesChan, err := c.connectUseCase.ShowNodes()
+	if err != nil {
+		return nil
+	}
+
+	suggestions := make([]prompt.Suggest, 0)
+	for nodeName := range nodeNamesChan {
+		if strings.HasPrefix(nodeName, prefix) {
+			suggestions = append(suggestions, prompt.Suggest{
+				Text: nodeName,
+			})
+		}
+	}
+
+	return suggestions
+}
+
+func (c *Cli) rootNameSuggestionFunc(prefix string) []prompt.Suggest {
+	rootNames := c.rootUseCase.GetRoots()
+	suggestions := make([]prompt.Suggest, 0)
+	for _, rootName := range rootNames {
+		if strings.HasPrefix(rootName.String(), prefix) {
+			suggestions = append(suggestions, prompt.Suggest{
+				Text: rootName.String(),
+			})
+		}
+	}
+
+	return suggestions
 }

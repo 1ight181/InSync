@@ -32,3 +32,11 @@ func (p *RootResolver) AddRoot(rootName string, rootPath string) {
 func (p *RootResolver) RemoveRoot(rootName string) {
 	delete(p.rootMap, rootName)
 }
+
+func (p *RootResolver) GetRoots() []string {
+	roots := make([]string, 0, len(p.rootMap))
+	for rootName := range p.rootMap {
+		roots = append(roots, rootName)
+	}
+	return roots
+}
