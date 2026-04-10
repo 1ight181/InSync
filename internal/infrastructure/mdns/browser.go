@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"insync/internal/domain"
 	shared "insync/internal/shared"
 
 	"github.com/grandcat/zeroconf"
@@ -46,7 +47,7 @@ func NewMDnsNodeNamesBrowser(opts MDnsNodeNamesBrowserOptions) *MDnsNodeNamesBro
 	}
 }
 
-func (b *MDnsNodeNamesBrowser) BrowseNodeNames() (chan string, error) {
+func (b *MDnsNodeNamesBrowser) BrowseNodeNames() (chan domain.NodeName, error) {
 	b.logger.Info("запуск MDnsResolver...")
 
 	ifaces, err := shared.GetNetworkInterfacesByName(b.interfaces)
@@ -74,7 +75,7 @@ func (b *MDnsNodeNamesBrowser) BrowseNodeNames() (chan string, error) {
 		}
 	}()
 
-	nodeNamesChan := make(chan string)
+	nodeNamesChan := make(chan domain.NodeName)
 
 	go func() {
 		defer close(nodeNamesChan)
@@ -86,7 +87,7 @@ func (b *MDnsNodeNamesBrowser) BrowseNodeNames() (chan string, error) {
 	return nodeNamesChan, nil
 }
 
-func (b *MDnsNodeNamesBrowser) sendToNodeNamesChan(nodeChan chan string) {
+func (b *MDnsNodeNamesBrowser) sendToNodeNamesChan(nodeChan chan domain.NodeName) {
 	for {
 		select {
 		case <-b.ctx.Done():
@@ -96,7 +97,18 @@ func (b *MDnsNodeNamesBrowser) sendToNodeNamesChan(nodeChan chan string) {
 				return
 			}
 
-			nodeChan <- entry.Instance
+			nodeName, err := domain.NewNodeName(entry.Instance)
+			if err != nil {
+				b.logger.LogAttrs(
+					b.ctx,
+					slog.LevelError,
+					"Ошибка при выполнении метода NewNodeName в MDnsResolver",
+					slog.String("error", err.Error()),
+				)
+				continue
+			}
+
+			nodeChan <- nodeName
 		}
 	}
 }

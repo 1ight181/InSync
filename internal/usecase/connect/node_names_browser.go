@@ -1,5 +1,7 @@
 package connect
 
+import "insync/internal/domain"
+
 type INodeNamesBrowser interface {
-	BrowseNodeNames() (nodeNamesChan chan string, err error)
+	BrowseNodeNames() (nodeNamesChan chan domain.NodeName, err error)
 }

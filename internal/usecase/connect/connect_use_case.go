@@ -23,11 +23,11 @@ func NewConnectUseCase(opts ConnectUseCaseOptions) *ConnectUseCase {
 	}
 }
 
-func (c *ConnectUseCase) ShowNodes() (nodeNamesChan chan string, err error) {
+func (c *ConnectUseCase) ShowNodes() (chan domain.NodeName, error) {
 	return c.nodeNamesBrowser.BrowseNodeNames()
 }
 
-func (c *ConnectUseCase) CurrentNode() (nodeName domain.NodeName, err error) {
+func (c *ConnectUseCase) CurrentNode() domain.NodeName {
 	return c.connectionManager.CurrentNodeName()
 }
 
