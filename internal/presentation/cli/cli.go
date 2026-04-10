@@ -427,9 +427,9 @@ func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
 
 	suggestions := make([]prompt.Suggest, 0)
 	for nodeName := range nodeNamesChan {
-		if strings.HasPrefix(nodeName, prefix) {
+		if strings.HasPrefix(nodeName.String(), prefix) {
 			suggestions = append(suggestions, prompt.Suggest{
-				Text: nodeName,
+				Text: nodeName.String(),
 			})
 		}
 	}
