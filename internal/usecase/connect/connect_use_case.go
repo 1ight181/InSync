@@ -8,15 +8,18 @@ type ConnectUseCase struct {
 }
 
 type ConnectUseCaseOptions struct {
-	NodeNamesBrowser INodeNamesBrowser
+	NodeNamesBrowser  INodeNamesBrowser
+	ConnectionManager IConnectionManager
 }
 
 func NewConnectUseCase(opts ConnectUseCaseOptions) *ConnectUseCase {
-	if opts.NodeNamesBrowser == nil {
+	if opts.NodeNamesBrowser == nil ||
+		opts.ConnectionManager == nil {
 		panic("Все поля ConnectUseCaseOptions должны быть заполнены")
 	}
 	return &ConnectUseCase{
-		nodeNamesBrowser: opts.NodeNamesBrowser,
+		nodeNamesBrowser:  opts.NodeNamesBrowser,
+		connectionManager: opts.ConnectionManager,
 	}
 }
 

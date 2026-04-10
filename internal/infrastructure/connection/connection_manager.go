@@ -64,10 +64,7 @@ func (c *ConnectionManager) CurrentNodeName() domain.NodeName {
 }
 
 func (c *ConnectionManager) ConnectToNode(nodeName domain.NodeName) error {
-	mDnsUrl, err := c.nodeNameResolver.ResolveToMDnsUrl(nodeName)
-	if err != nil {
-		return err
-	}
+	mDnsUrl := c.nodeNameResolver.ResolveToMDnsUrl(nodeName)
 
 	grpcConf := c.baseGrpcConf
 	grpcConf.ServerAddress = mDnsUrl
