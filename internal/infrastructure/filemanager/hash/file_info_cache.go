@@ -17,7 +17,7 @@ type FileInfoCache struct {
 	cache map[string]domain.FileInfo
 }
 
-func NewHashCache() *FileInfoCache {
+func NewFileInfoCache() *FileInfoCache {
 	return &FileInfoCache{
 		cache: make(map[string]domain.FileInfo),
 	}
