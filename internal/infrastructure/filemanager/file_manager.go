@@ -359,7 +359,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 		fileMetadata := f.createMetadata(entryInfo)
 		resourceContent := f.createResourceContent(entryInfo, nextAbsolutePath)
 
-		hashValue, err := f.hashResolver.ResolveHash(resourceContent, fileMetadata)
+		hashValue, err := f.hashManager.ResolveHash(resourceContent, fileMetadata)
 		if err != nil {
 			return nil, err
 		}
