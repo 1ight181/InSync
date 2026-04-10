@@ -78,11 +78,12 @@ var (
 
 // Ошибки валидации конфигурации mDNS
 var (
-	ErrMdnsInstanceNameIsEmpty = errors.New("Название экземпляра сервера mDNS не может быть пустым")
-	ErrMdnsServiceTypeIsEmpty  = errors.New("Тип сервиса mDNS не может быть пустым")
-	ErrMdnsDomainIsEmpty       = errors.New("Домен mDNS не может быть пустым")
-	ErrMdnsPortIsInvalid       = errors.New("Порт mDNS должен быть целым числом в диапозоне от 0 до 65535")
-	ErrMdnsInterfacesIsEmpty   = errors.New("Список интерфейсов mDNS не может быть пустым")
+	ErrMdnsInstanceNameIsEmpty        = errors.New("Название экземпляра сервера mDNS не может быть пустым")
+	ErrMdnsInstanceNamePostfixIsEmpty = errors.New("Постфикс названия экземпляра сервера mDNS не может быть пустым")
+	ErrMdnsServiceTypeIsEmpty         = errors.New("Тип сервиса mDNS не может быть пустым")
+	ErrMdnsDomainIsEmpty              = errors.New("Домен mDNS не может быть пустым")
+	ErrMdnsPortIsInvalid              = errors.New("Порт mDNS должен быть целым числом в диапозоне от 0 до 65535")
+	ErrMdnsInterfacesIsEmpty          = errors.New("Список интерфейсов mDNS не может быть пустым")
 )
 
 var (

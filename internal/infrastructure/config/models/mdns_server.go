@@ -6,16 +6,20 @@ import (
 )
 
 type MdnsServerConfig struct {
-	InstanceName string `mapstructure:"instance_name"`
-	ServiceType  string `mapstructure:"service_type"`
-	Domain       string `mapstructure:"domain"`
-	Port         int    `mapstructure:"port"`
-	Interfaces   string `mapstructure:"interfaces"`
+	InstanceName        string `mapstructure:"instance_name"`
+	InstanceNamePostfix string `mapstructure:"instance_name_postfix"`
+	ServiceType         string `mapstructure:"service_type"`
+	Domain              string `mapstructure:"domain"`
+	Port                int    `mapstructure:"port"`
+	Interfaces          string `mapstructure:"interfaces"`
 }
 
 func (mc *MdnsServerConfig) Validate() error {
 	if mc.InstanceName == "" {
 		return ErrMdnsInstanceNameIsEmpty
+	}
+	if mc.InstanceNamePostfix == "" {
+		return ErrMdnsInstanceNamePostfixIsEmpty
 	}
 	if mc.ServiceType == "" {
 		return ErrMdnsServiceTypeIsEmpty
@@ -36,4 +40,8 @@ func (mc *MdnsServerConfig) GetInterfaces() []string {
 
 func (mc *MdnsServerConfig) GetFullServerName() string {
 	return fmt.Sprintf("%s.%s", mc.InstanceName, mc.Domain)
+}
+
+func (mc *MdnsServerConfig) GetFullInstanceName() string {
+	return fmt.Sprintf("%s.%s", mc.InstanceName, mc.InstanceNamePostfix)
 }

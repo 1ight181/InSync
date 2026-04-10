@@ -77,7 +77,8 @@ logger:
   log_level: "debug"
 
 mdns_server:
-  instance_name: "server1.server"
+  instance_name: "server1"
+  instance_name_postfix: "server"
   service_type: "_grpc._tcp"
   domain: "local"
   port: 5353
