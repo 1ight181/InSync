@@ -4,12 +4,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"insync/internal/domain"
+	cont "insync/internal/infrastructure/filemanager/content"
 	"io"
 )
 
 type IHashCalculator interface {
-	CalculateHash(content domain.ResourceContent) (string, error)
+	CalculateHash(content cont.ResourceContent) (string, error)
 }
 
 type HashCalculator struct{}
@@ -18,7 +18,7 @@ func NewHashCalculator() IHashCalculator {
 	return &HashCalculator{}
 }
 
-func (hc *HashCalculator) CalculateHash(content domain.ResourceContent) (string, error) {
+func (hc *HashCalculator) CalculateHash(content cont.ResourceContent) (string, error) {
 	hash := sha256.New()
 	fullPath := content.Path
 	contentReader, err := content.OpenContent(fullPath)

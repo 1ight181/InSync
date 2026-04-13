@@ -3,6 +3,8 @@ package filemanager
 import (
 	"context"
 	"insync/internal/domain"
+	cont "insync/internal/infrastructure/filemanager/content"
+
 	"io"
 	"io/fs"
 	"log/slog"
@@ -298,14 +300,14 @@ func (f *FileManager) createMetadata(entryInfo fs.FileInfo) domain.FileMetadata 
 	}
 }
 
-func (f *FileManager) createResourceContent(entryInfo fs.FileInfo, fullPath string) domain.ResourceContent {
+func (f *FileManager) createResourceContent(entryInfo fs.FileInfo, fullPath string) cont.ResourceContent {
 	if entryInfo.IsDir() {
-		return domain.ResourceContent{
+		return cont.ResourceContent{
 			Path:        fullPath,
 			OpenContent: f.openContentDir,
 		}
 	} else {
-		return domain.ResourceContent{
+		return cont.ResourceContent{
 			Path:        fullPath,
 			OpenContent: f.openContentFile,
 		}

@@ -3,6 +3,7 @@ package hash
 import (
 	"context"
 	"insync/internal/domain"
+	cont "insync/internal/infrastructure/filemanager/content"
 	"log/slog"
 )
 
@@ -37,7 +38,7 @@ func NewHashManager(options HashManagerOptions) *HashManager {
 	}
 }
 
-func (h *HashManager) ResolveHash(resourceContent domain.ResourceContent, fileMetadata domain.FileMetadata) (string, error) {
+func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, fileMetadata domain.FileMetadata) (string, error) {
 	fullPath := resourceContent.Path
 
 	if _, isDirty := h.dirtyPaths[fullPath]; !isDirty {
