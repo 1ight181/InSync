@@ -36,7 +36,13 @@ func (gc *GrpcClient) GetFileList(ctx context.Context, rootName string) ([]domai
 			continue
 		}
 
-		fileEntry, err := domain.NewFileEntry(rootName, file.RelativePath, fileInfo)
+		fileRelativePath, err := domain.NewRelativePath(file.RelativePath)
+		if err != nil {
+			resultErr = multierr.Append(resultErr, err)
+			continue
+		}
+
+		fileEntry, err := domain.NewFileEntry(fileRelativePath, fileInfo)
 		if err != nil {
 			resultErr = multierr.Append(resultErr, err)
 			continue

@@ -90,7 +90,7 @@ func (f *FileManager) GetFileList(ctx context.Context, rootName domain.RootName)
 		return nil, err
 	}
 
-	return f.collectAllFileEntries(ctx, root, resolvedRootPath)
+	return f.collectAllFileEntries(ctx, resolvedRootPath)
 }
 
 func (f *FileManager) RenameFile(ctx context.Context, rootName domain.RootName, oldRelativePath domain.RelativePath, newRelativePath domain.RelativePath) error {
@@ -374,7 +374,6 @@ func (f *FileManager) createMetadata(entryInfo fs.FileInfo) domain.FileMetadata 
 
 func (f *FileManager) collectAllFileEntries(
 	ctx context.Context,
-	rootName string,
 	rootAbsolutePath string,
 ) ([]domain.FileEntry, error) {
 
@@ -382,12 +381,12 @@ func (f *FileManager) collectAllFileEntries(
 		return nil, ctx.Err()
 	}
 
-	rootEntry, err := f.createFileEntryForDirectory(ctx, rootName, rootAbsolutePath, "")
+	rootEntry, err := f.createFileEntryForDirectory(ctx, rootAbsolutePath, "")
 	if err != nil {
 		return nil, err
 	}
 
-	children, err := f.collectFileEntriesRecursive(ctx, rootName, rootAbsolutePath, "")
+	children, err := f.collectFileEntriesRecursive(ctx, rootAbsolutePath, "")
 	if err != nil {
 		return nil, err
 	}
@@ -401,7 +400,6 @@ func (f *FileManager) collectAllFileEntries(
 
 func (f *FileManager) collectFileEntriesRecursive(
 	ctx context.Context,
-	rootName string,
 	currentAbsolutePath string,
 	currentRelativePath string,
 ) ([]domain.FileEntry, error) {
@@ -457,9 +455,15 @@ func (f *FileManager) collectFileEntriesRecursive(
 		fileInfo, err := domain.NewFileInfo(fileMetadata, hashValue)
 		if err != nil {
 			return nil, err
+
 		}
 
-		fileEntry, err := domain.NewFileEntry(rootName, nextRelativePath, fileInfo)
+		fileRelativePath, err := domain.NewRelativePath(nextRelativePath)
+		if err != nil {
+			return nil, err
+		}
+
+		fileEntry, err := domain.NewFileEntry(fileRelativePath, fileInfo)
 		if err != nil {
 			return nil, err
 		}
@@ -467,7 +471,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 		collectedEntries = append(collectedEntries, fileEntry)
 
 		if directoryEntry.IsDir() {
-			nested, err := f.collectFileEntriesRecursive(ctx, rootName, nextAbsolutePath, nextRelativePath)
+			nested, err := f.collectFileEntriesRecursive(ctx, nextAbsolutePath, nextRelativePath)
 			if err != nil {
 				return nil, err
 			}
@@ -480,11 +484,9 @@ func (f *FileManager) collectFileEntriesRecursive(
 
 func (f *FileManager) createFileEntryForDirectory(
 	ctx context.Context,
-	rootName string,
 	absolutePath string,
 	relativePath string,
 ) (domain.FileEntry, error) {
-
 	if ctx.Err() != nil {
 		return domain.FileEntry{}, ctx.Err()
 	}
@@ -509,5 +511,10 @@ func (f *FileManager) createFileEntryForDirectory(
 		return domain.FileEntry{}, err
 	}
 
-	return domain.NewFileEntry(rootName, relativePath, fileInfo)
+	fileRelativePath, err := domain.NewRelativePath(relativePath)
+	if err != nil {
+		return domain.FileEntry{}, err
+	}
+
+	return domain.NewFileEntry(fileRelativePath, fileInfo)
 }

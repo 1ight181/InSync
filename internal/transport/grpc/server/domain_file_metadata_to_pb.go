@@ -7,8 +7,7 @@ import (
 
 func DomainFileEntryToPb(fileEntry domain.FileEntry) *insyncpb.FileEntry {
 	return &insyncpb.FileEntry{
-		RootName:     fileEntry.RootName,
-		RelativePath: fileEntry.RelativePath,
+		RelativePath: fileEntry.RelativePath.String(),
 		IsDirectory:  fileEntry.FileInfo.Metadata.IsDirectory,
 		SizeBytes:    fileEntry.FileInfo.Metadata.SizeBytes,
 		ModifiedUnix: fileEntry.FileInfo.Metadata.ModifiedUnix,
