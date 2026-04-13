@@ -1,7 +1,10 @@
 package cli
 
-import "insync/internal/domain"
+import (
+	"context"
+	"insync/internal/domain"
+)
 
 type IScanUseCase interface {
-	PlanSyncChanges(rootName domain.RootName) ([]domain.SyncChange, error)
+	PlanSyncChanges(ctx context.Context, rootName domain.RootName) ([]domain.SyncChange, error)
 }

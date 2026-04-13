@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"insync/internal/domain"
 	"insync/internal/transport/grpc/insyncpb"
 	"io"
 
@@ -10,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName, relativePath string) error {
+func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName domain.RootName, relativePath domain.Path) error {
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка отправить файл, когда клиент не запущен")
 		return ErrClientNotStarted
@@ -22,8 +23,8 @@ func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName, rel
 	}
 
 	if err := gc.sendInitMessage(
-		rootName,
-		relativePath,
+		rootName.String(),
+		relativePath.String(),
 		putFileStream,
 	); err != nil {
 		return err

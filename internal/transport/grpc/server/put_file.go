@@ -29,7 +29,7 @@ func (gs *GrpcServer) PutFile(stream grpc.ClientStreamingServer[insyncpb.PutFile
 	}
 
 	relativePath := initMessage.GetRelativePath()
-	validRelativePath, err := domain.NewRelativePath(relativePath)
+	validRelativePath, err := domain.NewPath(relativePath)
 	if err != nil {
 		return err
 	}

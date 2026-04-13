@@ -16,13 +16,13 @@ func (gs *GrpcServer) RenameFile(ctx context.Context, request *insyncpb.RenameFi
 	}
 
 	oldRelativePath := request.GetOldRelativePath()
-	validOldRelativePath, err := domain.NewRelativePath(oldRelativePath)
+	validOldRelativePath, err := domain.NewPath(oldRelativePath)
 	if err != nil {
 		return &emptypb.Empty{}, err
 	}
 
 	newRelativePath := request.GetNewRelativePath()
-	validNewRelativePath, err := domain.NewRelativePath(newRelativePath)
+	validNewRelativePath, err := domain.NewPath(newRelativePath)
 	if err != nil {
 		return &emptypb.Empty{}, err
 	}

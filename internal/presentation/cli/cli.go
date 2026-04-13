@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"insync/internal/domain"
 	"log/slog"
+	"os"
+	"os/signal"
 	"strings"
 
 	prompt "github.com/c-bata/go-prompt"
@@ -46,6 +48,7 @@ type Cli struct {
 
 type CliOptions struct {
 	SyncUseCase    ISyncUseCase
+	ScanUseCase    IScanUseCase
 	ConnectUseCase IConnectUseCase
 	RootUseCase    IRootUseCase
 
@@ -56,6 +59,7 @@ type CliOptions struct {
 
 func NewCli(opts CliOptions) *Cli {
 	if opts.SyncUseCase == nil ||
+		opts.ScanUseCase == nil ||
 		opts.ConnectUseCase == nil ||
 		opts.RootUseCase == nil ||
 		opts.Logger == nil ||
@@ -245,7 +249,7 @@ func (c *Cli) addRootCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	rootRelativePath, err := domain.NewRelativePath(args[1])
+	rootRelativePath, err := domain.NewPath(args[1])
 	if err != nil {
 		c.logger.Error("Не удалось создать корневой каталог")
 		return err
@@ -313,7 +317,11 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	changes, err := c.scanUseCase.PlanSyncChanges(rootName)
+	cmdCtx := cmd.Context()
+	interruptCtx, interruptCancel := signal.NotifyContext(cmdCtx, os.Interrupt)
+	defer interruptCancel()
+
+	changes, err := c.scanUseCase.PlanSyncChanges(interruptCtx, rootName)
 	if err != nil {
 		c.logger.Error("Не удалось получить изменения для синхронизации")
 		return err
@@ -372,7 +380,11 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	changes, err := c.scanUseCase.PlanSyncChanges(rootName)
+	cmdCtx := cmd.Context()
+	interruptCtx, interruptCancel := signal.NotifyContext(cmdCtx, os.Interrupt)
+	defer interruptCancel()
+
+	changes, err := c.scanUseCase.PlanSyncChanges(interruptCtx, rootName)
 	if err != nil {
 		c.logger.Error("Не удалось получить изменения для синхронизации")
 		return err

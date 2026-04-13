@@ -1,4 +1,4 @@
-package sync
+package scan
 
 import "insync/internal/domain"
 

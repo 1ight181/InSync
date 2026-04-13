@@ -8,8 +8,8 @@ import (
 
 type IFileUseCase interface {
 	GetFileList(ctx context.Context, rootName domain.RootName) ([]domain.FileEntry, error)
-	DeleteFile(ctx context.Context, rootName domain.RootName, relativePath domain.RelativePath) error
-	PutFile(ctx context.Context, rootName domain.RootName, relativePath domain.RelativePath, file io.Reader) error
-	RenameFile(ctx context.Context, rootName domain.RootName, oldRelativePath, newRelativePath domain.RelativePath) error
-	GetFile(ctx context.Context, rootName domain.RootName, relativePath domain.RelativePath) (io.ReadCloser, error)
+	DeleteFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) error
+	PutFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path, file io.Reader) error
+	RenameFile(ctx context.Context, rootName domain.RootName, oldRelativePath, newRelativePath domain.Path) error
+	GetFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) (io.ReadCloser, error)
 }

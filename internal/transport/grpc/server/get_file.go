@@ -19,7 +19,7 @@ func (gs *GrpcServer) GetFile(request *insyncpb.GetFileRequest, stream grpc.Serv
 		return err
 	}
 
-	validRelativePath, err := domain.NewRelativePath(relativePath)
+	validRelativePath, err := domain.NewPath(relativePath)
 	if err != nil {
 		return err
 	}

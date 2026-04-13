@@ -8,14 +8,14 @@ import (
 	"go.uber.org/multierr"
 )
 
-func (gc *GrpcClient) GetFileList(ctx context.Context, rootName string) ([]domain.FileEntry, error) {
+func (gc *GrpcClient) GetFileList(ctx context.Context, rootName domain.RootName) ([]domain.FileEntry, error) {
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка получить список файлов, когда клиент не запущен")
 		return nil, ErrClientNotStarted
 	}
 
 	getFileListResponse, err := gc.client.GetFileList(ctx, &insyncpb.GetFileListRequest{
-		RootName: rootName,
+		RootName: rootName.String(),
 	})
 	if err != nil {
 		return nil, err
@@ -36,13 +36,13 @@ func (gc *GrpcClient) GetFileList(ctx context.Context, rootName string) ([]domai
 			continue
 		}
 
-		fileRelativePath, err := domain.NewRelativePath(file.RelativePath)
+		filePath, err := domain.NewPath(file.RelativePath)
 		if err != nil {
 			resultErr = multierr.Append(resultErr, err)
 			continue
 		}
 
-		fileEntry, err := domain.NewFileEntry(fileRelativePath, fileInfo)
+		fileEntry, err := domain.NewFileEntry(filePath, fileInfo)
 		if err != nil {
 			resultErr = multierr.Append(resultErr, err)
 			continue

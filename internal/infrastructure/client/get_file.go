@@ -3,21 +3,22 @@ package client
 import (
 	"context"
 	"errors"
+	"insync/internal/domain"
 	"insync/internal/transport/grpc/insyncpb"
 	"io"
 	"log/slog"
 	"runtime/debug"
 )
 
-func (gc *GrpcClient) GetFile(ctx context.Context, rootName, relativePath string) (io.ReadCloser, error) {
+func (gc *GrpcClient) GetFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) (io.ReadCloser, error) {
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка получить файл, когда клиент не запущен")
 		return nil, ErrClientNotStarted
 	}
 
 	getFileRequest := &insyncpb.GetFileRequest{
-		RootName:     rootName,
-		RelativePath: relativePath,
+		RootName:     rootName.String(),
+		RelativePath: relativePath.String(),
 	}
 
 	getFileResponseStream, err := gc.client.GetFile(ctx, getFileRequest)

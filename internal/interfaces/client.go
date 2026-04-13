@@ -7,11 +7,11 @@ import (
 )
 
 type IClient interface {
-	GetFileList(ctx context.Context, rootName string) ([]domain.FileEntry, error)
+	GetFileList(ctx context.Context, rootName domain.RootName) ([]domain.FileEntry, error)
 	// Причина использования именно ReadCloser вместо io.Reader, так как ReadCloser позволяет закрыть соединение с сервером
 	// Это позволяет закрыть соединение, даже если реализация io.Reader не закрывает соединение по контексту, игнорируя его
-	GetFile(ctx context.Context, rootName, relativePath string) (io.ReadCloser, error)
-	PutFile(ctx context.Context, file io.Reader, rootName, relativePath string) error
-	DeleteFile(ctx context.Context, rootName, relativePath string) error
-	RenameFile(ctx context.Context, rootName, fileUuid, relativePath string) error
+	GetFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) (io.ReadCloser, error)
+	PutFile(ctx context.Context, file io.Reader, rootName domain.RootName, relativePath domain.Path) error
+	DeleteFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) error
+	RenameFile(ctx context.Context, fileUuid string, rootName domain.RootName, oldRelativePath domain.Path, newRelativePath domain.Path) error
 }

@@ -2,10 +2,11 @@ package root
 
 import (
 	"fmt"
+	"insync/internal/domain"
 )
 
 type RootNotFoundError struct {
-	RootName string
+	RootName domain.RootName
 }
 
 func (e RootNotFoundError) Error() string {

@@ -9,13 +9,14 @@ import (
 	"insync/internal/infrastructure/filemanager/filesys"
 	"insync/internal/infrastructure/filemanager/hash"
 	"insync/internal/infrastructure/filemanager/pathtree"
-	"insync/internal/infrastructure/filemanager/root"
 	node "insync/internal/infrastructure/nodename"
+	"insync/internal/infrastructure/root"
 	cli "insync/internal/presentation/cli"
 	server "insync/internal/transport/grpc/server"
 	connusecase "insync/internal/usecase/connect"
 	fileusecase "insync/internal/usecase/file"
-	syncusecase "insync/internal/usecase/sync"
+	rootusecase "insync/internal/usecase/root"
+	scanusecase "insync/internal/usecase/scan"
 	"os"
 	"os/signal"
 	"syscall"
@@ -72,8 +73,8 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось запустить mDNS сервер: %v", err))
 	}
 
-	rootResolverOpts := root.NewRootResolver()
-	fileSystemOpts := filesys.NewFileSystem()
+	rootResolver := root.NewRootResolver()
+	fileSystem := filesys.NewFileSystem()
 	pathTree := pathtree.NewPathTree()
 	hashCache := hash.NewHashCache()
 	hashCalc := hash.NewHashCalculator()
@@ -94,9 +95,9 @@ func RunApp() {
 	fileManagerLogger := logger.With(moduleAtrributeName, fileManagerModuleName)
 
 	fileManagerOpts := filemanager.FileManagerOptions{
-		RootResolver:   rootResolverOpts,
+		RootResolver:   rootResolver,
 		HashManager:    hashManager,
-		FileSystem:     fileSystemOpts,
+		FileSystem:     fileSystem,
 		PathTreeWriter: pathTree,
 
 		TempDir:   fileManagerConfig.TempDir,
@@ -228,17 +229,24 @@ func RunApp() {
 
 	connectUseCase := connusecase.NewConnectUseCase(connectUseCaseOpts)
 
-	syncUseCaseOpts := syncusecase.SyncUseCaseOptions{
+	scanUseCaseOpts := scanusecase.ScanUseCaseOptions{
 		ClientFabric: connectionManager,
 	}
 
-	syncUseCase := syncusecase.NewSyncUseCase(syncUseCaseOpts)
+	scanUseCase := scanusecase.NewScanUseCase(scanUseCaseOpts)
+
+	rootUseCaseOpts := rootusecase.RootUseCaseOptions{
+		RootRegistrar: rootResolver,
+	}
+
+	rootUseCase := rootusecase.NewRootUseCase(rootUseCaseOpts)
 
 	cliLogger := logger.With(moduleAtrributeName, cliModuleName)
 
 	cliInstanceOpts := cli.CliOptions{
-		SyncUseCase:    syncUseCase,
+		ScanUseCase:    scanUseCase,
 		ConnectUseCase: connectUseCase,
+		RootUseCase:    rootUseCase,
 
 		Logger: cliLogger,
 

@@ -16,7 +16,7 @@ func (gs *GrpcServer) DeleteFile(ctx context.Context, request *insyncpb.DeleteFi
 	}
 
 	relativePath := request.GetRelativePath()
-	validRelativePath, err := domain.NewRelativePath(relativePath)
+	validRelativePath, err := domain.NewPath(relativePath)
 	if err != nil {
 		return &emptypb.Empty{}, err
 	}

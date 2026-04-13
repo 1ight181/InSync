@@ -84,8 +84,7 @@ func NewFileManager(opts FileManagerOptions) *FileManager {
 }
 
 func (f *FileManager) GetFileList(ctx context.Context, rootName domain.RootName) ([]domain.FileEntry, error) {
-	root := rootName.String()
-	resolvedRootPath, err := f.rootResolver.ResolveRoot(root, "")
+	resolvedRootPath, err := f.rootResolver.ResolveRoot(rootName, "")
 	if err != nil {
 		return nil, err
 	}
@@ -93,22 +92,17 @@ func (f *FileManager) GetFileList(ctx context.Context, rootName domain.RootName)
 	return f.collectAllFileEntries(ctx, resolvedRootPath)
 }
 
-func (f *FileManager) RenameFile(ctx context.Context, rootName domain.RootName, oldRelativePath domain.RelativePath, newRelativePath domain.RelativePath) error {
+func (f *FileManager) RenameFile(ctx context.Context, rootName domain.RootName, oldPath domain.Path, newPath domain.Path) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
 
-	root := rootName.String()
-
-	oldRelPath := oldRelativePath.String()
-	newRelPath := newRelativePath.String()
-
-	oldResolvedPath, err := f.rootResolver.ResolveRoot(root, oldRelPath)
+	oldResolvedPath, err := f.rootResolver.ResolveRoot(rootName, oldPath)
 	if err != nil {
 		return err
 	}
 
-	newResolvedPath, err := f.rootResolver.ResolveRoot(root, newRelPath)
+	newResolvedPath, err := f.rootResolver.ResolveRoot(rootName, newPath)
 	if err != nil {
 		return err
 	}
@@ -128,15 +122,12 @@ func (f *FileManager) RenameFile(ctx context.Context, rootName domain.RootName, 
 	return f.hashManager.MarkDirty(newResolvedPath)
 }
 
-func (f *FileManager) DeleteFile(ctx context.Context, rootName domain.RootName, relativePath domain.RelativePath) error {
+func (f *FileManager) DeleteFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
 
-	root := rootName.String()
-	relPath := relativePath.String()
-
-	resolvedPath, err := f.rootResolver.ResolveRoot(root, relPath)
+	resolvedPath, err := f.rootResolver.ResolveRoot(rootName, relativePath)
 	if err != nil {
 		return err
 	}
@@ -152,31 +143,25 @@ func (f *FileManager) DeleteFile(ctx context.Context, rootName domain.RootName, 
 	return f.hashManager.MarkDirty(resolvedPath)
 }
 
-func (f *FileManager) GetFile(ctx context.Context, rootName domain.RootName, relativePath domain.RelativePath) (io.ReadCloser, error) {
+func (f *FileManager) GetFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) (io.ReadCloser, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
 
-	root := rootName.String()
-	relPath := relativePath.String()
-
-	resolvedPath, err := f.rootResolver.ResolveRoot(root, relPath)
+	resolvedFullPath, err := f.rootResolver.ResolveRoot(rootName, relativePath)
 	if err != nil {
 		return nil, err
 	}
 
-	return f.openFileContent(resolvedPath, relPath)
+	return f.openFileContent(resolvedFullPath, relativePath.String())
 }
 
-func (f *FileManager) PutFile(ctx context.Context, rootName domain.RootName, relativePath domain.RelativePath, content io.Reader) error {
+func (f *FileManager) PutFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path, content io.Reader) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
 
-	root := rootName.String()
-	relPath := relativePath.String()
-
-	resolvedPath, err := f.rootResolver.ResolveRoot(root, relPath)
+	resolvedPath, err := f.rootResolver.ResolveRoot(rootName, relativePath)
 	if err != nil {
 		return err
 	}
@@ -294,8 +279,8 @@ func (f *FileManager) openDirContent(fullPath, relativePath string) (io.ReadClos
 
 		if entry.IsDir() {
 			subDirFullPath := filepath.Join(fullPath, entry.Name())
-			subDirRelativePath := filepath.Join(relativePath, entry.Name())
-			subDirContent, err := f.openDirContent(subDirFullPath, subDirRelativePath)
+			subDirPath := filepath.Join(relativePath, entry.Name())
+			subDirContent, err := f.openDirContent(subDirFullPath, subDirPath)
 			if err != nil {
 				f.logger.LogAttrs(
 					f.loggerCtx,
@@ -315,8 +300,8 @@ func (f *FileManager) openDirContent(fullPath, relativePath string) (io.ReadClos
 		}
 
 		fileFullPath := filepath.Join(fullPath, entry.Name())
-		fileRelativePath := filepath.Join(relativePath, entry.Name())
-		fileContent, err := f.openFileContent(fileFullPath, fileRelativePath)
+		filePath := filepath.Join(relativePath, entry.Name())
+		fileContent, err := f.openFileContent(fileFullPath, filePath)
 		if err != nil {
 			f.logger.LogAttrs(
 				f.loggerCtx,
@@ -401,7 +386,7 @@ func (f *FileManager) collectAllFileEntries(
 func (f *FileManager) collectFileEntriesRecursive(
 	ctx context.Context,
 	currentAbsolutePath string,
-	currentRelativePath string,
+	currentPath string,
 ) ([]domain.FileEntry, error) {
 	directoryEntries, err := f.fileSystem.ReadDir(currentAbsolutePath)
 	if err != nil {
@@ -426,7 +411,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 
 		entryName := directoryEntry.Name()
 		nextAbsolutePath := filepath.Join(currentAbsolutePath, entryName)
-		nextRelativePath := filepath.Join(currentRelativePath, entryName)
+		nextPath := filepath.Join(currentPath, entryName)
 
 		entryInfo, err := directoryEntry.Info()
 		if err != nil {
@@ -442,7 +427,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 
 		resourceContent := cont.ResourceContent{
 			FullPath:     nextAbsolutePath,
-			RelativePath: nextRelativePath,
+			RelativePath: nextPath,
 			OpenContent:  resourceContentFunc,
 		}
 
@@ -458,12 +443,12 @@ func (f *FileManager) collectFileEntriesRecursive(
 
 		}
 
-		fileRelativePath, err := domain.NewRelativePath(nextRelativePath)
+		filePath, err := domain.NewPath(nextPath)
 		if err != nil {
 			return nil, err
 		}
 
-		fileEntry, err := domain.NewFileEntry(fileRelativePath, fileInfo)
+		fileEntry, err := domain.NewFileEntry(filePath, fileInfo)
 		if err != nil {
 			return nil, err
 		}
@@ -471,7 +456,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 		collectedEntries = append(collectedEntries, fileEntry)
 
 		if directoryEntry.IsDir() {
-			nested, err := f.collectFileEntriesRecursive(ctx, nextAbsolutePath, nextRelativePath)
+			nested, err := f.collectFileEntriesRecursive(ctx, nextAbsolutePath, nextPath)
 			if err != nil {
 				return nil, err
 			}
@@ -511,10 +496,10 @@ func (f *FileManager) createFileEntryForDirectory(
 		return domain.FileEntry{}, err
 	}
 
-	fileRelativePath, err := domain.NewRelativePath(relativePath)
+	filePath, err := domain.NewPath(relativePath)
 	if err != nil {
 		return domain.FileEntry{}, err
 	}
 
-	return domain.NewFileEntry(fileRelativePath, fileInfo)
+	return domain.NewFileEntry(filePath, fileInfo)
 }

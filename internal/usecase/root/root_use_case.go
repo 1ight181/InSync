@@ -1,5 +1,7 @@
 package root
 
+import "insync/internal/domain"
+
 type RootUseCase struct {
 	rootRegistrar IRootRegistrar
 }
@@ -15,10 +17,14 @@ func NewRootUseCase(opts RootUseCaseOptions) *RootUseCase {
 	return &RootUseCase{rootRegistrar: opts.RootRegistrar}
 }
 
-func (r *RootUseCase) AddRoot(rootName string, rootPath string) {
+func (r *RootUseCase) AddRoot(rootName domain.RootName, rootPath domain.Path) {
 	r.rootRegistrar.AddRoot(rootName, rootPath)
 }
 
-func (r *RootUseCase) RemoveRoot(rootName string) {
+func (r *RootUseCase) RemoveRoot(rootName domain.RootName) {
 	r.rootRegistrar.RemoveRoot(rootName)
+}
+
+func (r *RootUseCase) GetRoots() []domain.RootName {
+	return r.rootRegistrar.GetRoots()
 }

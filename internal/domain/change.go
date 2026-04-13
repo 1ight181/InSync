@@ -2,8 +2,8 @@ package domain
 
 type SyncChange struct {
 	RootName        RootName
-	OldRelativePath RelativePath
-	NewRelativePath RelativePath
+	OldRelativePath Path
+	NewRelativePath Path
 	ChangeType      SyncChangeType
 }
 
