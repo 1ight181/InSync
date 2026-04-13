@@ -11,5 +11,8 @@ func NewChangesScanner() *ChangesScanner {
 }
 
 func (s *ChangesScanner) Scan(rootName string) domain.SyncChange {
-	return domain.SyncChange{}
+	rootPath, err := s.rootResolver.ResolveRoot(rootName, "")
+	if err != nil {
+		return domain.SyncChange{}
+	}
 }

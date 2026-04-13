@@ -34,6 +34,7 @@ const (
 
 type Cli struct {
 	syncUseCase    ISyncUseCase
+	scanUseCase    IScanUseCase
 	connectUseCase IConnectUseCase
 	rootUseCase    IRootUseCase
 
@@ -312,7 +313,7 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	changes, err := c.syncUseCase.GetSyncChanges(rootName)
+	changes, err := c.scanUseCase.PlanSyncChanges(rootName)
 	if err != nil {
 		c.logger.Error("Не удалось получить изменения для синхронизации")
 		return err
@@ -371,7 +372,7 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	changes, err := c.syncUseCase.GetSyncChanges(rootName)
+	changes, err := c.scanUseCase.PlanSyncChanges(rootName)
 	if err != nil {
 		c.logger.Error("Не удалось получить изменения для синхронизации")
 		return err

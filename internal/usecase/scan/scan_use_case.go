@@ -4,6 +4,7 @@ import "insync/internal/domain"
 
 type SyncUseCase struct {
 	clientFabric   IClientFabric
+	fileManager    IFileManager
 	changesScanner IChangesScanner
 }
 
@@ -22,10 +23,16 @@ func NewSyncUseCase(opts SyncUseCaseOptions) *SyncUseCase {
 	}
 }
 
-func (s *SyncUseCase) ApplySyncChanges(changes []domain.SyncChange) (<-chan domain.ChangeEvent, error) {
-	return make(<-chan domain.ChangeEvent), nil
-}
+func (s *SyncUseCase) PlanSyncChanges(rootName domain.RootName) ([]domain.SyncChange, error) {
+	localEntries, err := s.fileManager.GetFileList(rootName)
+	if err != nil {
+		return nil, err
+	}
 
-func (s *SyncUseCase) GetSyncChanges(rootName domain.RootName) ([]domain.SyncChange, error) {
-	return s.changesScanner.Scan(rootName)
+	remoteEntries, err := s.clientFabric.CurrentClient().GetFileList(rootName.String())
+	if err != nil {
+		return nil, err
+	}
+
+	return s.changesScanner.Scan(localEntries, remoteEntries)
 }
