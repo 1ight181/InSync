@@ -17,7 +17,7 @@ type HashManager struct {
 }
 
 type HashManagerOptions struct {
-	hashCache      IHashCache
+	HashCache      IHashCache
 	HashCalculator IHashCalculator
 	PathTreeReader IPathTreeReader
 
@@ -27,7 +27,7 @@ type HashManagerOptions struct {
 
 func NewHashManager(options HashManagerOptions) *HashManager {
 	return &HashManager{
-		hashCache:      options.hashCache,
+		hashCache:      options.HashCache,
 		hashCalculator: options.HashCalculator,
 		pathTreeReader: options.PathTreeReader,
 
@@ -37,9 +37,7 @@ func NewHashManager(options HashManagerOptions) *HashManager {
 	}
 }
 
-func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent) (string, error) {
-	fullPath := resourceContent.Path
-
+func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, fullPath string) (string, error) {
 	if _, isDirty := h.dirtyPaths[fullPath]; !isDirty {
 		if hash, err := h.hashCache.GetHashCache(fullPath); err == nil {
 			return hash, nil

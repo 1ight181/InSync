@@ -46,3 +46,7 @@ func (f *FileSystem) MkdirAll(path string, perm fs.FileMode) error {
 func (f *FileSystem) Create(fullPath string) (io.ReadWriteCloser, error) {
 	return os.Create(fullPath)
 }
+
+func (f *FileSystem) Stat(fullPath string) (fs.FileInfo, error) {
+	return os.Stat(fullPath)
+}

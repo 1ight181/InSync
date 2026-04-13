@@ -20,8 +20,9 @@ func NewHashCalculator() IHashCalculator {
 
 func (hc *HashCalculator) CalculateHash(content cont.ResourceContent) (string, error) {
 	hash := sha256.New()
-	fullPath := content.Path
-	contentReader, err := content.OpenContent(fullPath)
+	fullPath := content.FullPath
+	relativePath := content.RelativePath
+	contentReader, err := content.OpenContent(fullPath, relativePath)
 	if err != nil {
 		return "", err
 	}

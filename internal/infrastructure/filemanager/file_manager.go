@@ -1,16 +1,40 @@
 package filemanager
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"insync/internal/domain"
 	cont "insync/internal/infrastructure/filemanager/content"
+	"sort"
+	"syscall"
 
 	"io"
 	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
+
+	"go.uber.org/multierr"
 )
+
+type multiCloser struct {
+	closers []io.Closer
+}
+
+func (m multiCloser) Close() error {
+	var closeErr error
+	for _, closer := range m.closers {
+		if err := closer.Close(); err != nil {
+			closeErr = multierr.Append(closeErr, err)
+		}
+	}
+	return closeErr
+}
+
+func NewMultiCloser(closers ...io.Closer) io.Closer {
+	return multiCloser{closers: closers}
+}
 
 type FileManager struct {
 	rootResolver   IRootResolver
@@ -58,6 +82,7 @@ func NewFileManager(opts FileManagerOptions) *FileManager {
 		loggerCtx: opts.LoggerCtx,
 	}
 }
+
 func (f *FileManager) GetFileList(ctx context.Context, rootName domain.RootName) ([]domain.FileEntry, error) {
 	root := rootName.String()
 	resolvedRootPath, err := f.rootResolver.ResolveRoot(root, "")
@@ -65,7 +90,7 @@ func (f *FileManager) GetFileList(ctx context.Context, rootName domain.RootName)
 		return nil, err
 	}
 
-	return f.collectFileEntriesRecursive(ctx, root, resolvedRootPath, "")
+	return f.collectAllFileEntries(ctx, root, resolvedRootPath)
 }
 
 func (f *FileManager) RenameFile(ctx context.Context, rootName domain.RootName, oldRelativePath domain.RelativePath, newRelativePath domain.RelativePath) error {
@@ -140,7 +165,7 @@ func (f *FileManager) GetFile(ctx context.Context, rootName domain.RootName, rel
 		return nil, err
 	}
 
-	return f.openContentFile(resolvedPath)
+	return f.openFileContent(resolvedPath, relPath)
 }
 
 func (f *FileManager) PutFile(ctx context.Context, rootName domain.RootName, relativePath domain.RelativePath, content io.Reader) error {
@@ -213,7 +238,7 @@ func (f *FileManager) moveTempToDestination(ctx context.Context, tempFilePath st
 		return err
 	}
 
-	if err := f.fileSystem.Rename(tempFilePath, destPath); err != nil {
+	if err := f.fileSystem.Rename(tempFilePath, destPath); errors.Is(err, syscall.EXDEV) {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -238,58 +263,105 @@ func (f *FileManager) moveTempToDestination(ctx context.Context, tempFilePath st
 	return nil
 }
 
-func (f *FileManager) openContentDir(fullPath string) (io.ReadCloser, error) {
-	pipeReader, pipeWriter, err := os.Pipe()
+func (f *FileManager) openDirContent(fullPath, relativePath string) (io.ReadCloser, error) {
+
+	entries, err := f.fileSystem.ReadDir(fullPath)
 	if err != nil {
 		return nil, err
 	}
-	go func() {
-		defer pipeWriter.Close()
-		err := f.fileSystem.WalkDir(fullPath, func(path string, d os.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
 
-			if d.Type()&os.ModeSymlink != 0 {
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Name() < entries[j].Name()
+	})
+
+	var readers []io.Reader
+	var closers []io.Closer
+
+	dirHeaderContent := bytes.NewReader([]byte(relativePath))
+	readers = append(readers, dirHeaderContent)
+
+	for _, entry := range entries {
+		if entry.Type()&os.ModeSymlink != 0 {
+			f.logger.LogAttrs(
+				f.loggerCtx,
+				slog.LevelWarn,
+				"Обнаружена и пропущена символическая ссылка при чтении директории",
+				slog.String("fullPath", fullPath),
+				slog.String("symlinkName", filepath.Join(fullPath, entry.Name())),
+			)
+			continue
+		}
+
+		if entry.IsDir() {
+			subDirFullPath := filepath.Join(fullPath, entry.Name())
+			subDirRelativePath := filepath.Join(relativePath, entry.Name())
+			subDirContent, err := f.openDirContent(subDirFullPath, subDirRelativePath)
+			if err != nil {
 				f.logger.LogAttrs(
 					f.loggerCtx,
-					slog.LevelWarn,
-					"Обнаружена и пропущена символическая ссылка при чтении директории",
-					slog.String("fullPath", fullPath),
-					slog.String("symlinkPath", path),
+					slog.LevelError,
+					"Ошибка при чтении директории",
+					slog.String("fullPath", subDirFullPath),
 				)
-				return nil
+
+				NewMultiCloser(closers...).Close()
+
+				return nil, err
 			}
 
-			if d.IsDir() {
-				return nil
-			}
+			readers = append(readers, subDirContent)
+			closers = append(closers, subDirContent)
+			continue
+		}
 
-			file, err := f.openContentFile(path)
-			if err != nil {
-				return err
-			}
-			defer file.Close()
-
-			_, err = io.Copy(pipeWriter, file)
-			return err
-		})
+		fileFullPath := filepath.Join(fullPath, entry.Name())
+		fileRelativePath := filepath.Join(relativePath, entry.Name())
+		fileContent, err := f.openFileContent(fileFullPath, fileRelativePath)
 		if err != nil {
 			f.logger.LogAttrs(
 				f.loggerCtx,
 				slog.LevelError,
-				"Ошибка при чтении содержимого директории",
-				slog.String("fullPath", fullPath),
-				slog.String("error", err.Error()),
+				"Ошибка при чтении файла",
+				slog.String("fullPath", fileFullPath),
 			)
-		}
-	}()
 
-	return pipeReader, nil
+			NewMultiCloser(closers...).Close()
+
+			return nil, err
+		}
+
+		readers = append(readers, fileContent)
+		closers = append(closers, fileContent)
+	}
+
+	content := io.MultiReader(readers...)
+
+	return struct {
+		io.Reader
+		io.Closer
+	}{
+		Reader: content,
+		Closer: NewMultiCloser(closers...),
+	}, nil
+
 }
 
-func (f *FileManager) openContentFile(fullPath string) (io.ReadCloser, error) {
-	return f.fileSystem.Open(fullPath)
+func (f *FileManager) openFileContent(fullPath, relativePath string) (io.ReadCloser, error) {
+	fileContent, err := f.fileSystem.Open(fullPath)
+	if err != nil {
+		return nil, err
+	}
+
+	headerContent := bytes.NewReader([]byte(relativePath))
+	content := io.MultiReader(headerContent, fileContent)
+
+	return struct {
+		io.Reader
+		io.Closer
+	}{
+		Reader: content,
+		Closer: fileContent,
+	}, nil
 }
 
 func (f *FileManager) createMetadata(entryInfo fs.FileInfo) domain.FileMetadata {
@@ -300,18 +372,31 @@ func (f *FileManager) createMetadata(entryInfo fs.FileInfo) domain.FileMetadata 
 	}
 }
 
-func (f *FileManager) createResourceContent(entryInfo fs.FileInfo, fullPath string) cont.ResourceContent {
-	if entryInfo.IsDir() {
-		return cont.ResourceContent{
-			Path:        fullPath,
-			OpenContent: f.openContentDir,
-		}
-	} else {
-		return cont.ResourceContent{
-			Path:        fullPath,
-			OpenContent: f.openContentFile,
-		}
+func (f *FileManager) collectAllFileEntries(
+	ctx context.Context,
+	rootName string,
+	rootAbsolutePath string,
+) ([]domain.FileEntry, error) {
+
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
+
+	rootEntry, err := f.createFileEntryForDirectory(ctx, rootName, rootAbsolutePath, "")
+	if err != nil {
+		return nil, err
+	}
+
+	children, err := f.collectFileEntriesRecursive(ctx, rootName, rootAbsolutePath, "")
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]domain.FileEntry, 0, len(children)+1)
+	result = append(result, rootEntry)
+	result = append(result, children...)
+
+	return result, nil
 }
 
 func (f *FileManager) collectFileEntriesRecursive(
@@ -320,11 +405,6 @@ func (f *FileManager) collectFileEntriesRecursive(
 	currentAbsolutePath string,
 	currentRelativePath string,
 ) ([]domain.FileEntry, error) {
-
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-
 	directoryEntries, err := f.fileSystem.ReadDir(currentAbsolutePath)
 	if err != nil {
 		return nil, err
@@ -333,39 +413,47 @@ func (f *FileManager) collectFileEntriesRecursive(
 	var collectedEntries []domain.FileEntry
 
 	for _, directoryEntry := range directoryEntries {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if directoryEntry.Type()&os.ModeSymlink != 0 {
+			f.logger.LogAttrs(
+				f.loggerCtx,
+				slog.LevelWarn,
+				"Обнаружена и пропущена символическая ссылка",
+				slog.String("fullPath", filepath.Join(currentAbsolutePath, directoryEntry.Name())),
+			)
+			continue
+		}
 
 		entryName := directoryEntry.Name()
-
 		nextAbsolutePath := filepath.Join(currentAbsolutePath, entryName)
 		nextRelativePath := filepath.Join(currentRelativePath, entryName)
 
-		if directoryEntry.IsDir() {
-			nestedEntries, err := f.collectFileEntriesRecursive(
-				ctx,
-				rootName,
-				nextAbsolutePath,
-				nextRelativePath,
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			collectedEntries = append(collectedEntries, nestedEntries...)
-			continue
-		}
 		entryInfo, err := directoryEntry.Info()
 		if err != nil {
 			return nil, err
 		}
 
-		fileMetadata := f.createMetadata(entryInfo)
-		resourceContent := f.createResourceContent(entryInfo, nextAbsolutePath)
+		var resourceContentFunc func(string, string) (io.ReadCloser, error)
+		if directoryEntry.IsDir() {
+			resourceContentFunc = f.openDirContent
+		} else {
+			resourceContentFunc = f.openFileContent
+		}
 
-		hashValue, err := f.hashManager.ResolveHash(resourceContent, fileMetadata)
+		resourceContent := cont.ResourceContent{
+			FullPath:     nextAbsolutePath,
+			RelativePath: nextRelativePath,
+			OpenContent:  resourceContentFunc,
+		}
+
+		hashValue, err := f.hashManager.ResolveHash(resourceContent, nextAbsolutePath)
 		if err != nil {
 			return nil, err
 		}
 
+		fileMetadata := f.createMetadata(entryInfo)
 		fileInfo, err := domain.NewFileInfo(fileMetadata, hashValue)
 		if err != nil {
 			return nil, err
@@ -377,7 +465,49 @@ func (f *FileManager) collectFileEntriesRecursive(
 		}
 
 		collectedEntries = append(collectedEntries, fileEntry)
+
+		if directoryEntry.IsDir() {
+			nested, err := f.collectFileEntriesRecursive(ctx, rootName, nextAbsolutePath, nextRelativePath)
+			if err != nil {
+				return nil, err
+			}
+			collectedEntries = append(collectedEntries, nested...)
+		}
 	}
 
 	return collectedEntries, nil
+}
+
+func (f *FileManager) createFileEntryForDirectory(
+	ctx context.Context,
+	rootName string,
+	absolutePath string,
+	relativePath string,
+) (domain.FileEntry, error) {
+
+	if ctx.Err() != nil {
+		return domain.FileEntry{}, ctx.Err()
+	}
+
+	resourceContent := cont.ResourceContent{
+		OpenContent: f.openDirContent,
+	}
+
+	hashValue, err := f.hashManager.ResolveHash(resourceContent, absolutePath)
+	if err != nil {
+		return domain.FileEntry{}, err
+	}
+
+	info, err := f.fileSystem.Stat(absolutePath)
+	if err != nil {
+		return domain.FileEntry{}, err
+	}
+
+	metadata := f.createMetadata(info)
+	fileInfo, err := domain.NewFileInfo(metadata, hashValue)
+	if err != nil {
+		return domain.FileEntry{}, err
+	}
+
+	return domain.NewFileEntry(rootName, relativePath, fileInfo)
 }

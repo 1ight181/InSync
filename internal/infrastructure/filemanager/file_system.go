@@ -14,4 +14,5 @@ type IFileSystem interface {
 	Rename(oldPath, newPath string) error
 	MkdirAll(path string, perm fs.FileMode) error
 	Create(fullPath string) (io.ReadWriteCloser, error)
+	Stat(fullPath string) (fs.FileInfo, error)
 }
