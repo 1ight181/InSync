@@ -312,7 +312,11 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	changes := c.syncUseCase.GetSyncChanges(rootName)
+	changes, err := c.syncUseCase.GetSyncChanges(rootName)
+	if err != nil {
+		c.logger.Error("Не удалось получить изменения для синхронизации")
+		return err
+	}
 	changesLen := len(changes)
 	if changesLen == 0 {
 		c.logger.Info("Нет изменений для синхронизации")
@@ -367,7 +371,11 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	changes := c.syncUseCase.GetSyncChanges(rootName)
+	changes, err := c.syncUseCase.GetSyncChanges(rootName)
+	if err != nil {
+		c.logger.Error("Не удалось получить изменения для синхронизации")
+		return err
+	}
 	changesLen := len(changes)
 	if changesLen == 0 {
 		c.logger.Info("Нет изменений для синхронизации")
