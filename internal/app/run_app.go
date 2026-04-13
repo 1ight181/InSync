@@ -75,13 +75,13 @@ func RunApp() {
 	rootResolverOpts := root.NewRootResolver()
 	fileSystemOpts := filesys.NewFileSystem()
 	pathTree := pathtree.NewPathTree()
-	fileInfoCache := hash.NewFileInfoCache()
+	hashCache := hash.NewHashCache()
 	hashCalc := hash.NewHashCalculator()
 
 	hashManagerLogger := logger.With(moduleAtrributeName, hashManagerModuleName)
 
 	hashManagerOpts := hash.HashManagerOptions{
-		FileInfoCache:  fileInfoCache,
+		HashCache:      hashCache,
 		HashCalculator: hashCalc,
 		PathTreeReader: pathTree,
 		Logger:         hashManagerLogger,

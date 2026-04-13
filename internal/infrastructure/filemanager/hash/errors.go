@@ -2,10 +2,10 @@ package hash
 
 import "fmt"
 
-type FileInfoCacheNotFoundError struct {
+type HashCacheNotFoundError struct {
 	FullPath string
 }
 
-func (e FileInfoCacheNotFoundError) Error() string {
-	return fmt.Sprintf("Информация о файле не найдена в кэше для: %s", e.FullPath)
+func (e HashCacheNotFoundError) Error() string {
+	return fmt.Sprintf("Кэш хэша не найдена для: %s", e.FullPath)
 }

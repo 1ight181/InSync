@@ -2,13 +2,12 @@ package hash
 
 import (
 	"context"
-	"insync/internal/domain"
 	cont "insync/internal/infrastructure/filemanager/content"
 	"log/slog"
 )
 
 type HashManager struct {
-	fileInfoCache  IFileInfoCache
+	hashCache      IHashCache
 	hashCalculator IHashCalculator
 	pathTreeReader IPathTreeReader
 	dirtyPaths     map[string]struct{}
@@ -18,7 +17,7 @@ type HashManager struct {
 }
 
 type HashManagerOptions struct {
-	FileInfoCache  IFileInfoCache
+	hashCache      IHashCache
 	HashCalculator IHashCalculator
 	PathTreeReader IPathTreeReader
 
@@ -28,7 +27,7 @@ type HashManagerOptions struct {
 
 func NewHashManager(options HashManagerOptions) *HashManager {
 	return &HashManager{
-		fileInfoCache:  options.FileInfoCache,
+		hashCache:      options.hashCache,
 		hashCalculator: options.HashCalculator,
 		pathTreeReader: options.PathTreeReader,
 
@@ -38,12 +37,12 @@ func NewHashManager(options HashManagerOptions) *HashManager {
 	}
 }
 
-func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, fileMetadata domain.FileMetadata) (string, error) {
+func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent) (string, error) {
 	fullPath := resourceContent.Path
 
 	if _, isDirty := h.dirtyPaths[fullPath]; !isDirty {
-		if fileInfo, err := h.fileInfoCache.GetFileInfoCache(fullPath, fileMetadata); err == nil {
-			return fileInfo.Hash, nil
+		if hash, err := h.hashCache.GetHashCache(fullPath); err == nil {
+			return hash, nil
 		}
 		h.logger.LogAttrs(
 			h.loggerCtx,
@@ -73,12 +72,7 @@ func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, fileMeta
 		slog.String("hash", hash),
 	)
 
-	fileInfo := domain.FileInfo{
-		Hash:     hash,
-		Metadata: fileMetadata,
-	}
-
-	h.fileInfoCache.SetFileInfoCache(fullPath, fileInfo)
+	h.hashCache.SetHashCache(fullPath, hash)
 
 	h.logger.LogAttrs(
 		h.loggerCtx,
