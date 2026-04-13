@@ -3,6 +3,7 @@ package scan
 import "insync/internal/domain"
 
 type ChangesScanner struct {
+	rootResolver IRootResolver
 }
 
 func NewChangesScanner() *ChangesScanner {
