@@ -3,28 +3,20 @@ package connect
 import "insync/internal/domain"
 
 type ConnectUseCase struct {
-	nodeNamesBrowser  INodeNamesBrowser
 	connectionManager IConnectionManager
 }
 
 type ConnectUseCaseOptions struct {
-	NodeNamesBrowser  INodeNamesBrowser
 	ConnectionManager IConnectionManager
 }
 
 func NewConnectUseCase(opts ConnectUseCaseOptions) *ConnectUseCase {
-	if opts.NodeNamesBrowser == nil ||
-		opts.ConnectionManager == nil {
+	if opts.ConnectionManager == nil {
 		panic("Все поля ConnectUseCaseOptions должны быть заполнены")
 	}
 	return &ConnectUseCase{
-		nodeNamesBrowser:  opts.NodeNamesBrowser,
 		connectionManager: opts.ConnectionManager,
 	}
-}
-
-func (c *ConnectUseCase) ShowNodeNames() (chan domain.NodeName, error) {
-	return c.nodeNamesBrowser.BrowseNodeNames()
 }
 
 func (c *ConnectUseCase) CurrentNodeName() domain.NodeName {

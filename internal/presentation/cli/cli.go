@@ -38,6 +38,7 @@ const (
 type Cli struct {
 	syncUseCase    ISyncUseCase
 	scanUseCase    IScanUseCase
+	nodeUseCase    INodeUseCase
 	connectUseCase IConnectUseCase
 	rootUseCase    IRootUseCase
 
@@ -50,6 +51,7 @@ type Cli struct {
 type CliOptions struct {
 	SyncUseCase    ISyncUseCase
 	ScanUseCase    IScanUseCase
+	NodeUseCase    INodeUseCase
 	ConnectUseCase IConnectUseCase
 	RootUseCase    IRootUseCase
 
@@ -61,6 +63,7 @@ type CliOptions struct {
 func NewCli(opts CliOptions) *Cli {
 	if opts.SyncUseCase == nil ||
 		opts.ScanUseCase == nil ||
+		opts.NodeUseCase == nil ||
 		opts.ConnectUseCase == nil ||
 		opts.RootUseCase == nil ||
 		opts.Logger == nil ||
@@ -70,6 +73,8 @@ func NewCli(opts CliOptions) *Cli {
 	loggerCtx := context.Background()
 	return &Cli{
 		syncUseCase:    opts.SyncUseCase,
+		scanUseCase:    opts.ScanUseCase,
+		nodeUseCase:    opts.NodeUseCase,
 		connectUseCase: opts.ConnectUseCase,
 		rootUseCase:    opts.RootUseCase,
 
@@ -219,7 +224,7 @@ func (c *Cli) createSyncCmd() *cobra.Command {
 
 func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) {
 	c.logger.Debug("Выполнение команды nodes")
-	nodeNamesChan, err := c.connectUseCase.ShowNodeNames()
+	nodeNamesChan, err := c.nodeUseCase.ShowNodeNames()
 	if err != nil {
 		c.logger.Error("Не удалось получить узлы", "error", err)
 		return
@@ -444,7 +449,7 @@ func (c *Cli) suggestionFunc(annotationValue string, document *prompt.Document) 
 }
 
 func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
-	nodeNamesChan, err := c.connectUseCase.ShowNodeNames()
+	nodeNamesChan, err := c.nodeUseCase.ShowNodeNames()
 	if err != nil {
 		return nil
 	}

@@ -15,6 +15,7 @@ import (
 	server "insync/internal/transport/grpc/server"
 	connusecase "insync/internal/usecase/connect"
 	fileusecase "insync/internal/usecase/file"
+	nodeusecase "insync/internal/usecase/node"
 	rootusecase "insync/internal/usecase/root"
 	scanusecase "insync/internal/usecase/scan"
 	"os"
@@ -223,9 +224,15 @@ func RunApp() {
 	connectionManager := conn.NewConnectionManager(connectionManagerOpts)
 
 	connectUseCaseOpts := connusecase.ConnectUseCaseOptions{
-		NodeNamesBrowser:  mDnsNodeNamesBrowser,
+
 		ConnectionManager: connectionManager,
 	}
+
+	nodeUseCaseOpts := nodeusecase.NodeUseCaseOptions{
+		NodeNamesBrowser: mDnsNodeNamesBrowser,
+	}
+
+	nodeUseCase := nodeusecase.NewNodeUseCase(nodeUseCaseOpts)
 
 	connectUseCase := connusecase.NewConnectUseCase(connectUseCaseOpts)
 
@@ -244,7 +251,9 @@ func RunApp() {
 	cliLogger := logger.With(moduleAtrributeName, cliModuleName)
 
 	cliInstanceOpts := cli.CliOptions{
+		SyncUseCase:    nil, // TODO: добавить SyncUseCase
 		ScanUseCase:    scanUseCase,
+		NodeUseCase:    nodeUseCase,
 		ConnectUseCase: connectUseCase,
 		RootUseCase:    rootUseCase,
 
