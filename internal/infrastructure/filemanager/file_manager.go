@@ -95,11 +95,9 @@ func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName)
 		return domain.Snapshot{}, err
 	}
 
-	return domain.Snapshot{
-		RootName: rootName,
-		Files:    allEntries,
-		UnixTime: uint64(time.Now().Unix()),
-	}, nil
+	snapshot := domain.NewSnapshot(rootName, uint64(time.Now().Unix()), allEntries)
+
+	return snapshot, nil
 }
 
 func (f *FileManager) RenameFile(ctx context.Context, rootName domain.RootName, oldPath domain.Path, newPath domain.Path) error {

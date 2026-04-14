@@ -22,11 +22,9 @@ func pbSnapshotToDomain(pbSnapshot *insyncpb.Snapshot) (domain.Snapshot, error) 
 		return domain.Snapshot{}, err
 	}
 
-	return domain.Snapshot{
-		RootName: rootName,
-		UnixTime: pbSnapshot.UnixTime,
-		Files:    files,
-	}, nil
+	snapshot := domain.NewSnapshot(rootName, pbSnapshot.UnixTime, files)
+
+	return snapshot, nil
 }
 
 func pbFileEntriesToDomain(pbFileEntries []*insyncpb.FileEntry) ([]domain.FileEntry, error) {
