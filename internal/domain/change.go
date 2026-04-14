@@ -5,13 +5,15 @@ type SyncChange struct {
 	OldRelativePath Path
 	NewRelativePath Path
 	ChangeType      SyncChangeType
+	ModifiedUnix    uint64
 }
 
 type SyncChangeType int
 
 const (
-	Create SyncChangeType = iota
-	Delete
-	Rename
-	Move
+	Created SyncChangeType = iota
+	Deleted
+	Modified
+	Renamed
+	Moved
 )

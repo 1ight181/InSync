@@ -27,11 +27,12 @@ const (
 )
 
 const (
-	changeTypeCreate  = "CREATE"
-	changeTypeDelete  = "DELETE"
-	changeTypeRename  = "RENAME"
-	changeTypeMove    = "MOVE"
-	changeTypeUnknown = "UNKNOWN"
+	changeTypeCreated  = "CREATED"
+	changeTypeDeleted  = "DELETED"
+	changeTypeRenamed  = "RENAMED"
+	changeTypeMoved    = "MOVED"
+	changeTypeModified = "MODIFIED"
+	changeTypeUnknown  = "UNKNOWN"
 )
 
 type Cli struct {
@@ -411,14 +412,16 @@ func (c *Cli) getChangesHeader() string {
 
 func (c *Cli) changeToHumanReadable(s domain.SyncChange) string {
 	switch s.ChangeType {
-	case domain.Create:
-		return fmt.Sprintf("|%s|%s|%s|\n", changeTypeCreate, s.RootName, s.NewRelativePath)
-	case domain.Delete:
-		return fmt.Sprintf("|%s|%s|%s|\n", changeTypeDelete, s.RootName, s.OldRelativePath)
-	case domain.Rename:
-		return fmt.Sprintf("|%s|%s|%s|%s|\n", changeTypeRename, s.RootName, s.OldRelativePath, s.NewRelativePath)
-	case domain.Move:
-		return fmt.Sprintf("|%s|%s|%s|%s|\n", changeTypeMove, s.RootName, s.OldRelativePath, s.NewRelativePath)
+	case domain.Created:
+		return fmt.Sprintf("|%s|%s|%s|\n", changeTypeCreated, s.RootName, s.NewRelativePath)
+	case domain.Deleted:
+		return fmt.Sprintf("|%s|%s|%s|\n", changeTypeDeleted, s.RootName, s.OldRelativePath)
+	case domain.Renamed:
+		return fmt.Sprintf("|%s|%s|%s|%s|\n", changeTypeRenamed, s.RootName, s.OldRelativePath, s.NewRelativePath)
+	case domain.Moved:
+		return fmt.Sprintf("|%s|%s|%s|%s|\n", changeTypeMoved, s.RootName, s.OldRelativePath, s.NewRelativePath)
+	case domain.Modified:
+		return fmt.Sprintf("|%s|%s|%s|%s|\n", changeTypeModified, s.RootName, s.OldRelativePath, s.NewRelativePath)
 	default:
 		return changeTypeUnknown
 	}
