@@ -1,7 +1,7 @@
 package domain
 
 type FileMetadata struct {
-	ModifiedUnix uint32
-	SizeBytes    uint32
+	ModifiedUnix uint64
+	SizeBytes    uint64
 	IsDirectory  bool
 }

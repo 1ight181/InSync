@@ -7,7 +7,7 @@ import (
 )
 
 type IFileUseCase interface {
-	GetFileList(ctx context.Context, rootName domain.RootName) ([]domain.FileEntry, error)
+	GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error)
 	DeleteFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) error
 	PutFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path, file io.Reader) error
 	RenameFile(ctx context.Context, rootName domain.RootName, oldRelativePath, newRelativePath domain.Path) error

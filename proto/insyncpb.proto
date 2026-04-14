@@ -9,22 +9,29 @@ import "google/protobuf/empty.proto";
 
 // Тип файла для передачи метаданных о файлах и директориях
 message FileEntry {
-    string root_name = 1;
     string relative_path = 2;
-    uint32 size_bytes = 3;
-    uint32 modified_unix = 4;
+    uint64 size_bytes = 3;
+    uint64 modified_unix = 4;
     string hash = 5;
     bool is_directory = 6;
+    // Количество файлов в поддереве (для директорий), учитывая все вложенные файлы и директории и саму папку
+    uint64 subtree_size = 7; 
+}
+
+message Snapshot {
+    string root_name = 1;
+    uint64 unix_time = 2;
+    repeated FileEntry files = 3;
 }
 
 
 // Тип для запроса и ответа при получении списка файлов
-message GetFileListRequest {
+message GetSnapshotRequest {
     string root_name = 1;
 }
 
-message GetFileListResponse {
-    repeated FileEntry files = 1;
+message GetSnapshotResponse {
+    Snapshot snapshot = 1;
 }
 
 // Тип для запроса и ответа при получении файла
@@ -66,13 +73,13 @@ message RenameFileRequest {
 
 // Чанк файла
 message FileChunk {
-    uint32 index = 1;
+    uint64 index = 1;
     bytes data = 2;
 }
 
 // Сервис для синхронизации файлов
 service FileSyncService {
-    rpc GetFileList(GetFileListRequest) returns (GetFileListResponse);
+    rpc GetSnapshot(GetSnapshotRequest) returns (GetSnapshotResponse);
     rpc GetFile(GetFileRequest) returns (stream GetFileResponse);
     rpc PutFile(stream PutFileRequest) returns (google.protobuf.Empty);
     rpc DeleteFile(DeleteFileRequest) returns (google.protobuf.Empty);

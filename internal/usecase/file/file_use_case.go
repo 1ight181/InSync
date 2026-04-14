@@ -18,8 +18,8 @@ func NewFileUseCase(opts FileUseCaseOptions) *FileUseCase {
 	return &FileUseCase{fileManager: opts.FileManager}
 }
 
-func (f *FileUseCase) GetFileList(ctx context.Context, rootName domain.RootName) ([]domain.FileEntry, error) {
-	return f.fileManager.GetFileList(ctx, rootName)
+func (f *FileUseCase) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
+	return f.fileManager.GetSnapshot(ctx, rootName)
 }
 
 func (f *FileUseCase) DeleteFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) error {

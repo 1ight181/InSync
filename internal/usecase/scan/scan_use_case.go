@@ -27,15 +27,15 @@ func NewScanUseCase(opts ScanUseCaseOptions) *ScanUseCase {
 }
 
 func (s *ScanUseCase) PlanSyncChanges(ctx context.Context, rootName domain.RootName) ([]domain.SyncChange, error) {
-	localEntries, err := s.fileManager.GetFileList(rootName)
+	localSnapshot, err := s.fileManager.GetSnapshot(ctx, rootName)
 	if err != nil {
 		return nil, err
 	}
 
-	remoteEntries, err := s.clientFabric.CurrentClient().GetFileList(ctx, rootName)
+	remoteSnapshot, err := s.clientFabric.CurrentClient().GetSnapshot(ctx, rootName)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.changesScanner.Scan(localEntries, remoteEntries)
+	return s.changesScanner.Scan(localSnapshot, remoteSnapshot)
 }

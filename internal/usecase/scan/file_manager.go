@@ -1,7 +1,10 @@
 package scan
 
-import "insync/internal/domain"
+import (
+	"context"
+	"insync/internal/domain"
+)
 
 type IFileManager interface {
-	GetFileList(rootName domain.RootName) ([]domain.FileEntry, error)
+	GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error)
 }

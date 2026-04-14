@@ -8,6 +8,7 @@ import (
 	cont "insync/internal/infrastructure/filemanager/content"
 	"sort"
 	"syscall"
+	"time"
 
 	"io"
 	"io/fs"
@@ -83,13 +84,22 @@ func NewFileManager(opts FileManagerOptions) *FileManager {
 	}
 }
 
-func (f *FileManager) GetFileList(ctx context.Context, rootName domain.RootName) ([]domain.FileEntry, error) {
+func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
 	resolvedRootPath, err := f.rootResolver.ResolveRoot(rootName, "")
 	if err != nil {
-		return nil, err
+		return domain.Snapshot{}, err
 	}
 
-	return f.collectAllFileEntries(ctx, resolvedRootPath)
+	allEntries, err := f.collectAllFileEntries(ctx, resolvedRootPath)
+	if err != nil {
+		return domain.Snapshot{}, err
+	}
+
+	return domain.Snapshot{
+		RootName: rootName,
+		Files:    allEntries,
+		UnixTime: uint64(time.Now().Unix()),
+	}, nil
 }
 
 func (f *FileManager) RenameFile(ctx context.Context, rootName domain.RootName, oldPath domain.Path, newPath domain.Path) error {
@@ -351,8 +361,8 @@ func (f *FileManager) openFileContent(fullPath, relativePath string) (io.ReadClo
 
 func (f *FileManager) createMetadata(entryInfo fs.FileInfo) domain.FileMetadata {
 	return domain.FileMetadata{
-		ModifiedUnix: uint32(entryInfo.ModTime().Unix()),
-		SizeBytes:    uint32(entryInfo.Size()),
+		ModifiedUnix: uint64(entryInfo.ModTime().Unix()),
+		SizeBytes:    uint64(entryInfo.Size()),
 		IsDirectory:  entryInfo.IsDir(),
 	}
 }
@@ -366,12 +376,14 @@ func (f *FileManager) collectAllFileEntries(
 		return nil, ctx.Err()
 	}
 
-	rootEntry, err := f.createFileEntryForDirectory(ctx, rootAbsolutePath, "")
+	children, childrenSubtreeSize, err := f.collectFileEntriesRecursive(ctx, rootAbsolutePath, "")
 	if err != nil {
 		return nil, err
 	}
 
-	children, err := f.collectFileEntriesRecursive(ctx, rootAbsolutePath, "")
+	rootEntrySubtreeSize := uint64(1 + childrenSubtreeSize) // размер корневой директории
+
+	rootEntry, err := f.createFileEntryForDirectory(ctx, rootAbsolutePath, "", rootEntrySubtreeSize)
 	if err != nil {
 		return nil, err
 	}
@@ -387,17 +399,18 @@ func (f *FileManager) collectFileEntriesRecursive(
 	ctx context.Context,
 	currentAbsolutePath string,
 	currentPath string,
-) ([]domain.FileEntry, error) {
+) ([]domain.FileEntry, uint64, error) { // добавили возврат размера поддерева
 	directoryEntries, err := f.fileSystem.ReadDir(currentAbsolutePath)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	var collectedEntries []domain.FileEntry
+	var subtreeSize uint64 = 0 // размер текущего поддерева (включая саму запись)
 
 	for _, directoryEntry := range directoryEntries {
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return nil, 0, ctx.Err()
 		}
 		if directoryEntry.Type()&os.ModeSymlink != 0 {
 			f.logger.LogAttrs(
@@ -415,7 +428,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 
 		entryInfo, err := directoryEntry.Info()
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		var resourceContentFunc func(string, string) (io.ReadCloser, error)
@@ -433,44 +446,56 @@ func (f *FileManager) collectFileEntriesRecursive(
 
 		hashValue, err := f.hashManager.ResolveHash(resourceContent, nextAbsolutePath)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		fileMetadata := f.createMetadata(entryInfo)
 		fileInfo, err := domain.NewFileInfo(fileMetadata, hashValue)
 		if err != nil {
-			return nil, err
-
+			return nil, 0, err
 		}
 
 		filePath, err := domain.NewPath(nextPath)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
-		fileEntry, err := domain.NewFileEntry(filePath, fileInfo)
+		fileEntry, err := domain.NewFileEntry(filePath, subtreeSize, fileInfo)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
-
-		collectedEntries = append(collectedEntries, fileEntry)
 
 		if directoryEntry.IsDir() {
-			nested, err := f.collectFileEntriesRecursive(ctx, nextAbsolutePath, nextPath)
+			// рекурсия — получаем список и размер поддерева детей
+			nested, nestedSubtreeSize, err := f.collectFileEntriesRecursive(ctx, nextAbsolutePath, nextPath)
 			if err != nil {
-				return nil, err
+				return nil, 0, err
 			}
+
+			// теперь знаем полный размер поддерева этой директории
+			fileEntry.SubtreeSize = 1 + nestedSubtreeSize
+
+			collectedEntries = append(collectedEntries, fileEntry)
 			collectedEntries = append(collectedEntries, nested...)
+
+			subtreeSize += 1 + nestedSubtreeSize
+		} else {
+			// для обычного файла размер поддерева всегда 1
+			fileEntry.SubtreeSize = 1
+
+			collectedEntries = append(collectedEntries, fileEntry)
+			subtreeSize += 1
 		}
 	}
 
-	return collectedEntries, nil
+	return collectedEntries, subtreeSize, nil
 }
 
 func (f *FileManager) createFileEntryForDirectory(
 	ctx context.Context,
 	absolutePath string,
 	relativePath string,
+	subtreeSize uint64,
 ) (domain.FileEntry, error) {
 	if ctx.Err() != nil {
 		return domain.FileEntry{}, ctx.Err()
@@ -501,5 +526,5 @@ func (f *FileManager) createFileEntryForDirectory(
 		return domain.FileEntry{}, err
 	}
 
-	return domain.NewFileEntry(filePath, fileInfo)
+	return domain.NewFileEntry(filePath, subtreeSize, fileInfo)
 }

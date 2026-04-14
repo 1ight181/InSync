@@ -68,7 +68,7 @@ readLabel:
 			chunkMessage := &insyncpb.PutFileRequest{
 				Payload: &insyncpb.PutFileRequest_Chunk{
 					Chunk: &insyncpb.FileChunk{
-						Index: uint32(i),
+						Index: uint64(i),
 						Data:  buffer[:numberOfBytes],
 					},
 				},

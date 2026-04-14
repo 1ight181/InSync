@@ -63,7 +63,7 @@ readLabel:
 			}
 			err = stream.Send(&insyncpb.GetFileResponse{
 				Chunk: &insyncpb.FileChunk{
-					Index: uint32(i),
+					Index: uint64(i),
 					// обрезка буфера, чтобы не передавать нули на последней итерации
 					Data: buffer[:numberOfBytes],
 				},

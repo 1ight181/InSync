@@ -20,7 +20,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	FileSyncService_GetFileList_FullMethodName = "/insyncpb.FileSyncService/GetFileList"
+	FileSyncService_GetSnapshot_FullMethodName = "/insyncpb.FileSyncService/GetSnapshot"
 	FileSyncService_GetFile_FullMethodName     = "/insyncpb.FileSyncService/GetFile"
 	FileSyncService_PutFile_FullMethodName     = "/insyncpb.FileSyncService/PutFile"
 	FileSyncService_DeleteFile_FullMethodName  = "/insyncpb.FileSyncService/DeleteFile"
@@ -33,7 +33,7 @@ const (
 //
 // Сервис для синхронизации файлов
 type FileSyncServiceClient interface {
-	GetFileList(ctx context.Context, in *GetFileListRequest, opts ...grpc.CallOption) (*GetFileListResponse, error)
+	GetSnapshot(ctx context.Context, in *GetSnapshotRequest, opts ...grpc.CallOption) (*GetSnapshotResponse, error)
 	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetFileResponse], error)
 	PutFile(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[PutFileRequest, emptypb.Empty], error)
 	DeleteFile(ctx context.Context, in *DeleteFileRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -48,10 +48,10 @@ func NewFileSyncServiceClient(cc grpc.ClientConnInterface) FileSyncServiceClient
 	return &fileSyncServiceClient{cc}
 }
 
-func (c *fileSyncServiceClient) GetFileList(ctx context.Context, in *GetFileListRequest, opts ...grpc.CallOption) (*GetFileListResponse, error) {
+func (c *fileSyncServiceClient) GetSnapshot(ctx context.Context, in *GetSnapshotRequest, opts ...grpc.CallOption) (*GetSnapshotResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetFileListResponse)
-	err := c.cc.Invoke(ctx, FileSyncService_GetFileList_FullMethodName, in, out, cOpts...)
+	out := new(GetSnapshotResponse)
+	err := c.cc.Invoke(ctx, FileSyncService_GetSnapshot_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (c *fileSyncServiceClient) RenameFile(ctx context.Context, in *RenameFileRe
 //
 // Сервис для синхронизации файлов
 type FileSyncServiceServer interface {
-	GetFileList(context.Context, *GetFileListRequest) (*GetFileListResponse, error)
+	GetSnapshot(context.Context, *GetSnapshotRequest) (*GetSnapshotResponse, error)
 	GetFile(*GetFileRequest, grpc.ServerStreamingServer[GetFileResponse]) error
 	PutFile(grpc.ClientStreamingServer[PutFileRequest, emptypb.Empty]) error
 	DeleteFile(context.Context, *DeleteFileRequest) (*emptypb.Empty, error)
@@ -131,8 +131,8 @@ type FileSyncServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedFileSyncServiceServer struct{}
 
-func (UnimplementedFileSyncServiceServer) GetFileList(context.Context, *GetFileListRequest) (*GetFileListResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetFileList not implemented")
+func (UnimplementedFileSyncServiceServer) GetSnapshot(context.Context, *GetSnapshotRequest) (*GetSnapshotResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSnapshot not implemented")
 }
 func (UnimplementedFileSyncServiceServer) GetFile(*GetFileRequest, grpc.ServerStreamingServer[GetFileResponse]) error {
 	return status.Error(codes.Unimplemented, "method GetFile not implemented")
@@ -167,20 +167,20 @@ func RegisterFileSyncServiceServer(s grpc.ServiceRegistrar, srv FileSyncServiceS
 	s.RegisterService(&FileSyncService_ServiceDesc, srv)
 }
 
-func _FileSyncService_GetFileList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetFileListRequest)
+func _FileSyncService_GetSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSnapshotRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FileSyncServiceServer).GetFileList(ctx, in)
+		return srv.(FileSyncServiceServer).GetSnapshot(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: FileSyncService_GetFileList_FullMethodName,
+		FullMethod: FileSyncService_GetSnapshot_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FileSyncServiceServer).GetFileList(ctx, req.(*GetFileListRequest))
+		return srv.(FileSyncServiceServer).GetSnapshot(ctx, req.(*GetSnapshotRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -247,8 +247,8 @@ var FileSyncService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*FileSyncServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetFileList",
-			Handler:    _FileSyncService_GetFileList_Handler,
+			MethodName: "GetSnapshot",
+			Handler:    _FileSyncService_GetSnapshot_Handler,
 		},
 		{
 			MethodName: "DeleteFile",
