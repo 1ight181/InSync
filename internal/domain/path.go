@@ -1,6 +1,8 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+)
 
 type Path string
 
@@ -14,7 +16,6 @@ func NewPath(path string) (Path, error) {
 	}
 	return Path(path), nil
 }
-
-func (rp Path) String() string {
-	return string(rp)
+func (p Path) String() string {
+	return string(p)
 }

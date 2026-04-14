@@ -161,7 +161,7 @@ func (f *FileManager) GetFile(ctx context.Context, rootName domain.RootName, rel
 		return nil, err
 	}
 
-	return f.openFileContent(resolvedFullPath, relativePath.String())
+	return f.openFileContentWithHeader(resolvedFullPath, relativePath.String())
 }
 
 func (f *FileManager) PutFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path, content io.Reader) error {
@@ -309,7 +309,7 @@ func (f *FileManager) openDirContent(fullPath, relativePath string) (io.ReadClos
 
 		fileFullPath := filepath.Join(fullPath, entry.Name())
 		filePath := filepath.Join(relativePath, entry.Name())
-		fileContent, err := f.openFileContent(fileFullPath, filePath)
+		fileContent, err := f.openFileContentWithHeader(fileFullPath, filePath)
 		if err != nil {
 			f.logger.LogAttrs(
 				f.loggerCtx,
@@ -339,7 +339,7 @@ func (f *FileManager) openDirContent(fullPath, relativePath string) (io.ReadClos
 
 }
 
-func (f *FileManager) openFileContent(fullPath, relativePath string) (io.ReadCloser, error) {
+func (f *FileManager) openFileContentWithHeader(fullPath, relativePath string) (io.ReadCloser, error) {
 	fileContent, err := f.fileSystem.Open(fullPath)
 	if err != nil {
 		return nil, err
@@ -355,6 +355,10 @@ func (f *FileManager) openFileContent(fullPath, relativePath string) (io.ReadClo
 		Reader: content,
 		Closer: fileContent,
 	}, nil
+}
+
+func (f *FileManager) openFileContent(fullPath, _ string) (io.ReadCloser, error) {
+	return f.fileSystem.Open(fullPath)
 }
 
 func (f *FileManager) createMetadata(entryInfo fs.FileInfo) domain.FileMetadata {
