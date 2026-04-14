@@ -3,5 +3,5 @@ package scan
 import "insync/internal/domain"
 
 type IChangesScanner interface {
-	Scan(localSnapshot, remoteSnapshot []domain.FileEntry) ([]domain.SyncChange, error)
+	Scan(localFileEntries, remoteFileEntries []domain.FileEntry) ([]domain.SyncChange, error)
 }

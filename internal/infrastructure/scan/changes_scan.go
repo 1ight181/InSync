@@ -9,6 +9,6 @@ func NewChangesScanner() *ChangesScanner {
 	return &ChangesScanner{}
 }
 
-func (s *ChangesScanner) Scan(localSnapshot, remoteSnapshot []domain.FileEntry) domain.SyncChange {
-	return domain.SyncChange{}
+func (s *ChangesScanner) Scan(localFileEntries, remoteFileEntries []domain.FileEntry) []domain.SyncChange {
+	return nil
 }
