@@ -1,19 +1,29 @@
 package domain
 
+type LocalChange SyncChange
+type RemoteChange SyncChange
+
 type SyncChange struct {
-	RootName        RootName
 	OldRelativePath Path
 	NewRelativePath Path
 	ChangeType      SyncChangeType
 	ModifiedUnix    uint64
 }
 
+func (c SyncChange) ToLocalChange() LocalChange {
+	return LocalChange(c)
+}
+
+func (c SyncChange) ToRemoteChange() RemoteChange {
+	return RemoteChange(c)
+}
+
 type SyncChangeType int
 
 const (
-	Created SyncChangeType = iota
-	Deleted
-	Modified
-	Renamed
-	Moved
+	Create SyncChangeType = iota
+	Delete
+	Modify
+	Rename
+	Move
 )

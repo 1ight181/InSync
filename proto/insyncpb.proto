@@ -14,14 +14,14 @@ message FileEntry {
     uint64 modified_unix = 4;
     string hash = 5;
     bool is_directory = 6;
+    uint64 file_id = 7;
     // Количество файлов в поддереве (для директорий), учитывая все вложенные файлы и директории и саму папку
-    uint64 subtree_size = 7; 
+    uint64 subtree_size = 8; 
 }
 
 message Snapshot {
-    string root_name = 1;
-    uint64 unix_time = 2;
-    repeated FileEntry files = 3;
+    uint64 unix_time = 1;
+    repeated FileEntry files = 2;
 }
 
 

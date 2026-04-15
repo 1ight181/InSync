@@ -27,12 +27,12 @@ const (
 )
 
 const (
-	changeTypeCreated  = "CREATED"
-	changeTypeDeleted  = "DELETED"
-	changeTypeRenamed  = "RENAMED"
-	changeTypeMoved    = "MOVED"
-	changeTypeModified = "MODIFIED"
-	changeTypeUnknown  = "UNKNOWN"
+	changeTypeCreate  = "CREATE"
+	changeTypeDelete  = "DELETE"
+	changeTypeRename  = "RENAME"
+	changeTypeMove    = "MOVE"
+	changeTypeModify  = "MODIFY"
+	changeTypeUnknown = "UNKNOWN"
 )
 
 type Cli struct {
@@ -412,21 +412,21 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 }
 
 func (c *Cli) getChangesHeader() string {
-	return fmt.Sprintf("|%s|%s|%s|%s|\n", "CHANGE TYPE", "ROOT NAME", "OLD RELATIVE PATH", "NEW RELATIVE PATH")
+	return fmt.Sprintf("|%s|%s|%s|\n", "CHANGE TYPE", "OLD RELATIVE PATH", "NEW RELATIVE PATH")
 }
 
 func (c *Cli) changeToHumanReadable(s domain.SyncChange) string {
 	switch s.ChangeType {
-	case domain.Created:
-		return fmt.Sprintf("|%s|%s|%s|\n", changeTypeCreated, s.RootName, s.NewRelativePath)
-	case domain.Deleted:
-		return fmt.Sprintf("|%s|%s|%s|\n", changeTypeDeleted, s.RootName, s.OldRelativePath)
-	case domain.Renamed:
-		return fmt.Sprintf("|%s|%s|%s|%s|\n", changeTypeRenamed, s.RootName, s.OldRelativePath, s.NewRelativePath)
-	case domain.Moved:
-		return fmt.Sprintf("|%s|%s|%s|%s|\n", changeTypeMoved, s.RootName, s.OldRelativePath, s.NewRelativePath)
-	case domain.Modified:
-		return fmt.Sprintf("|%s|%s|%s|%s|\n", changeTypeModified, s.RootName, s.OldRelativePath, s.NewRelativePath)
+	case domain.Create:
+		return fmt.Sprintf("|%s|%s|\n", changeTypeCreate, s.NewRelativePath)
+	case domain.Delete:
+		return fmt.Sprintf("|%s|%s|\n", changeTypeDelete, s.OldRelativePath)
+	case domain.Rename:
+		return fmt.Sprintf("|%s|%s|%s|\n", changeTypeRename, s.OldRelativePath, s.NewRelativePath)
+	case domain.Move:
+		return fmt.Sprintf("|%s|%s|%s|\n", changeTypeMove, s.OldRelativePath, s.NewRelativePath)
+	case domain.Modify:
+		return fmt.Sprintf("|%s|%s|%s|\n", changeTypeModify, s.OldRelativePath, s.NewRelativePath)
 	default:
 		return changeTypeUnknown
 	}

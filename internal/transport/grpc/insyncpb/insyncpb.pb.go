@@ -30,8 +30,9 @@ type FileEntry struct {
 	ModifiedUnix uint64                 `protobuf:"varint,4,opt,name=modified_unix,json=modifiedUnix,proto3" json:"modified_unix,omitempty"`
 	Hash         string                 `protobuf:"bytes,5,opt,name=hash,proto3" json:"hash,omitempty"`
 	IsDirectory  bool                   `protobuf:"varint,6,opt,name=is_directory,json=isDirectory,proto3" json:"is_directory,omitempty"`
+	FileId       uint64                 `protobuf:"varint,7,opt,name=file_id,json=fileId,proto3" json:"file_id,omitempty"`
 	// Количество файлов в поддереве (для директорий), учитывая все вложенные файлы и директории и саму папку
-	SubtreeSize   uint64 `protobuf:"varint,7,opt,name=subtree_size,json=subtreeSize,proto3" json:"subtree_size,omitempty"`
+	SubtreeSize   uint64 `protobuf:"varint,8,opt,name=subtree_size,json=subtreeSize,proto3" json:"subtree_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -101,6 +102,13 @@ func (x *FileEntry) GetIsDirectory() bool {
 	return false
 }
 
+func (x *FileEntry) GetFileId() uint64 {
+	if x != nil {
+		return x.FileId
+	}
+	return 0
+}
+
 func (x *FileEntry) GetSubtreeSize() uint64 {
 	if x != nil {
 		return x.SubtreeSize
@@ -110,9 +118,8 @@ func (x *FileEntry) GetSubtreeSize() uint64 {
 
 type Snapshot struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	RootName      string                 `protobuf:"bytes,1,opt,name=root_name,json=rootName,proto3" json:"root_name,omitempty"`
-	UnixTime      uint64                 `protobuf:"varint,2,opt,name=unix_time,json=unixTime,proto3" json:"unix_time,omitempty"`
-	Files         []*FileEntry           `protobuf:"bytes,3,rep,name=files,proto3" json:"files,omitempty"`
+	UnixTime      uint64                 `protobuf:"varint,1,opt,name=unix_time,json=unixTime,proto3" json:"unix_time,omitempty"`
+	Files         []*FileEntry           `protobuf:"bytes,2,rep,name=files,proto3" json:"files,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -145,13 +152,6 @@ func (x *Snapshot) ProtoReflect() protoreflect.Message {
 // Deprecated: Use Snapshot.ProtoReflect.Descriptor instead.
 func (*Snapshot) Descriptor() ([]byte, []int) {
 	return file_proto_insyncpb_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *Snapshot) GetRootName() string {
-	if x != nil {
-		return x.RootName
-	}
-	return ""
 }
 
 func (x *Snapshot) GetUnixTime() uint64 {
@@ -660,19 +660,19 @@ var File_proto_insyncpb_proto protoreflect.FileDescriptor
 
 const file_proto_insyncpb_proto_rawDesc = "" +
 	"\n" +
-	"\x14proto/insyncpb.proto\x12\binsyncpb\x1a\x1bgoogle/protobuf/empty.proto\"\xce\x01\n" +
+	"\x14proto/insyncpb.proto\x12\binsyncpb\x1a\x1bgoogle/protobuf/empty.proto\"\xe7\x01\n" +
 	"\tFileEntry\x12#\n" +
 	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\x12\x1d\n" +
 	"\n" +
 	"size_bytes\x18\x03 \x01(\x04R\tsizeBytes\x12#\n" +
 	"\rmodified_unix\x18\x04 \x01(\x04R\fmodifiedUnix\x12\x12\n" +
 	"\x04hash\x18\x05 \x01(\tR\x04hash\x12!\n" +
-	"\fis_directory\x18\x06 \x01(\bR\visDirectory\x12!\n" +
-	"\fsubtree_size\x18\a \x01(\x04R\vsubtreeSize\"o\n" +
+	"\fis_directory\x18\x06 \x01(\bR\visDirectory\x12\x17\n" +
+	"\afile_id\x18\a \x01(\x04R\x06fileId\x12!\n" +
+	"\fsubtree_size\x18\b \x01(\x04R\vsubtreeSize\"R\n" +
 	"\bSnapshot\x12\x1b\n" +
-	"\troot_name\x18\x01 \x01(\tR\brootName\x12\x1b\n" +
-	"\tunix_time\x18\x02 \x01(\x04R\bunixTime\x12)\n" +
-	"\x05files\x18\x03 \x03(\v2\x13.insyncpb.FileEntryR\x05files\"1\n" +
+	"\tunix_time\x18\x01 \x01(\x04R\bunixTime\x12)\n" +
+	"\x05files\x18\x02 \x03(\v2\x13.insyncpb.FileEntryR\x05files\"1\n" +
 	"\x12GetSnapshotRequest\x12\x1b\n" +
 	"\troot_name\x18\x01 \x01(\tR\brootName\"E\n" +
 	"\x13GetSnapshotResponse\x12.\n" +

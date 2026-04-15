@@ -19,3 +19,7 @@ func NewPath(path string) (Path, error) {
 func (p Path) String() string {
 	return string(p)
 }
+
+func (p Path) IsEmpty() bool {
+	return p == ""
+}

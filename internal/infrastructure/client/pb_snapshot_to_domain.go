@@ -12,17 +12,12 @@ func pbSnapshotToDomain(pbSnapshot *insyncpb.Snapshot) (domain.Snapshot, error) 
 		return domain.Snapshot{}, nil
 	}
 
-	rootName, err := domain.NewRootName(pbSnapshot.RootName)
-	if err != nil {
-		return domain.Snapshot{}, err
-	}
-
 	files, err := pbFileEntriesToDomain(pbSnapshot.Files)
 	if err != nil {
 		return domain.Snapshot{}, err
 	}
 
-	snapshot := domain.NewSnapshot(rootName, pbSnapshot.UnixTime, files)
+	snapshot := domain.NewSnapshot(pbSnapshot.UnixTime, files)
 
 	return snapshot, nil
 }

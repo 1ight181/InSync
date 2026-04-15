@@ -95,7 +95,7 @@ func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName)
 		return domain.Snapshot{}, err
 	}
 
-	snapshot := domain.NewSnapshot(rootName, uint64(time.Now().Unix()), allEntries)
+	snapshot := domain.NewSnapshot(uint64(time.Now().Unix()), allEntries)
 
 	return snapshot, nil
 }

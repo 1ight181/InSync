@@ -7,7 +7,6 @@ import (
 
 func domainSnapshotToPb(snapshot domain.Snapshot) *insyncpb.Snapshot {
 	return &insyncpb.Snapshot{
-		RootName: snapshot.RootName.String(),
 		UnixTime: snapshot.UnixTime,
 		Files:    domainFileEntriesToPb(snapshot.Files),
 	}
