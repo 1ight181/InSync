@@ -9,20 +9,20 @@ import (
 
 const sentinel = "\xFF\xFF"
 
-type ChangesScannerWithTreeSkip struct {
+type ChangesPlannerWithTreeSkip struct {
 	logger    *slog.Logger
 	loggerCtx context.Context
 }
 
-type ChangesScannerWithTreeSkipOptions struct {
+type ChangesPlannerWithTreeSkipOptions struct {
 	Logger *slog.Logger
 }
 
-func NewChangesScannerWithTreeSkip(opts ChangesScannerWithTreeSkipOptions) *ChangesScannerWithTreeSkip {
+func NewChangesPlannerWithTreeSkip(opts ChangesPlannerWithTreeSkipOptions) *ChangesPlannerWithTreeSkip {
 	if opts.Logger == nil {
-		panic("Logger must be provided to ChangesScannerWithTreeSkip")
+		panic("Logger must be provided to ChangesPlannerWithTreeSkip")
 	}
-	return &ChangesScannerWithTreeSkip{
+	return &ChangesPlannerWithTreeSkip{
 		logger:    opts.Logger,
 		loggerCtx: context.Background(),
 	}
@@ -35,9 +35,9 @@ type potentialChange struct {
 	Modify     uint64
 }
 
-func (s *ChangesScannerWithTreeSkip) Scan(
+func (s *ChangesPlannerWithTreeSkip) Plan(
 	baseSnapshot, localSnapshot, remoteSnapshot domain.Snapshot,
-) ([]domain.LocalChange, []domain.RemoteChange, []domain.Conflict) {
+) domain.SyncPlan {
 
 	var localChanges []domain.LocalChange
 	var remoteChanges []domain.RemoteChange
@@ -112,10 +112,14 @@ func (s *ChangesScannerWithTreeSkip) Scan(
 	remoteChanges = append(remoteChanges, appliedRemoteChanges...)
 	conflicts = append(conflicts, appliedConflicts...)
 
-	return localChanges, remoteChanges, conflicts
+	return domain.SyncPlan{
+		LocalChanges:  localChanges,
+		RemoteChanges: remoteChanges,
+		Conflicts:     conflicts,
+	}
 }
 
-func (s *ChangesScannerWithTreeSkip) processEntry(
+func (s *ChangesPlannerWithTreeSkip) processEntry(
 	baseEntry, localEntry, remoteEntry *domain.FileEntry,
 ) (
 	*domain.LocalChange,
@@ -141,7 +145,7 @@ func (s *ChangesScannerWithTreeSkip) processEntry(
 	return nil, nil, nil, nil, nil
 }
 
-func (s *ChangesScannerWithTreeSkip) handleDeletion(
+func (s *ChangesPlannerWithTreeSkip) handleDeletion(
 	baseEntry, localEntry, remoteEntry *domain.FileEntry,
 ) (
 	*domain.Conflict,
@@ -194,7 +198,7 @@ func (s *ChangesScannerWithTreeSkip) handleDeletion(
 	return nil, nil, nil
 }
 
-func (s *ChangesScannerWithTreeSkip) handleCreation(
+func (s *ChangesPlannerWithTreeSkip) handleCreation(
 	localEntry, remoteEntry *domain.FileEntry,
 ) (*potentialChange, *potentialChange, *domain.Conflict) {
 	// создать на remote
@@ -232,7 +236,7 @@ func (s *ChangesScannerWithTreeSkip) handleCreation(
 	return nil, nil, nil
 }
 
-func (s *ChangesScannerWithTreeSkip) handleModification(
+func (s *ChangesPlannerWithTreeSkip) handleModification(
 	local, remote *domain.FileEntry,
 ) (*domain.LocalChange, *domain.RemoteChange, *domain.Conflict) {
 	if local.FileInfo.Metadata.ModifiedUnix > remote.FileInfo.Metadata.ModifiedUnix {
@@ -256,7 +260,7 @@ func (s *ChangesScannerWithTreeSkip) handleModification(
 		ModifiedUnix:    remote.FileInfo.Metadata.ModifiedUnix,
 	}, nil, nil
 }
-func (s *ChangesScannerWithTreeSkip) detectRenamesAndMoves(
+func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 	potentialLocalChanges, potentialRemoteChanges []potentialChange, baseFiles []domain.FileEntry,
 ) ([]domain.LocalChange, []domain.RemoteChange, []domain.Conflict) {
 	localChanges := make([]domain.LocalChange, 0, len(potentialLocalChanges))
@@ -455,14 +459,14 @@ func (s *ChangesScannerWithTreeSkip) detectRenamesAndMoves(
 	return localChanges, remoteChanges, conflicts
 }
 
-func (s *ChangesScannerWithTreeSkip) isRenamedRenamedConflict(
+func (s *ChangesPlannerWithTreeSkip) isRenamedRenamedConflict(
 	baseEntryDir, localDir, baseEntryFileName, localFileName, remoteDir, remoteFileName string,
 ) bool {
 	return baseEntryDir == localDir && baseEntryFileName != localFileName &&
 		baseEntryDir == remoteDir && baseEntryFileName != remoteFileName
 }
 
-func (s *ChangesScannerWithTreeSkip) isMovedMovedConflict(
+func (s *ChangesPlannerWithTreeSkip) isMovedMovedConflict(
 	baseEntryDir, localDir, remoteDir string,
 ) bool {
 	return baseEntryDir != localDir &&
@@ -470,14 +474,14 @@ func (s *ChangesScannerWithTreeSkip) isMovedMovedConflict(
 		localDir != remoteDir
 }
 
-func (s *ChangesScannerWithTreeSkip) pathAt(entries []domain.FileEntry, idx int) string {
+func (s *ChangesPlannerWithTreeSkip) pathAt(entries []domain.FileEntry, idx int) string {
 	if idx >= len(entries) {
 		return sentinel
 	}
 	return entries[idx].RelativePath.String()
 }
 
-func (s *ChangesScannerWithTreeSkip) minString(a, b, c string) string {
+func (s *ChangesPlannerWithTreeSkip) minString(a, b, c string) string {
 	if a <= b && a <= c {
 		return a
 	}
@@ -487,7 +491,7 @@ func (s *ChangesScannerWithTreeSkip) minString(a, b, c string) string {
 	return c
 }
 
-func (s *ChangesScannerWithTreeSkip) canSkipSubtreeAt(b, l, r *domain.FileEntry, currentPath string) bool {
+func (s *ChangesPlannerWithTreeSkip) canSkipSubtreeAt(b, l, r *domain.FileEntry, currentPath string) bool {
 	if b == nil || l == nil || r == nil {
 		return false
 	}
@@ -499,21 +503,21 @@ func (s *ChangesScannerWithTreeSkip) canSkipSubtreeAt(b, l, r *domain.FileEntry,
 	return b.FileInfo.Hash == l.FileInfo.Hash && b.FileInfo.Hash == r.FileInfo.Hash
 }
 
-func (s *ChangesScannerWithTreeSkip) skipSubtree(subtreeSize int, idx *int) {
+func (s *ChangesPlannerWithTreeSkip) skipSubtree(subtreeSize int, idx *int) {
 	*idx += subtreeSize
 }
 
-func (s *ChangesScannerWithTreeSkip) isDeleted(base, local, remote *domain.FileEntry) bool {
+func (s *ChangesPlannerWithTreeSkip) isDeleted(base, local, remote *domain.FileEntry) bool {
 	return base != nil && (local == nil || remote == nil)
 }
 
-func (s *ChangesScannerWithTreeSkip) isNewFile(base, local, remote *domain.FileEntry) bool {
+func (s *ChangesPlannerWithTreeSkip) isNewFile(base, local, remote *domain.FileEntry) bool {
 	if base != nil {
 		return false
 	}
 	return local != nil || remote != nil
 }
 
-func (s *ChangesScannerWithTreeSkip) isModified(base, local, remote *domain.FileEntry) bool {
+func (s *ChangesPlannerWithTreeSkip) isModified(base, local, remote *domain.FileEntry) bool {
 	return base != nil && local != nil && remote != nil && local.FileInfo.Hash != remote.FileInfo.Hash
 }

@@ -11,9 +11,9 @@ import (
 )
 
 func TestChangesScannerWithTreeSkip_Scan(t *testing.T) {
-	logger := slog.New(slog.DiscardHandler) // тихий логгер для тестов
+	logger := slog.New(slog.DiscardHandler)
 
-	scanner := NewChangesScannerWithTreeSkip(ChangesScannerWithTreeSkipOptions{
+	scanner := NewChangesPlannerWithTreeSkip(ChangesPlannerWithTreeSkipOptions{
 		Logger: logger,
 	})
 
@@ -28,42 +28,33 @@ func TestChangesScannerWithTreeSkip_Scan(t *testing.T) {
 	}{
 		{
 			name:           "no changes - identical snapshots",
-			baseSnapshot:   newSnapshot(100, newFile("file1.txt", "hash1", 100, false)),
-			localSnapshot:  newSnapshot(100, newFile("file1.txt", "hash1", 100, false)),
-			remoteSnapshot: newSnapshot(100, newFile("file1.txt", "hash1", 100, false)),
-			wantLocal:      nil,
-			wantRemote:     nil,
-			wantConflicts:  nil,
+			baseSnapshot:   newSnapshot(100, newFile(t, "file1.txt", "hash1", 100, false)),
+			localSnapshot:  newSnapshot(100, newFile(t, "file1.txt", "hash1", 100, false)),
+			remoteSnapshot: newSnapshot(100, newFile(t, "file1.txt", "hash1", 100, false)),
 		},
 		{
 			name:           "new file on local only",
 			baseSnapshot:   newSnapshot(100),
-			localSnapshot:  newSnapshot(101, newFile("new.txt", "hashA", 101, false)),
+			localSnapshot:  newSnapshot(101, newFile(t, "new.txt", "hashA", 101, false)),
 			remoteSnapshot: newSnapshot(100),
-			wantLocal:      nil,
 			wantRemote: []domain.RemoteChange{
 				newRemoteChange(domain.Create, "", "new.txt", 101),
 			},
-			wantConflicts: nil,
 		},
 		{
 			name:           "new file on remote only",
 			baseSnapshot:   newSnapshot(100),
 			localSnapshot:  newSnapshot(100),
-			remoteSnapshot: newSnapshot(101, newFile("new.txt", "hashB", 101, false)),
+			remoteSnapshot: newSnapshot(101, newFile(t, "new.txt", "hashB", 101, false)),
 			wantLocal: []domain.LocalChange{
 				newLocalChange(domain.Create, "", "new.txt", 101),
 			},
-			wantRemote:    nil,
-			wantConflicts: nil,
 		},
 		{
 			name:           "conflict - both created same path different content",
 			baseSnapshot:   newSnapshot(100),
-			localSnapshot:  newSnapshot(101, newFile("conflict.txt", "hashL", 101, false)),
-			remoteSnapshot: newSnapshot(101, newFile("conflict.txt", "hashR", 101, false)),
-			wantLocal:      nil,
-			wantRemote:     nil,
+			localSnapshot:  newSnapshot(101, newFile(t, "conflict.txt", "hashL", 101, false)),
+			remoteSnapshot: newSnapshot(101, newFile(t, "conflict.txt", "hashR", 101, false)),
 			wantConflicts: []domain.Conflict{
 				newConflict(
 					domain.ConflictBothCreatedAtSamePathConflict,
@@ -74,22 +65,18 @@ func TestChangesScannerWithTreeSkip_Scan(t *testing.T) {
 		},
 		{
 			name:           "delete on local, unchanged on remote → delete on remote",
-			baseSnapshot:   newSnapshot(100, newFile("del.txt", "hash1", 100, false)),
+			baseSnapshot:   newSnapshot(100, newFile(t, "del.txt", "hash1", 100, false)),
 			localSnapshot:  newSnapshot(101),
-			remoteSnapshot: newSnapshot(100, newFile("del.txt", "hash1", 100, false)),
-			wantLocal:      nil,
+			remoteSnapshot: newSnapshot(100, newFile(t, "del.txt", "hash1", 100, false)),
 			wantRemote: []domain.RemoteChange{
 				newRemoteChange(domain.Delete, "del.txt", "", 100),
 			},
-			wantConflicts: nil,
 		},
 		{
 			name:           "delete on local + modified on remote → conflict",
-			baseSnapshot:   newSnapshot(100, newFile("mod.txt", "hash1", 100, false)),
+			baseSnapshot:   newSnapshot(100, newFile(t, "mod.txt", "hash1", 100, false)),
 			localSnapshot:  newSnapshot(101),
-			remoteSnapshot: newSnapshot(102, newFile("mod.txt", "hash2", 102, false)),
-			wantLocal:      nil,
-			wantRemote:     nil,
+			remoteSnapshot: newSnapshot(102, newFile(t, "mod.txt", "hash2", 102, false)),
 			wantConflicts: []domain.Conflict{
 				newConflict(
 					domain.ConflictLocalDeletedRemoteModified,
@@ -100,44 +87,36 @@ func TestChangesScannerWithTreeSkip_Scan(t *testing.T) {
 		},
 		{
 			name:           "modification - local newer",
-			baseSnapshot:   newSnapshot(100, newFile("file.txt", "hash1", 100, false)),
-			localSnapshot:  newSnapshot(200, newFile("file.txt", "hash2", 200, false)),
-			remoteSnapshot: newSnapshot(150, newFile("file.txt", "hash3", 150, false)),
-			wantLocal:      nil,
+			baseSnapshot:   newSnapshot(100, newFile(t, "file.txt", "hash1", 100, false)),
+			localSnapshot:  newSnapshot(200, newFile(t, "file.txt", "hash2", 200, false)),
+			remoteSnapshot: newSnapshot(150, newFile(t, "file.txt", "hash3", 150, false)),
 			wantRemote: []domain.RemoteChange{
 				newRemoteChange(domain.Modify, "file.txt", "", 200),
 			},
-			wantConflicts: nil,
 		},
 		{
 			name:           "rename on local only",
-			baseSnapshot:   newSnapshot(100, newFile("old.txt", "hashX", 100, false)),
-			localSnapshot:  newSnapshot(100, newFile("new.txt", "hashX", 100, false)),
-			remoteSnapshot: newSnapshot(100, newFile("old.txt", "hashX", 100, false)),
-			wantLocal:      nil,
+			baseSnapshot:   newSnapshot(100, newFile(t, "old.txt", "hashX", 100, false)),
+			localSnapshot:  newSnapshot(100, newFile(t, "new.txt", "hashX", 100, false)),
+			remoteSnapshot: newSnapshot(100, newFile(t, "old.txt", "hashX", 100, false)),
 			wantRemote: []domain.RemoteChange{
 				newRemoteChangeRename("old.txt", "new.txt", 100),
 			},
-			wantConflicts: nil,
 		},
 		{
 			name:           "move on local only",
-			baseSnapshot:   newSnapshot(100, newFile("docs/old.txt", "hashY", 100, false)),
-			localSnapshot:  newSnapshot(100, newFile("archive/old.txt", "hashY", 100, false)),
-			remoteSnapshot: newSnapshot(100, newFile("docs/old.txt", "hashY", 100, false)),
-			wantLocal:      nil,
+			baseSnapshot:   newSnapshot(100, newFile(t, "docs/old.txt", "hashY", 100, false)),
+			localSnapshot:  newSnapshot(100, newFile(t, "archive/old.txt", "hashY", 100, false)),
+			remoteSnapshot: newSnapshot(100, newFile(t, "docs/old.txt", "hashY", 100, false)),
 			wantRemote: []domain.RemoteChange{
 				newRemoteChangeMove("docs/old.txt", "archive/old.txt", 100),
 			},
-			wantConflicts: nil,
 		},
 		{
 			name:           "rename + rename conflict",
-			baseSnapshot:   newSnapshot(100, newFile("file.txt", "hashZ", 100, false)),
-			localSnapshot:  newSnapshot(101, newFile("file_local.txt", "hashZ", 100, false)),
-			remoteSnapshot: newSnapshot(101, newFile("file_remote.txt", "hashZ", 100, false)),
-			wantLocal:      nil,
-			wantRemote:     nil,
+			baseSnapshot:   newSnapshot(100, newFile(t, "file.txt", "hashZ", 100, false)),
+			localSnapshot:  newSnapshot(101, newFile(t, "file_local.txt", "hashZ", 100, false)),
+			remoteSnapshot: newSnapshot(101, newFile(t, "file_remote.txt", "hashZ", 100, false)),
 			wantConflicts: []domain.Conflict{
 				newConflict(
 					domain.ConflictLocalRenamedRemoteRenamed,
@@ -147,107 +126,124 @@ func TestChangesScannerWithTreeSkip_Scan(t *testing.T) {
 			},
 		},
 		{
-			name:           "tree skip - identical directory subtree",
-			baseSnapshot:   newSnapshot(100, newDir("dir/", "hashD", 3), newFile("dir/sub.txt", "hashS", 100, false)),
-			localSnapshot:  newSnapshot(100, newDir("dir/", "hashD", 3), newFile("dir/sub.txt", "hashS", 100, false)),
-			remoteSnapshot: newSnapshot(100, newDir("dir/", "hashD", 3), newFile("dir/sub.txt", "hashS", 100, false)),
-			wantLocal:      nil,
-			wantRemote:     nil,
-			wantConflicts:  nil,
+			name: "tree skip - identical directory subtree",
+			baseSnapshot: newSnapshot(100,
+				newDir(t, "dir/", "hashD", 3),
+				newFile(t, "dir/sub.txt", "hashS", 100, false),
+			),
+			localSnapshot: newSnapshot(100,
+				newDir(t, "dir/", "hashD", 3),
+				newFile(t, "dir/sub.txt", "hashS", 100, false),
+			),
+			remoteSnapshot: newSnapshot(100,
+				newDir(t, "dir/", "hashD", 3),
+				newFile(t, "dir/sub.txt", "hashS", 100, false),
+			),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			localCh, remoteCh, conflicts := scanner.Scan(tt.baseSnapshot, tt.localSnapshot, tt.remoteSnapshot)
+			plan := scanner.Plan(tt.baseSnapshot, tt.localSnapshot, tt.remoteSnapshot)
 
-			assert.Equal(t, tt.wantLocal, localCh, "local changes mismatch")
-			assert.Equal(t, tt.wantRemote, remoteCh, "remote changes mismatch")
-			assert.Equal(t, tt.wantConflicts, conflicts, "conflicts mismatch")
+			assert.Equal(t, tt.wantLocal, plan.LocalChanges, "local changes mismatch")
+			assert.Equal(t, tt.wantRemote, plan.RemoteChanges, "remote changes mismatch")
+			assert.Equal(t, tt.wantConflicts, plan.Conflicts, "conflicts mismatch")
 		})
 	}
 }
 
-// ==================== Вспомогательные конструкторы ====================
+// ==================== helpers ====================
 
 func newSnapshot(unixTime uint64, files ...domain.FileEntry) domain.Snapshot {
 	return domain.NewSnapshot(unixTime, files)
 }
 
-func newFile(relPath, hash string, modified uint64, isDir bool) domain.FileEntry {
+func newFile(t *testing.T, relPath, hash string, modified uint64, isDir bool) domain.FileEntry {
 	path, err := domain.NewPath(relPath)
-	require.NoError(nil, err) // в тесте паника при ошибке — нормально
+	require.NoError(t, err)
 
 	fi := domain.FileInfo{
-		Hash:     hash,
-		Metadata: domain.FileMetadata{ModifiedUnix: modified, IsDirectory: isDir},
-		// RootName и SizeBytes можно оставить пустыми/0, если не используются в сравнении
+		Hash: hash,
+		Metadata: domain.FileMetadata{
+			ModifiedUnix: modified,
+			IsDirectory:  isDir,
+		},
 	}
 
-	entry, err := domain.NewFileEntry(path, 1, fi) // subtreeSize = 1 для файла
-	require.NoError(nil, err)
+	entry, err := domain.NewFileEntry(path, 1, fi)
+	require.NoError(t, err)
+
 	return entry
 }
 
-func newDir(relPath, hash string, subtreeSize uint64) domain.FileEntry {
-	path, _ := domain.NewPath(relPath)
+func newDir(t *testing.T, relPath, hash string, subtreeSize uint64) domain.FileEntry {
+	path, err := domain.NewPath(relPath)
+	require.NoError(t, err)
+
 	fi := domain.FileInfo{
-		Hash:     hash,
-		Metadata: domain.FileMetadata{ModifiedUnix: 100, IsDirectory: true},
+		Hash: hash,
+		Metadata: domain.FileMetadata{
+			ModifiedUnix: 100,
+			IsDirectory:  true,
+		},
 	}
-	entry, _ := domain.NewFileEntry(path, subtreeSize, fi)
+
+	entry, err := domain.NewFileEntry(path, subtreeSize, fi)
+	require.NoError(t, err)
+
 	return entry
 }
 
-func newLocalChange(ct domain.SyncChangeType, old, new string, mod uint64) domain.LocalChange {
+func newLocalChange(changeType domain.SyncChangeType, oldPath, newPath string, modifiedUnix uint64) domain.LocalChange {
 	return domain.SyncChange{
-		OldRelativePath: mustPath(old),
-		NewRelativePath: mustPath(new),
-		ChangeType:      ct,
-		ModifiedUnix:    mod,
+		OldRelativePath: mustPath(oldPath),
+		NewRelativePath: mustPath(newPath),
+		ChangeType:      changeType,
+		ModifiedUnix:    modifiedUnix,
 	}.ToLocalChange()
 }
 
-func newRemoteChange(ct domain.SyncChangeType, old, new string, mod uint64) domain.RemoteChange {
+func newRemoteChange(changeType domain.SyncChangeType, oldPath, newPath string, modifiedUnix uint64) domain.RemoteChange {
 	return domain.SyncChange{
-		OldRelativePath: mustPath(old),
-		NewRelativePath: mustPath(new),
-		ChangeType:      ct,
-		ModifiedUnix:    mod,
+		OldRelativePath: mustPath(oldPath),
+		NewRelativePath: mustPath(newPath),
+		ChangeType:      changeType,
+		ModifiedUnix:    modifiedUnix,
 	}.ToRemoteChange()
 }
 
-func newRemoteChangeRename(old, new string, mod uint64) domain.RemoteChange {
-	return newRemoteChange(domain.Rename, old, new, mod)
+func newRemoteChangeRename(oldPath, newPath string, modifiedUnix uint64) domain.RemoteChange {
+	return newRemoteChange(domain.Rename, oldPath, newPath, modifiedUnix)
 }
 
-func newRemoteChangeMove(old, new string, mod uint64) domain.RemoteChange {
-	return newRemoteChange(domain.Move, old, new, mod)
+func newRemoteChangeMove(oldPath, newPath string, modifiedUnix uint64) domain.RemoteChange {
+	return newRemoteChange(domain.Move, oldPath, newPath, modifiedUnix)
 }
 
 func newConflict(
-	typ domain.ConflictType,
-	localP, remoteP, baseP string,
-	localMod, remoteMod, baseMod uint64,
+	conflictType domain.ConflictType,
+	localPath, remotePath, basePath string,
+	localModifiedUnix, remoteModifiedUnix, baseModifiedUnix uint64,
 ) domain.Conflict {
 	return domain.Conflict{
-		LocalRelativePath:  mustPath(localP),
-		RemoteRelativePath: mustPath(remoteP),
-		BaseRelativePath:   mustPath(baseP),
-		LocalModifiedUnix:  localMod,
-		RemoteModifiedUnix: remoteMod,
-		BaseModifiedUnix:   baseMod,
-		Conflict:           typ,
+		LocalRelativePath:  mustPath(localPath),
+		RemoteRelativePath: mustPath(remotePath),
+		BaseRelativePath:   mustPath(basePath),
+		LocalModifiedUnix:  localModifiedUnix,
+		RemoteModifiedUnix: remoteModifiedUnix,
+		BaseModifiedUnix:   baseModifiedUnix,
+		Conflict:           conflictType,
 	}
 }
 
-func mustPath(s string) domain.Path {
-	if s == "" {
+func mustPath(pathString string) domain.Path {
+	if pathString == "" {
 		return ""
 	}
-	p, err := domain.NewPath(s)
+	parsedPath, err := domain.NewPath(pathString)
 	if err != nil {
 		panic(err)
 	}
-	return p
+	return parsedPath
 }
