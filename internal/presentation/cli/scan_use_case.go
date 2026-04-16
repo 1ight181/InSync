@@ -6,5 +6,5 @@ import (
 )
 
 type IScanUseCase interface {
-	PlanSyncChanges(ctx context.Context, rootName domain.RootName) ([]domain.SyncChange, error)
+	PlanSyncChanges(ctx context.Context, rootName domain.RootName) (domain.SyncPlan, error)
 }

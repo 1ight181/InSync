@@ -27,6 +27,16 @@ const (
 )
 
 const (
+	conflictTypeLocalDeletedRemoteModified     = "LOCAL_DELETED_REMOTE_MODIFIED"
+	conflictTypeRemoteDeletedLocalModified     = "REMOTE_DELETED_LOCAL_MODIFIED"
+	conflictTypeLocalMovedRemoteMoved          = "LOCAL_MOVED_REMOTE_MOVED"
+	conflictTypeLocalRenamedRemoteRenamed      = "LOCAL_RENAMED_REMOTE_RENAMED"
+	conflictTypeBothModifiedConflictAtSameTime = "BOTH_MODIFIED_CONFLICT_AT_SAME_TIME"
+	conflictTypeBothCreatedAtSamePathConflict  = "BOTH_CREATED_AT_SAME_PATH_CONFLICT"
+	conflictTypeUnknown                        = "UNKNOWN"
+)
+
+const (
 	shouldUseCacheFlagName = "should_use_cache"
 )
 
@@ -343,51 +353,19 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 	interruptCtx, interruptCancel := signal.NotifyContext(cmdCtx, os.Interrupt)
 	defer interruptCancel()
 
-	changes, err := c.scanUseCase.PlanSyncChanges(interruptCtx, rootName)
-	if err != nil {
-		c.logger.Error("Не удалось получить изменения для синхронизации")
-		return err
-	}
-	changesLen := len(changes)
-	if changesLen == 0 {
-		c.logger.Info("Нет изменений для синхронизации")
-	}
-
 	shouldUseCache := *c.shouldUseCache
 	changeEventChan, err := c.syncUseCase.ApplySyncChanges(interruptCtx, shouldUseCache, rootName)
 	if err != nil {
 		return err
 	}
 
-	changeCount := 0
-
 	for changeEvent := range changeEventChan {
-		changeCount++
+
 		changeEventErr := changeEvent.Err
 		if changeEventErr != nil {
 			return changeEventErr
 		}
 		c.logger.Info(fmt.Sprintf("Применено изменение: %s\n", c.changeToHumanReadable(changeEvent.Change)))
-		if changeCount > changesLen {
-			c.logger.LogAttrs(
-				c.loggerCtx,
-				slog.LevelWarn,
-				"Необычное поведение: применено изменений больше чем было завялено",
-				slog.Int("declared", changesLen),
-				slog.Int("applied", changeCount),
-			)
-		}
-	}
-
-	if changeCount < changesLen {
-		c.logger.LogAttrs(
-			c.loggerCtx,
-			slog.LevelWarn,
-			"Необычное поведение: применено изменений меньше чем было завялено, несмотря на отсутствие ошибок",
-			slog.Int("declared", changesLen),
-			slog.Int("applied", changeCount),
-		)
-
 	}
 
 	c.logger.Info("Синхронизация завершена")
@@ -407,22 +385,40 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 	interruptCtx, interruptCancel := signal.NotifyContext(cmdCtx, os.Interrupt)
 	defer interruptCancel()
 
-	changes, err := c.scanUseCase.PlanSyncChanges(interruptCtx, rootName)
+	plan, err := c.scanUseCase.PlanSyncChanges(interruptCtx, rootName)
 	if err != nil {
 		c.logger.Error("Не удалось получить изменения для синхронизации")
 		return err
 	}
-	changesLen := len(changes)
-	if changesLen == 0 {
+
+	if plan.IsEmpty() {
 		c.logger.Info("Нет изменений для синхронизации")
 	}
 
 	changesHeader := c.getChangesHeader()
 
-	c.logger.Info(fmt.Sprintf("Всего изменений: %d\n%s", changesLen, changesHeader))
+	if plan.IsAnyLocalChange() {
+		c.logger.Info(fmt.Sprintf("Всего локальных изменений: %d\n%s", plan.LocalLength(), changesHeader))
+		localChanges := plan.LocalChanges
+		for i, change := range localChanges {
+			c.logger.Info(fmt.Sprintf("%d. %s", i+1, c.changeToHumanReadable(change.ToSyncChange())))
+		}
+	}
 
-	for i, change := range changes {
-		c.logger.Info(fmt.Sprintf("%d. %s", i+1, c.changeToHumanReadable(change)))
+	if plan.IsAnyRemoteChange() {
+		c.logger.Info(fmt.Sprintf("Всего удалённых изменений: %d\n%s", plan.RemoteLength(), changesHeader))
+		remoteChanges := plan.RemoteChanges
+		for i, change := range remoteChanges {
+			c.logger.Info(fmt.Sprintf("%d. %s", i+1, c.changeToHumanReadable(change.ToSyncChange())))
+		}
+	}
+
+	if plan.IsAnyConflict() {
+		c.logger.Info(fmt.Sprintf("Всего конфликтов: %d\n%s", plan.ConflictLength(), changesHeader))
+		conflicts := plan.Conflicts
+		for i, conflict := range conflicts {
+			c.logger.Info(fmt.Sprintf("%d. %s", i+1, c.conflictToHumanReadable(conflict)))
+		}
 	}
 
 	return nil
@@ -447,7 +443,44 @@ func (c *Cli) changeToHumanReadable(s domain.SyncChange) string {
 	default:
 		return changeTypeUnknown
 	}
+}
 
+func (c *Cli) conflictToHumanReadable(s domain.Conflict) string {
+	var conflictType string
+
+	switch s.Conflict {
+	case domain.ConflictLocalDeletedRemoteModified:
+		conflictType = conflictTypeLocalDeletedRemoteModified
+
+	case domain.ConflictRemoteDeletedLocalModified:
+		conflictType = conflictTypeRemoteDeletedLocalModified
+
+	case domain.ConflictLocalMovedRemoteMoved:
+		conflictType = conflictTypeLocalMovedRemoteMoved
+
+	case domain.ConflictLocalRenamedRemoteRenamed:
+		conflictType = conflictTypeLocalRenamedRemoteRenamed
+
+	case domain.ConflictBothModifiedConflictAtSameTime:
+		conflictType = conflictTypeBothModifiedConflictAtSameTime
+
+	case domain.ConflictBothCreatedAtSamePathConflict:
+		conflictType = conflictTypeBothCreatedAtSamePathConflict
+
+	default:
+		conflictType = conflictTypeUnknown
+	}
+
+	return fmt.Sprintf(
+		"Тип конфликта: %s\nLocalRelativePath : %s\nRemoteRelativePath : %s\nBaseRelativePath : %s\nLocalModifiedUnix : %d\nRemoteModifiedUnix : %d\nBaseModifiedUnix : %d\n",
+		conflictType,
+		s.LocalRelativePath,
+		s.RemoteRelativePath,
+		s.BaseRelativePath,
+		s.LocalModifiedUnix,
+		s.RemoteModifiedUnix,
+		s.BaseModifiedUnix,
+	)
 }
 
 func (c *Cli) suggestionFunc(annotationValue string, document *prompt.Document) []prompt.Suggest {
