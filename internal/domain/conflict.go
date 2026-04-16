@@ -21,6 +21,6 @@ const (
 	ConflictLocalMovedRemoteMoved
 	ConflictLocalRenamedRemoteRenamed
 
-	BothModifiedConflictAtSameTime
-	BothCreatedAtSamePathConflict
+	ConflictBothModifiedConflictAtSameTime
+	ConflictBothCreatedAtSamePathConflict
 )
