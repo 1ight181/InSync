@@ -65,11 +65,14 @@ readLabel:
 				return err
 			}
 
+			chunkCopy := make([]byte, readResult.numberOfBytes)
+			copy(chunkCopy, buffer[:readResult.numberOfBytes])
+
 			chunkMessage := &insyncpb.PutFileRequest{
 				Payload: &insyncpb.PutFileRequest_Chunk{
 					Chunk: &insyncpb.FileChunk{
 						Index: uint64(i),
-						Data:  buffer[:numberOfBytes],
+						Data:  chunkCopy,
 					},
 				},
 			}
