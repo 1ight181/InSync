@@ -28,6 +28,9 @@ func NewChangesPlannerWithTreeSkip(opts ChangesPlannerWithTreeSkipOptions) *Chan
 	}
 }
 
+// potentialChange отражает изменение которое потенциально требуется совершить
+//
+// Используется для обнаружения rename/move и связанных конфликтов
 type potentialChange struct {
 	Changetype domain.SyncChangeType
 	Path       domain.Path
@@ -35,9 +38,15 @@ type potentialChange struct {
 	Modify     uint64
 }
 
+// Единственная возвращаемая ошибка - ошибка по контексту.
 func (s *ChangesPlannerWithTreeSkip) Plan(
+	ctx context.Context,
 	baseSnapshot, localSnapshot, remoteSnapshot domain.Snapshot,
-) domain.SyncPlan {
+) (domain.SyncPlan, error) {
+
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return domain.SyncPlan{}, ctxErr
+	}
 
 	var localChanges []domain.LocalChange
 	var remoteChanges []domain.RemoteChange
@@ -53,6 +62,9 @@ func (s *ChangesPlannerWithTreeSkip) Plan(
 	remote := remoteSnapshot.Files
 
 	for baseIdx < len(base) || localIdx < len(local) || remoteIdx < len(remote) {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return domain.SyncPlan{}, ctxErr
+		}
 		pBase := s.pathAt(base, baseIdx)
 		pLocal := s.pathAt(local, localIdx)
 		pRemote := s.pathAt(remote, remoteIdx)
@@ -107,7 +119,11 @@ func (s *ChangesPlannerWithTreeSkip) Plan(
 		}
 	}
 
-	appliedLocalChanges, appliedRemoteChanges, appliedConflicts := s.detectRenamesAndMoves(potentialLocalChanges, potentialRemoteChanges, base)
+	appliedLocalChanges, appliedRemoteChanges, appliedConflicts, err := s.detectRenamesAndMoves(ctx, potentialLocalChanges, potentialRemoteChanges, base)
+	if err != nil {
+		return domain.SyncPlan{}, err
+	}
+
 	localChanges = append(localChanges, appliedLocalChanges...)
 	remoteChanges = append(remoteChanges, appliedRemoteChanges...)
 	conflicts = append(conflicts, appliedConflicts...)
@@ -116,7 +132,7 @@ func (s *ChangesPlannerWithTreeSkip) Plan(
 		LocalChanges:  localChanges,
 		RemoteChanges: remoteChanges,
 		Conflicts:     conflicts,
-	}
+	}, nil
 }
 
 func (s *ChangesPlannerWithTreeSkip) processEntry(
@@ -261,8 +277,15 @@ func (s *ChangesPlannerWithTreeSkip) handleModification(
 	}, nil, nil
 }
 func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
-	potentialLocalChanges, potentialRemoteChanges []potentialChange, baseFiles []domain.FileEntry,
-) ([]domain.LocalChange, []domain.RemoteChange, []domain.Conflict) {
+	ctx context.Context,
+	potentialLocalChanges, potentialRemoteChanges []potentialChange,
+	baseFiles []domain.FileEntry,
+) ([]domain.LocalChange, []domain.RemoteChange, []domain.Conflict, error) {
+
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return nil, nil, nil, ctxErr
+	}
+
 	localChanges := make([]domain.LocalChange, 0, len(potentialLocalChanges))
 	remoteChanges := make([]domain.RemoteChange, 0, len(potentialRemoteChanges))
 	conflicts := make([]domain.Conflict, 0)
@@ -284,89 +307,6 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 		baseByHash[entry.FileInfo.Hash] = entry
 	}
 
-	extractPair := func(changes []potentialChange) (deleteChange, createChange *potentialChange) {
-		for i := range changes {
-			switch changes[i].Changetype {
-			case domain.Delete:
-				if deleteChange == nil {
-					deleteChange = &changes[i]
-				}
-			case domain.Create:
-				if createChange == nil {
-					createChange = &changes[i]
-				}
-			}
-		}
-		return deleteChange, createChange
-	}
-
-	buildLocalChange := func(baseEntry domain.FileEntry, newPath domain.Path, modifiedUnix uint64) domain.LocalChange {
-		baseDir, baseName := filepath.Split(baseEntry.RelativePath.String())
-		newDir, newName := filepath.Split(newPath.String())
-
-		if baseDir == newDir && baseName != newName {
-			return domain.LocalChange{
-				OldRelativePath: baseEntry.RelativePath,
-				NewRelativePath: newPath,
-				ChangeType:      domain.Rename,
-				ModifiedUnix:    modifiedUnix,
-			}
-		}
-
-		return domain.LocalChange{
-			OldRelativePath: baseEntry.RelativePath,
-			NewRelativePath: newPath,
-			ChangeType:      domain.Move,
-			ModifiedUnix:    modifiedUnix,
-		}
-	}
-
-	buildRemoteChange := func(baseEntry domain.FileEntry, newPath domain.Path, modifiedUnix uint64) domain.RemoteChange {
-		baseDir, baseName := filepath.Split(baseEntry.RelativePath.String())
-		newDir, newName := filepath.Split(newPath.String())
-
-		if baseDir == newDir && baseName != newName {
-			return domain.RemoteChange{
-				OldRelativePath: baseEntry.RelativePath,
-				NewRelativePath: newPath,
-				ChangeType:      domain.Rename,
-				ModifiedUnix:    modifiedUnix,
-			}
-		}
-
-		return domain.RemoteChange{
-			OldRelativePath: baseEntry.RelativePath,
-			NewRelativePath: newPath,
-			ChangeType:      domain.Move,
-			ModifiedUnix:    modifiedUnix,
-		}
-	}
-
-	buildConflict := func(
-		baseEntry domain.FileEntry,
-		localCreate, remoteCreate *potentialChange,
-	) domain.Conflict {
-		baseDir, baseName := filepath.Split(baseEntry.RelativePath.String())
-		localDir, localName := filepath.Split(localCreate.Path.String())
-		remoteDir, remoteName := filepath.Split(remoteCreate.Path.String())
-
-		conflictType := domain.ConflictLocalMovedRemoteMoved
-		if baseDir == localDir && baseName != localName &&
-			baseDir == remoteDir && baseName != remoteName {
-			conflictType = domain.ConflictLocalRenamedRemoteRenamed
-		}
-
-		return domain.Conflict{
-			LocalRelativePath:  localCreate.Path,
-			RemoteRelativePath: remoteCreate.Path,
-			BaseRelativePath:   baseEntry.RelativePath,
-			LocalModifiedUnix:  localCreate.Modify,
-			RemoteModifiedUnix: remoteCreate.Modify,
-			BaseModifiedUnix:   baseEntry.FileInfo.Metadata.ModifiedUnix,
-			Conflict:           conflictType,
-		}
-	}
-
 	processedHashes := make(map[string]struct{}, len(localByHash)+len(remoteByHash))
 	for hash := range localByHash {
 		processedHashes[hash] = struct{}{}
@@ -376,59 +316,180 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 	}
 
 	for hash := range processedHashes {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, nil, nil, ctxErr
+		}
+
 		baseEntry, hasBase := baseByHash[hash]
 		if !hasBase {
 			continue
 		}
 
-		_, localCreate := extractPair(localByHash[hash])
-		_, remoteCreate := extractPair(remoteByHash[hash])
+		_, localCreate := s.extractCreateDeletePair(localByHash[hash])
+		_, remoteCreate := s.extractCreateDeletePair(remoteByHash[hash])
 
 		switch {
 		case localCreate != nil && remoteCreate != nil:
-			// обе стороны создали новый путь для одного hash → rename vs rename
+
+			// обе стороны создали новый путь, но одинаковый - изменения не требуются
 			if localCreate.Path.String() == remoteCreate.Path.String() {
-				// одинаковый результат → no-op
 				delete(localByHash, hash)
 				delete(remoteByHash, hash)
 				continue
 			}
 
-			conflicts = append(conflicts, buildConflict(baseEntry, remoteCreate, localCreate))
+			// обе стороны создали новый путь для одного hash - конфликт rename vs rename
+			conflicts = append(conflicts, s.buildRenameMoveConflict(baseEntry, localCreate, remoteCreate))
 			delete(localByHash, hash)
 			delete(remoteByHash, hash)
-			continue
 
 		case localCreate != nil:
-			// изменение произошло на remote → применяем на local
+			// изменение произошло на remote - требуется применить на local
 			localChanges = append(localChanges,
-				buildLocalChange(baseEntry, localCreate.Path, localCreate.Modify),
+				s.buildLocalRenameOrMove(baseEntry, localCreate.Path, localCreate.Modify),
 			)
 			delete(localByHash, hash)
-			continue
 
 		case remoteCreate != nil:
-			// изменение произошло на local → применяем на remote
+			// изменение произошло на local - требуется применить на remote
 			remoteChanges = append(remoteChanges,
-				buildRemoteChange(baseEntry, remoteCreate.Path, remoteCreate.Modify),
+				s.buildRemoteRenameOrMove(baseEntry, remoteCreate.Path, remoteCreate.Modify),
 			)
 			delete(remoteByHash, hash)
-			continue
 		}
 	}
 
-	// Остатки без пары — обычные create/delete.
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return nil, nil, nil, ctxErr
+	}
+
+	// Остатки без пары — стребуется create/delete на соответствующей стороне
+	s.appendRemainingRemoteChanges(remoteByHash, &remoteChanges)
+	s.appendRemainingLocalChanges(localByHash, &localChanges)
+
+	return localChanges, remoteChanges, conflicts, nil
+}
+
+func (s *ChangesPlannerWithTreeSkip) extractCreateDeletePair(
+	changes []potentialChange,
+) (deleteChange, createChange *potentialChange) {
+
+	for i := range changes {
+		switch changes[i].Changetype {
+		case domain.Delete:
+			if deleteChange == nil {
+				deleteChange = &changes[i]
+			}
+		case domain.Create:
+			if createChange == nil {
+				createChange = &changes[i]
+			}
+		}
+	}
+	return deleteChange, createChange
+}
+
+func (s *ChangesPlannerWithTreeSkip) buildLocalRenameOrMove(
+	baseEntry domain.FileEntry,
+	newPath domain.Path,
+	modifiedUnix uint64,
+) domain.LocalChange {
+
+	baseDir, baseName := filepath.Split(baseEntry.RelativePath.String())
+	newDir, newName := filepath.Split(newPath.String())
+
+	if baseDir == newDir && baseName != newName {
+		return domain.LocalChange{
+			OldRelativePath: baseEntry.RelativePath,
+			NewRelativePath: newPath,
+			ChangeType:      domain.Rename,
+			ModifiedUnix:    modifiedUnix,
+		}
+	}
+
+	return domain.LocalChange{
+		OldRelativePath: baseEntry.RelativePath,
+		NewRelativePath: newPath,
+		ChangeType:      domain.Move,
+		ModifiedUnix:    modifiedUnix,
+	}
+}
+func (s *ChangesPlannerWithTreeSkip) buildRemoteRenameOrMove(
+	baseEntry domain.FileEntry,
+	newPath domain.Path,
+	modifiedUnix uint64,
+) domain.RemoteChange {
+
+	baseDir, baseName := filepath.Split(baseEntry.RelativePath.String())
+	newDir, newName := filepath.Split(newPath.String())
+
+	if baseDir == newDir && baseName != newName {
+		return domain.RemoteChange{
+			OldRelativePath: baseEntry.RelativePath,
+			NewRelativePath: newPath,
+			ChangeType:      domain.Rename,
+			ModifiedUnix:    modifiedUnix,
+		}
+	}
+
+	return domain.RemoteChange{
+		OldRelativePath: baseEntry.RelativePath,
+		NewRelativePath: newPath,
+		ChangeType:      domain.Move,
+		ModifiedUnix:    modifiedUnix,
+	}
+}
+
+func (s *ChangesPlannerWithTreeSkip) buildRenameMoveConflict(
+	baseEntry domain.FileEntry,
+	localCreate, remoteCreate *potentialChange,
+) domain.Conflict {
+
+	baseDir, baseName := filepath.Split(baseEntry.RelativePath.String())
+	localDir, localName := filepath.Split(localCreate.Path.String())
+	remoteDir, remoteName := filepath.Split(remoteCreate.Path.String())
+
+	conflictType := domain.ConflictLocalMovedRemoteMoved
+
+	if baseDir == localDir && baseName != localName &&
+		baseDir == remoteDir && baseName != remoteName {
+		conflictType = domain.ConflictLocalRenamedRemoteRenamed
+	}
+
+	// remoteCreate это изменение, которое нужно применить на remote следовательно переданный путь/время в нем это путь/время с local
+	localRelativePath := remoteCreate.Path
+	localModifiedUnix := remoteCreate.Modify
+	// remoteCreate это изменение, которое нужно применить на local следовательно переданный путь/время  в нем это путь/время  с remote
+	remoteRelativePath := localCreate.Path
+	remoteModifiedUnix := localCreate.Modify
+
+	return domain.Conflict{
+		LocalRelativePath:  localRelativePath,
+		RemoteRelativePath: remoteRelativePath,
+		BaseRelativePath:   baseEntry.RelativePath,
+
+		LocalModifiedUnix:  localModifiedUnix,
+		RemoteModifiedUnix: remoteModifiedUnix,
+		BaseModifiedUnix:   baseEntry.FileInfo.Metadata.ModifiedUnix,
+		Conflict:           conflictType,
+	}
+}
+
+func (s *ChangesPlannerWithTreeSkip) appendRemainingRemoteChanges(
+	remoteByHash map[string][]potentialChange,
+	target *[]domain.RemoteChange,
+) {
 	for _, changes := range remoteByHash {
 		for _, change := range changes {
 			switch change.Changetype {
 			case domain.Create:
-				remoteChanges = append(remoteChanges, domain.RemoteChange{
+				*target = append(*target, domain.RemoteChange{
 					ChangeType:      domain.Create,
 					NewRelativePath: change.Path,
 					ModifiedUnix:    change.Modify,
 				})
 			case domain.Delete:
-				remoteChanges = append(remoteChanges, domain.RemoteChange{
+				*target = append(*target, domain.RemoteChange{
 					ChangeType:      domain.Delete,
 					OldRelativePath: change.Path,
 					ModifiedUnix:    change.Modify,
@@ -436,18 +497,23 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 			}
 		}
 	}
+}
 
+func (s *ChangesPlannerWithTreeSkip) appendRemainingLocalChanges(
+	localByHash map[string][]potentialChange,
+	target *[]domain.LocalChange,
+) {
 	for _, changes := range localByHash {
 		for _, change := range changes {
 			switch change.Changetype {
 			case domain.Create:
-				localChanges = append(localChanges, domain.LocalChange{
+				*target = append(*target, domain.LocalChange{
 					ChangeType:      domain.Create,
 					NewRelativePath: change.Path,
 					ModifiedUnix:    change.Modify,
 				})
 			case domain.Delete:
-				localChanges = append(localChanges, domain.LocalChange{
+				*target = append(*target, domain.LocalChange{
 					ChangeType:      domain.Delete,
 					OldRelativePath: change.Path,
 					ModifiedUnix:    change.Modify,
@@ -455,8 +521,6 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 			}
 		}
 	}
-
-	return localChanges, remoteChanges, conflicts
 }
 
 func (s *ChangesPlannerWithTreeSkip) isRenamedRenamedConflict(

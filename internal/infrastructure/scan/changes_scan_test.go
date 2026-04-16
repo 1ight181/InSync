@@ -144,7 +144,10 @@ func TestChangesScannerWithTreeSkip_Scan(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plan := scanner.Plan(tt.baseSnapshot, tt.localSnapshot, tt.remoteSnapshot)
+			plan, err := scanner.Plan(t.Context(), tt.baseSnapshot, tt.localSnapshot, tt.remoteSnapshot)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			assert.Equal(t, tt.wantLocal, plan.LocalChanges, "local changes mismatch")
 			assert.Equal(t, tt.wantRemote, plan.RemoteChanges, "remote changes mismatch")
