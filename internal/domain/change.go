@@ -1,13 +1,16 @@
 package domain
 
-type SyncPlan struct {
-	LocalChanges  []LocalChange
-	RemoteChanges []RemoteChange
-	Conflicts     []Conflict
+type LocalChange SyncChange
+
+func (c LocalChange) ToSyncChange() SyncChange {
+	return SyncChange(c)
 }
 
-type LocalChange SyncChange
 type RemoteChange SyncChange
+
+func (c RemoteChange) ToSyncChange() SyncChange {
+	return SyncChange(c)
+}
 
 type SyncChange struct {
 	OldRelativePath Path
