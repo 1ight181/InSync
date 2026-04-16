@@ -66,7 +66,7 @@ func TestChangesScannerWithTreeSkip_Scan(t *testing.T) {
 			wantRemote:     nil,
 			wantConflicts: []domain.Conflict{
 				newConflict(
-					domain.BothCreatedAtSamePathConflict,
+					domain.ConflictBothCreatedAtSamePathConflict,
 					"conflict.txt", "conflict.txt", "",
 					101, 101, 0,
 				),

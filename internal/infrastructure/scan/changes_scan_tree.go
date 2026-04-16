@@ -225,7 +225,7 @@ func (s *ChangesScannerWithTreeSkip) handleCreation(
 				RemoteRelativePath: remoteEntry.RelativePath,
 				LocalModifiedUnix:  localEntry.FileInfo.Metadata.ModifiedUnix,
 				RemoteModifiedUnix: remoteEntry.FileInfo.Metadata.ModifiedUnix,
-				Conflict:           domain.BothCreatedAtSamePathConflict,
+				Conflict:           domain.ConflictBothCreatedAtSamePathConflict,
 			}
 		}
 	}
@@ -247,7 +247,7 @@ func (s *ChangesScannerWithTreeSkip) handleModification(
 			RemoteRelativePath: remote.RelativePath,
 			LocalModifiedUnix:  local.FileInfo.Metadata.ModifiedUnix,
 			RemoteModifiedUnix: remote.FileInfo.Metadata.ModifiedUnix,
-			Conflict:           domain.BothModifiedConflictAtSameTime,
+			Conflict:           domain.ConflictBothModifiedConflictAtSameTime,
 		}
 	}
 	return &domain.LocalChange{
