@@ -1,5 +1,11 @@
 package domain
 
+type SyncPlan struct {
+	LocalChanges  []LocalChange
+	RemoteChanges []RemoteChange
+	Conflicts     []Conflict
+}
+
 type LocalChange SyncChange
 type RemoteChange SyncChange
 
