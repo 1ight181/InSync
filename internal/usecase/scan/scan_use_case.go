@@ -6,36 +6,22 @@ import (
 )
 
 type ScanUseCase struct {
-	clientFabric   IClientFabric
-	fileManager    IFileManager
-	changesScanner IChangesScanner
+	planResolver IPlanResolver
 }
 
 type ScanUseCaseOptions struct {
-	ClientFabric   IClientFabric
-	ChangesScanner IChangesScanner
+	PlanResolver IPlanResolver
 }
 
 func NewScanUseCase(opts ScanUseCaseOptions) *ScanUseCase {
-	if opts.ClientFabric == nil ||
-		opts.ChangesScanner == nil {
+	if opts.PlanResolver == nil {
 		panic("Все поля ScanUseCaseOptions должны быть заполнены")
 	}
 	return &ScanUseCase{
-		clientFabric: opts.ClientFabric,
+		planResolver: opts.PlanResolver,
 	}
 }
 
-func (s *ScanUseCase) PlanSyncChanges(ctx context.Context, rootName domain.RootName) ([]domain.SyncChange, error) {
-	localSnapshot, err := s.fileManager.GetSnapshot(ctx, rootName)
-	if err != nil {
-		return nil, err
-	}
-
-	remoteSnapshot, err := s.clientFabric.CurrentClient().GetSnapshot(ctx, rootName)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.changesScanner.Scan(localSnapshot, remoteSnapshot)
+func (s *ScanUseCase) PlanSyncChanges(ctx context.Context, rootName domain.RootName) (domain.SyncPlan, error) {
+	return s.planResolver.Resolve(ctx, rootName, false)
 }
