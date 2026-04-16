@@ -27,6 +27,10 @@ const (
 )
 
 const (
+	shouldUseCacheFlagName = "should_use_cache"
+)
+
+const (
 	changeTypeCreate  = "CREATE"
 	changeTypeDelete  = "DELETE"
 	changeTypeRename  = "RENAME"
@@ -46,6 +50,8 @@ type Cli struct {
 	loggerCtx context.Context
 
 	ctx context.Context
+
+	shouldUseCache *bool
 }
 
 type CliOptions struct {
@@ -211,7 +217,7 @@ func (c *Cli) createDryRunCmd() *cobra.Command {
 }
 
 func (c *Cli) createSyncCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   fmt.Sprintf("%s root-name", syncCmdName),
 		Short: "Выполнить синхронизацию",
 		RunE:  c.syncCmd,
@@ -220,6 +226,16 @@ func (c *Cli) createSyncCmd() *cobra.Command {
 			cobraprompt.DynamicSuggestionsAnnotation: syncCmdName,
 		},
 	}
+
+	shouldUseCachePtr := cmd.Flags().Bool(
+		shouldUseCacheFlagName,
+		true,
+		"Указывает стоит ли использовать изенения полученные с последнего скана или стоит просканировать еще раз",
+	)
+
+	c.shouldUseCache = shouldUseCachePtr
+
+	return cmd
 }
 
 func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) {
@@ -337,7 +353,8 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 		c.logger.Info("Нет изменений для синхронизации")
 	}
 
-	changeEventChan, err := c.syncUseCase.ApplySyncChanges(changes)
+	shouldUseCache := *c.shouldUseCache
+	changeEventChan, err := c.syncUseCase.ApplySyncChanges(interruptCtx, shouldUseCache, rootName)
 	if err != nil {
 		return err
 	}

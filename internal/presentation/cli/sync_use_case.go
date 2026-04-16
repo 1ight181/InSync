@@ -1,7 +1,10 @@
 package cli
 
-import "insync/internal/domain"
+import (
+	"context"
+	"insync/internal/domain"
+)
 
 type ISyncUseCase interface {
-	ApplySyncChanges(changes []domain.SyncChange) (<-chan domain.ChangeEvent, error)
+	ApplySyncChanges(ctx context.Context, shouldUseCache bool, rootName domain.RootName) (<-chan domain.ChangeEvent, error)
 }
