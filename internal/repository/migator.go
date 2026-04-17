@@ -1,4 +1,4 @@
-package migrator
+package repository
 
 import (
 	snap "insync/internal/repository/sqlite/base"
@@ -6,6 +6,10 @@ import (
 
 	"gorm.io/gorm"
 )
+
+type IMigrator interface {
+	Migrate(db *gorm.DB) error
+}
 
 type AutoMigrator struct{}
 
