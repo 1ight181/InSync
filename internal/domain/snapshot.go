@@ -6,16 +6,25 @@ import (
 )
 
 type Snapshot struct {
-	UnixTime uint64
-	Files    []FileEntry
+	Files []FileEntry
 }
 
-func NewSnapshot(unixTime uint64, files []FileEntry) Snapshot {
+func NewSnapshot(files []FileEntry) Snapshot {
 	slices.SortFunc(files, func(a, b FileEntry) int {
 		return strings.Compare(a.RelativePath.String(), b.RelativePath.String())
 	})
 	return Snapshot{
-		UnixTime: unixTime,
-		Files:    files,
+		Files: files,
 	}
+}
+
+type SnapshotMetadata struct {
+	UnixTime uint64
+	RootName RootName
+	DeviceId DeviceId
+}
+
+type SnapshotWithMetadata struct {
+	Snapshot Snapshot
+	Metadata SnapshotMetadata
 }

@@ -391,10 +391,6 @@ func TestGetSnapshot_ConvertsProtoSnapshotToDomain(t *testing.T) {
 		t.Fatalf("GetSnapshot returned error: %v", err)
 	}
 
-	if snapshot.UnixTime != 123 {
-		t.Fatalf("unexpected UnixTime: %d", snapshot.UnixTime)
-	}
-
 	if len(snapshot.Files) != 2 {
 		t.Fatalf("unexpected number of files: %d", len(snapshot.Files))
 	}
@@ -583,10 +579,6 @@ func TestPbSnapshotToDomain_NilSnapshot(t *testing.T) {
 	snapshot, err := pbSnapshotToDomain(nil)
 	if err != nil {
 		t.Fatalf("pbSnapshotToDomain returned error: %v", err)
-	}
-
-	if snapshot.UnixTime != 0 {
-		t.Fatalf("unexpected UnixTime: %d", snapshot.UnixTime)
 	}
 
 	if len(snapshot.Files) != 0 {

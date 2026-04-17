@@ -17,7 +17,7 @@ func pbSnapshotToDomain(pbSnapshot *insyncpb.Snapshot) (domain.Snapshot, error) 
 		return domain.Snapshot{}, err
 	}
 
-	snapshot := domain.NewSnapshot(pbSnapshot.UnixTime, files)
+	snapshot := domain.NewSnapshot(files)
 
 	return snapshot, nil
 }
