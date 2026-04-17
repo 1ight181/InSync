@@ -64,10 +64,8 @@ client:
       client_key_extension: ".key"
 
 db:
-  host: "db.example.com"
-  port: 5432
-  user: "dbuser"
-  password: "securepassword"
+  path: "../db/app.db"
+  pragma: "?_pragma=journal_mode(wal)&_pragma=foreign_keys(1)"
 
 logger:
   should_log_to_file: true

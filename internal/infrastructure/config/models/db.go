@@ -1,26 +1,21 @@
 package models
 
+import "fmt"
+
 // Реализует интерфейс ConfigModel
 type DbConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	User     string `mapstructure:"user"`
-	Password string `mapstructure:"password"`
+	Path   string `mapstructure:"path"`
+	Pragma string `mapstructure:"pragma"`
 }
 
 func (dc *DbConfig) Validate() error {
-	if dc.Host == "" {
-		return ErrDbHostIsEmpty
-	}
-	if dc.Port < 0 || dc.Port > 65535 {
-		return ErrDbPortIsInvalid
-	}
-	if dc.User == "" {
-		return ErrDbUserIsEmpty
-	}
-	if dc.Password == "" {
-		return ErrDbPasswordIsEmpty
+	if dc.Path == "" {
+		return ErrDbDsnIsEmpty
 	}
 
 	return nil
+}
+
+func (dc *DbConfig) GetDsn() string {
+	return fmt.Sprintf("%s%s", dc.Path, dc.Pragma)
 }

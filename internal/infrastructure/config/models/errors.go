@@ -39,10 +39,7 @@ var (
 
 // Ошибки валидации конфигурации базы данных
 var (
-	ErrDbHostIsEmpty     = errors.New("Хост БД не может быть пустым")
-	ErrDbPortIsInvalid   = errors.New("Порт БД должен быть целым числом в диапозоне от 0 до 65535")
-	ErrDbUserIsEmpty     = errors.New("Пользователь БД не может быть пустым")
-	ErrDbPasswordIsEmpty = errors.New("Пароль БД не может быть пустым")
+	ErrDbDsnIsEmpty = errors.New("Dsn БД не может быть пустым")
 )
 
 // Ошибки валидации конфигурации логгера
