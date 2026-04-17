@@ -11,7 +11,7 @@ type IFileSystem interface {
 	WalkDir(fullPath domain.Path, walkFn func(path string, d fs.DirEntry, err error) error) error
 	Open(fullPath domain.Path) (fs.File, error)
 	Remove(fullPath domain.Path) error
-	CreateTempFile(dir, pattern domain.Path) (io.ReadWriteCloser, domain.Path, error)
+	CreateTempFile(dir domain.Path, pattern string) (io.ReadWriteCloser, domain.Path, error)
 	Rename(oldPath, newPath domain.Path) error
 	MkdirAll(path domain.Path, perm fs.FileMode) error
 	Create(fullPath domain.Path) (io.ReadWriteCloser, error)
