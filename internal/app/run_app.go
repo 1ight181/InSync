@@ -3,15 +3,27 @@ package app
 import (
 	"context"
 	"fmt"
+	"insync/internal/domain"
 	clt "insync/internal/infrastructure/client"
 	conn "insync/internal/infrastructure/connection"
+	deviceidlocal "insync/internal/infrastructure/deviceid/local"
+	deviceidcreator "insync/internal/infrastructure/deviceid/local/creator"
 	"insync/internal/infrastructure/filemanager"
-	"insync/internal/infrastructure/filemanager/filesys"
 	"insync/internal/infrastructure/filemanager/hash"
+	hashcache "insync/internal/infrastructure/filemanager/hash/cache"
 	"insync/internal/infrastructure/filemanager/pathtree"
+	"insync/internal/infrastructure/filesys"
 	node "insync/internal/infrastructure/nodename"
+	planner "insync/internal/infrastructure/planner"
+	planres "insync/internal/infrastructure/planresolver"
+	base "insync/internal/infrastructure/planresolver/base"
+	local "insync/internal/infrastructure/planresolver/local"
+	remote "insync/internal/infrastructure/planresolver/remote"
 	"insync/internal/infrastructure/root"
 	cli "insync/internal/presentation/cli"
+	repo "insync/internal/repository/sqlite"
+	baserepo "insync/internal/repository/sqlite/base"
+	hashrepo "insync/internal/repository/sqlite/hash"
 	server "insync/internal/transport/grpc/server"
 	connusecase "insync/internal/usecase/connect"
 	fileusecase "insync/internal/usecase/file"
@@ -77,7 +89,33 @@ func RunApp() {
 	rootResolver := root.NewRootResolver()
 	fileSystem := filesys.NewFileSystem()
 	pathTree := pathtree.NewPathTree()
-	hashCache := hash.NewHashCache()
+
+	dbConfig := config.DbConfig
+	dbPath := dbConfig.Path
+	if err := os.MkdirAll(dbPath, 0755); err != nil {
+		panic(fmt.Sprintf("Не удалось создать директорию для БД: %v", err))
+	}
+	dsn := dbConfig.GetDsn()
+
+	migrator := repo.NewAutoMigrator()
+	dbOpts := repo.SqliteGormOptions{
+		Dsn:      dsn,
+		Migrator: migrator,
+	}
+
+	db := repo.NewGorm(dbOpts)
+
+	hashCacheRepoOpts := hashrepo.HashRepositoryOptions{
+		Db: db,
+	}
+
+	hashCacheRepo := hashrepo.NewHashRepository(hashCacheRepoOpts)
+
+	hashCacheOpts := hashcache.HashCacheOptions{
+		HashCacheRepository: hashCacheRepo,
+	}
+
+	hashCache := hashcache.NewHashCache(hashCacheOpts)
 	hashCalc := hash.NewHashCalculator()
 
 	hashManagerLogger := logger.With(moduleAtrributeName, hashManagerModuleName)
@@ -95,13 +133,32 @@ func RunApp() {
 	fileManagerConfig := config.FileManagerConfig
 	fileManagerLogger := logger.With(moduleAtrributeName, fileManagerModuleName)
 
-	fileManagerOpts := filemanager.FileManagerOptions{
-		RootResolver:   rootResolver,
-		HashManager:    hashManager,
-		FileSystem:     fileSystem,
-		PathTreeWriter: pathTree,
+	deviceIdResolverConfig := config.DeviceIdResolverConfig
+	deviceIdDir := deviceIdResolverConfig.DeviceIdDir
+	if err := os.MkdirAll(deviceIdDir, 0755); err != nil {
+		panic(fmt.Sprintf("Не удалось создать директорию для хранения device id: %v", err))
+	}
 
-		TempDir:   fileManagerConfig.TempDir,
+	deviceidLocalCreatorOpts := deviceidcreator.LocalDeviceIdCreatorOptions{
+		FileSys:          fileSystem,
+		DeviceIdFilePath: domain.Path(deviceIdResolverConfig.GetDeviceIdFilePath()),
+	}
+
+	deviceidlocalCreator := deviceidcreator.NewLocalDeviceIdCreator(deviceidLocalCreatorOpts)
+	localDeviceIdResolverOpts := deviceidlocal.LocalDeviceIdResolverOptions{
+		LocalDeviceIdCreator: deviceidlocalCreator,
+	}
+
+	localIdDeviceResolver := deviceidlocal.NewLocalDeviceIdResolver(localDeviceIdResolverOpts)
+
+	fileManagerOpts := filemanager.FileManagerOptions{
+		RootResolver:          rootResolver,
+		HashManager:           hashManager,
+		FileSystem:            fileSystem,
+		PathTreeWriter:        pathTree,
+		LocalDeviceIdProvider: localIdDeviceResolver,
+
+		TempDir:   domain.Path(fileManagerConfig.TempDir),
 		Logger:    fileManagerLogger,
 		LoggerCtx: appCtx,
 	}
@@ -206,15 +263,15 @@ func RunApp() {
 
 	connectionManagerLogger := logger.With(moduleAtrributeName, connectionManagerModuleName)
 
-	nodeNameResolverOpts := node.NodeNameResolverOptions{
+	mdnsUrldResolverOpts := node.MDnsUrlResolverOptions{
 		MDnsServerServiceType: mDnsBrowserConfig.ServerServiceType,
 		MDnsServerDomain:      mDnsBrowserConfig.ServerDomain,
 	}
 
-	nodeNameresolver := node.NewNodeNameResolver(nodeNameResolverOpts)
+	mdnsUrlResolver := node.NewMDnsUrlResolver(mdnsUrldResolverOpts)
 
 	connectionManagerOpts := conn.ConnectionManagerOptions{
-		NodeNameResolver: nodeNameresolver,
+		MDnsUrlResolver:  mdnsUrlResolver,
 		BaseGrpcConf:     &grpcClientConf,
 		GrpcClientLogger: clientLogger,
 		Logger:           connectionManagerLogger,
@@ -236,8 +293,40 @@ func RunApp() {
 
 	connectUseCase := connusecase.NewConnectUseCase(connectUseCaseOpts)
 
-	scanUseCaseOpts := scanusecase.ScanUseCaseOptions{
+	baseSnapshotRepositoryOpts := baserepo.BaseSnapshotRepositoryOptions{
+		Db: db,
+	}
+	baseSnapshotRepository := baserepo.NewBaseSnapshotRepository(baseSnapshotRepositoryOpts)
+
+	baseSnapshotProviderOpts := base.BaseSnapshotProviderOptions{
+		BaseSnapshotRepository: baseSnapshotRepository,
+	}
+	baseSnapshotProvider := base.NewBaseSnapshotProvider(baseSnapshotProviderOpts)
+
+	remoteSnapshotProviderOpts := remote.RemoteSnapshotProviderOptions{
 		ClientFabric: connectionManager,
+	}
+	remoteSnapshotProvider := remote.NewRemoteSnapshotProvider(remoteSnapshotProviderOpts)
+
+	localSnapshotProviderOpts := local.LocalSnapshotProviderOptions{
+		FileManager: fileManager,
+	}
+	localSnapshotProvider := local.NewLocalSnapshotProvider(localSnapshotProviderOpts)
+
+	planner := planner.NewChangesPlannerWithTreeSkip()
+
+	planResolverOpts := planres.PlanResolverOptions{
+		BaseSnapshotProvider:   baseSnapshotProvider,
+		RemoteSnapshotProvider: remoteSnapshotProvider,
+		LocalSnapshotProvider:  localSnapshotProvider,
+
+		ChangesPlanner: planner,
+	}
+
+	planResolver := planres.NewPlanResolver(planResolverOpts)
+
+	scanUseCaseOpts := scanusecase.ScanUseCaseOptions{
+		PlanResolver: planResolver,
 	}
 
 	scanUseCase := scanusecase.NewScanUseCase(scanUseCaseOpts)

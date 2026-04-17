@@ -85,6 +85,10 @@ mdns_server:
   # формат "eth0;wlan0"
   interfaces: ""
 
+device_id_resolver:
+  device_id_dir: "../deviceid"
+  device_id_file_name: "device_id.txt"
+
 mdns_browser:
   server_service_type: "_grpc._tcp"
   server_domain: "local"

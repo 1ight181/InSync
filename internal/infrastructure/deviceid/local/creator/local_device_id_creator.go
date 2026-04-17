@@ -23,7 +23,7 @@ func NewLocalDeviceIdCreator(opts LocalDeviceIdCreatorOptions) *LocalDeviceIdCre
 	return &LocalDeviceIdCreator{filsSys: opts.FileSys}
 }
 
-func (c *LocalDeviceIdCreator) CreateDeviceId() (string, error) {
+func (c *LocalDeviceIdCreator) CreateLocalDeviceId() (domain.DeviceId, error) {
 	file, err := c.filsSys.Create(c.deviceIdFilePath)
 	if err != nil {
 		return "", err
@@ -34,7 +34,12 @@ func (c *LocalDeviceIdCreator) CreateDeviceId() (string, error) {
 
 	file.Write([]byte(uuid))
 
-	return uuid, nil
+	deviceId, err := domain.NewDeviceId(uuid)
+	if err != nil {
+		return "", err
+	}
+
+	return deviceId, nil
 }
 
 func (c *LocalDeviceIdCreator) generateDeviceId() string {

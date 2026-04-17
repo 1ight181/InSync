@@ -20,11 +20,11 @@ func NewLocalSnapshotProvider(opts LocalSnapshotProviderOptions) *LocalSnapshotP
 	return &LocalSnapshotProvider{fileManager: opts.FileManager}
 }
 
-func (p *LocalSnapshotProvider) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
-	snapshotWithMetadata, err := p.fileManager.GetSnapshot(ctx, rootName)
+func (p *LocalSnapshotProvider) GetLocalSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
+	snapshot, err := p.fileManager.GetSnapshot(ctx, rootName)
 	if err != nil {
 		return domain.Snapshot{}, err
 	}
 
-	return snapshotWithMetadata.Snapshot, nil
+	return snapshot.Snapshot, nil
 }

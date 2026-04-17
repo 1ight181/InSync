@@ -10,6 +10,7 @@ type GeneralConfig struct {
 	MDnsBrowserConfig            MDnsBrowserConfig            `mapstructure:"mdns_browser"`
 	FileManagerConfig            FileManagerConfig            `mapstructure:"file_manager"`
 	RemoteDeviceIdResolverConfig RemoteDeviceIdResolverConfig `mapstructure:"remote_device_id_resolver"`
+	DeviceIdResolverConfig       DeviceIdResolverConfig       `mapstructure:"device_id_resolver"`
 }
 
 func (gc *GeneralConfig) Validate() error {

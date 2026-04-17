@@ -6,7 +6,7 @@ import (
 )
 
 type IBaseSnapshotRepositoryReader interface {
-	GetLastBaseSnapshotByDeviceIdAndRootName(ctx context.Context, localDeviceId, remoteDeviceId, rootName string) (domain.Snapshot, error)
+	GetLastBaseSnapshotByDeviceIdAndRootName(ctx context.Context, localDeviceId, remoteDeviceId string, rootName domain.RootName) (domain.Snapshot, error)
 }
 
 type IBaseSnapshotRepositoryWriter interface {

@@ -3,29 +3,15 @@ package scan
 import (
 	"context"
 	"insync/internal/domain"
-	"log/slog"
 	"path/filepath"
 )
 
 const sentinel = "\xFF\xFF"
 
-type ChangesPlannerWithTreeSkip struct {
-	logger    *slog.Logger
-	loggerCtx context.Context
-}
+type ChangesPlannerWithTreeSkip struct{}
 
-type ChangesPlannerWithTreeSkipOptions struct {
-	Logger *slog.Logger
-}
-
-func NewChangesPlannerWithTreeSkip(opts ChangesPlannerWithTreeSkipOptions) *ChangesPlannerWithTreeSkip {
-	if opts.Logger == nil {
-		panic("Logger must be provided to ChangesPlannerWithTreeSkip")
-	}
-	return &ChangesPlannerWithTreeSkip{
-		logger:    opts.Logger,
-		loggerCtx: context.Background(),
-	}
+func NewChangesPlannerWithTreeSkip() *ChangesPlannerWithTreeSkip {
+	return &ChangesPlannerWithTreeSkip{}
 }
 
 // potentialChange отражает изменение которое потенциально требуется совершить
@@ -84,9 +70,9 @@ func (s *ChangesPlannerWithTreeSkip) Plan(
 		}
 
 		if s.canSkipSubtreeAt(baseEntry, localEntry, remoteEntry, minPath) {
-			s.skipSubtree(int(baseSnapshot.Files[baseIdx].SubtreeSize), &baseIdx)
-			s.skipSubtree(int(localSnapshot.Files[localIdx].SubtreeSize), &localIdx)
-			s.skipSubtree(int(remoteSnapshot.Files[remoteIdx].SubtreeSize), &remoteIdx)
+			s.skipSubtree(int(base[baseIdx].SubtreeSize), &baseIdx)
+			s.skipSubtree(int(local[localIdx].SubtreeSize), &localIdx)
+			s.skipSubtree(int(remote[remoteIdx].SubtreeSize), &remoteIdx)
 			continue
 		}
 

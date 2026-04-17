@@ -1,7 +1,7 @@
 package local
 
-import "context"
+import "insync/internal/domain"
 
 type ILocalDeviceIdCreator interface {
-	CreateLocalDeviceId(ctx context.Context) (string, error)
+	CreateLocalDeviceId() (domain.DeviceId, error)
 }

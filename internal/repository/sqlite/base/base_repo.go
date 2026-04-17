@@ -3,6 +3,7 @@ package base
 import (
 	"context"
 	"errors"
+	"insync/internal/domain"
 
 	"gorm.io/gorm"
 )
@@ -24,9 +25,10 @@ func NewBaseSnapshotRepository(opts BaseSnapshotRepositoryOptions) *BaseSnapshot
 
 func (b *BaseSnapshotRepository) GetLastBaseSnapshotByDeviceIdAndRootName(
 	ctx context.Context,
-	localDeviceId, remoteDeviceId, rootName string,
+	localDeviceId, remoteDeviceId string,
+	rootName domain.RootName,
 ) (
-	BaseSnapshot, error,
+	domain.Snapshot, error,
 ) {
 	var baseSnapshot BaseSnapshot
 
@@ -41,15 +43,18 @@ func (b *BaseSnapshotRepository) GetLastBaseSnapshotByDeviceIdAndRootName(
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return BaseSnapshot{}, ErrBaseSnapshotNotFound
+			return domain.Snapshot{}, ErrBaseSnapshotNotFound
 		}
 
-		return BaseSnapshot{}, err
+		return domain.Snapshot{}, err
 	}
 
-	return baseSnapshot, nil
+	domainBaseSnapshot := ToDomainSnapshot(baseSnapshot)
+
+	return domainBaseSnapshot, nil
 }
 
-func (b *BaseSnapshotRepository) CreateBaseSnapshot(ctx context.Context, baseSnapshot BaseSnapshot) error {
-	return b.db.WithContext(ctx).Create(&baseSnapshot).Error
+func (b *BaseSnapshotRepository) CreateBaseSnapshot(ctx context.Context, baseSnapshot domain.SnapshotWithMetadata) error {
+	baseSnapshotModel := ToBaseSnapshot(baseSnapshot)
+	return b.db.WithContext(ctx).Create(baseSnapshotModel).Error
 }

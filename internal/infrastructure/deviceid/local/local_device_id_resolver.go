@@ -1,10 +1,10 @@
 package local
 
-import "context"
+import "insync/internal/domain"
 
 type LocalDeviceIdResolver struct {
 	localDeviceIdCreator ILocalDeviceIdCreator
-	currentDeviceId      string
+	currentDeviceId      domain.DeviceId
 }
 
 type LocalDeviceIdResolverOptions struct {
@@ -18,9 +18,9 @@ func NewLocalDeviceIdResolver(opts LocalDeviceIdResolverOptions) *LocalDeviceIdR
 	return &LocalDeviceIdResolver{localDeviceIdCreator: opts.LocalDeviceIdCreator}
 }
 
-func (r *LocalDeviceIdResolver) GetLocalDeviceId(ctx context.Context) (string, error) {
+func (r *LocalDeviceIdResolver) GetLocalDeviceId() (domain.DeviceId, error) {
 	if r.currentDeviceId == "" {
-		newDeviceId, err := r.localDeviceIdCreator.CreateLocalDeviceId(ctx)
+		newDeviceId, err := r.localDeviceIdCreator.CreateLocalDeviceId()
 		if err != nil {
 			return "", err
 		}

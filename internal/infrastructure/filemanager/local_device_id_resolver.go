@@ -5,5 +5,5 @@ import (
 )
 
 type ILocalDeviceIdProvider interface {
-	GetLocalDeviceId() domain.DeviceId
+	GetLocalDeviceId() (domain.DeviceId, error)
 }

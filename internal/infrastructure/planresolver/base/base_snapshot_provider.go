@@ -21,7 +21,7 @@ func NewBaseSnapshotProvider(opts BaseSnapshotProviderOptions) *BaseSnapshotProv
 	return &BaseSnapshotProvider{baseSnapshotRepository: opts.BaseSnapshotRepository}
 }
 
-func (b *BaseSnapshotProvider) GetBaseSnapshot(ctx context.Context, rootName string) (domain.Snapshot, error) {
+func (b *BaseSnapshotProvider) GetBaseSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
 	remoteDeviceId, err := b.deviceIdProvider.GetCurrentRemoteDeviceId()
 	if err != nil {
 		return domain.Snapshot{}, err

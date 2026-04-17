@@ -101,7 +101,10 @@ func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName)
 
 	snapshot := domain.NewSnapshot(allEntries)
 
-	localDeviceId := f.localDeviceIdProvider.GetLocalDeviceId()
+	localDeviceId, err := f.localDeviceIdProvider.GetLocalDeviceId()
+	if err != nil {
+		return domain.SnapshotWithMetadata{}, err
+	}
 
 	now := uint64(time.Now().Unix())
 
