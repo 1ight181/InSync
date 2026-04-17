@@ -2,6 +2,7 @@ package cache
 
 import "insync/internal/domain"
 
-type IHashCacheLoader interface {
+type IHashCacheRepository interface {
 	GetHashCache() (map[domain.Path]string, error)
+	SetHashCache(fullPath domain.Path, hash string) error
 }

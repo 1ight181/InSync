@@ -8,22 +8,22 @@ import (
 type HashCache struct {
 	mu sync.RWMutex
 	// FullPath -> Hash
-	cache  map[domain.Path]string
-	loader IHashCacheLoader
+	cache               map[domain.Path]string
+	hashCacheRepository IHashCacheRepository
 }
 
 type HashCacheOptions struct {
-	HashCacheLoader IHashCacheLoader
+	HashCacheRepository IHashCacheRepository
 }
 
 func NewHashCache(opts HashCacheOptions) *HashCache {
-	if opts.HashCacheLoader == nil {
+	if opts.HashCacheRepository == nil {
 		panic("Все поля HashCacheOptions должны быть заполнены")
 	}
 
 	hashCache := &HashCache{
-		loader: opts.HashCacheLoader,
-		cache:  make(map[domain.Path]string),
+		hashCacheRepository: opts.HashCacheRepository,
+		cache:               make(map[domain.Path]string),
 	}
 
 	if err := hashCache.loadHashCache(); err != nil {
@@ -36,7 +36,7 @@ func NewHashCache(opts HashCacheOptions) *HashCache {
 func (rc *HashCache) loadHashCache() error {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
-	hashSet, err := rc.loader.GetHashCache()
+	hashSet, err := rc.hashCacheRepository.GetHashCache()
 	if err != nil {
 		return err
 	}
@@ -57,8 +57,14 @@ func (rc *HashCache) GetHashCache(fullPath domain.Path) (string, error) {
 	return hash, nil
 }
 
-func (rc *HashCache) SetHashCache(fullPath domain.Path, hash string) {
+func (rc *HashCache) SetHashCache(fullPath domain.Path, hash string) error {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
+	if err := rc.hashCacheRepository.SetHashCache(fullPath, hash); err != nil {
+		return err
+	}
+
 	rc.cache[fullPath] = hash
+
+	return nil
 }
