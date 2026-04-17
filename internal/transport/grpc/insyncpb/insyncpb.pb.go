@@ -7,13 +7,12 @@
 package insyncpb
 
 import (
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (
@@ -120,7 +119,9 @@ func (x *FileEntry) GetSubtreeSize() uint64 {
 type Snapshot struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UnixTime      uint64                 `protobuf:"varint,1,opt,name=unix_time,json=unixTime,proto3" json:"unix_time,omitempty"`
-	Files         []*FileEntry           `protobuf:"bytes,2,rep,name=files,proto3" json:"files,omitempty"`
+	RootName      string                 `protobuf:"bytes,2,opt,name=root_name,json=rootName,proto3" json:"root_name,omitempty"`
+	DeviceId      string                 `protobuf:"bytes,3,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
+	Files         []*FileEntry           `protobuf:"bytes,4,rep,name=files,proto3" json:"files,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -160,6 +161,20 @@ func (x *Snapshot) GetUnixTime() uint64 {
 		return x.UnixTime
 	}
 	return 0
+}
+
+func (x *Snapshot) GetRootName() string {
+	if x != nil {
+		return x.RootName
+	}
+	return ""
+}
+
+func (x *Snapshot) GetDeviceId() string {
+	if x != nil {
+		return x.DeviceId
+	}
+	return ""
 }
 
 func (x *Snapshot) GetFiles() []*FileEntry {
@@ -670,10 +685,12 @@ const file_proto_insyncpb_proto_rawDesc = "" +
 	"\x04hash\x18\x05 \x01(\tR\x04hash\x12!\n" +
 	"\fis_directory\x18\x06 \x01(\bR\visDirectory\x12\x17\n" +
 	"\afile_id\x18\a \x01(\x04R\x06fileId\x12!\n" +
-	"\fsubtree_size\x18\b \x01(\x04R\vsubtreeSize\"R\n" +
+	"\fsubtree_size\x18\b \x01(\x04R\vsubtreeSize\"\x8c\x01\n" +
 	"\bSnapshot\x12\x1b\n" +
-	"\tunix_time\x18\x01 \x01(\x04R\bunixTime\x12)\n" +
-	"\x05files\x18\x02 \x03(\v2\x13.insyncpb.FileEntryR\x05files\"1\n" +
+	"\tunix_time\x18\x01 \x01(\x04R\bunixTime\x12\x1b\n" +
+	"\troot_name\x18\x02 \x01(\tR\brootName\x12\x1b\n" +
+	"\tdevice_id\x18\x03 \x01(\tR\bdeviceId\x12)\n" +
+	"\x05files\x18\x04 \x03(\v2\x13.insyncpb.FileEntryR\x05files\"1\n" +
 	"\x12GetSnapshotRequest\x12\x1b\n" +
 	"\troot_name\x18\x01 \x01(\tR\brootName\"E\n" +
 	"\x13GetSnapshotResponse\x12.\n" +

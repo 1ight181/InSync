@@ -22,5 +22,10 @@ func NewRemoteSnapshotProvider(options RemoteSnapshotProviderOptions) *RemoteSna
 
 func (p *RemoteSnapshotProvider) GetRemoteSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
 	client := p.clientFabric.CurrentClient()
-	return client.GetSnapshot(ctx, rootName)
+	snapshotWithMetadata, err := client.GetSnapshot(ctx, rootName)
+	if err != nil {
+		return domain.Snapshot{}, err
+	}
+
+	return snapshotWithMetadata.Snapshot, nil
 }

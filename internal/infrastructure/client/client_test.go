@@ -386,21 +386,21 @@ func TestGetSnapshot_ConvertsProtoSnapshotToDomain(t *testing.T) {
 
 	grpcClient := startedClientWithFakeService(t, fakeServiceClient)
 
-	snapshot, err := grpcClient.GetSnapshot(context.Background(), mustRootName(t, "root"))
+	snapshotWithMetadata, err := grpcClient.GetSnapshot(context.Background(), mustRootName(t, "root"))
 	if err != nil {
 		t.Fatalf("GetSnapshot returned error: %v", err)
 	}
 
-	if len(snapshot.Files) != 2 {
-		t.Fatalf("unexpected number of files: %d", len(snapshot.Files))
+	if len(snapshotWithMetadata.Snapshot.Files) != 2 {
+		t.Fatalf("unexpected number of files: %d", len(snapshotWithMetadata.Snapshot.Files))
 	}
 
-	if snapshot.Files[0].RelativePath != secondRelativePath {
-		t.Fatalf("expected files to be sorted, got first path %q", snapshot.Files[0].RelativePath)
+	if snapshotWithMetadata.Snapshot.Files[0].RelativePath != secondRelativePath {
+		t.Fatalf("expected files to be sorted, got first path %q", snapshotWithMetadata.Snapshot.Files[0].RelativePath)
 	}
 
-	if snapshot.Files[1].RelativePath != firstRelativePath {
-		t.Fatalf("expected files to be sorted, got second path %q", snapshot.Files[1].RelativePath)
+	if snapshotWithMetadata.Snapshot.Files[1].RelativePath != firstRelativePath {
+		t.Fatalf("expected files to be sorted, got second path %q", snapshotWithMetadata.Snapshot.Files[1].RelativePath)
 	}
 }
 
@@ -576,13 +576,13 @@ func TestPbFileEntriesToDomain_CollectsValidEntriesAndReturnsErrorForInvalidOnes
 func TestPbSnapshotToDomain_NilSnapshot(t *testing.T) {
 	t.Parallel()
 
-	snapshot, err := pbSnapshotToDomain(nil)
+	snapshotWithMetadata, err := pbSnapshotToDomain(nil)
 	if err != nil {
 		t.Fatalf("pbSnapshotToDomain returned error: %v", err)
 	}
 
-	if len(snapshot.Files) != 0 {
-		t.Fatalf("unexpected files count: %d", len(snapshot.Files))
+	if len(snapshotWithMetadata.Snapshot.Files) != 0 {
+		t.Fatalf("unexpected files count: %d", len(snapshotWithMetadata.Snapshot.Files))
 	}
 }
 

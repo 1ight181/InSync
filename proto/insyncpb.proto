@@ -21,7 +21,9 @@ message FileEntry {
 
 message Snapshot {
     uint64 unix_time = 1;
-    repeated FileEntry files = 2;
+    string root_name = 2;
+    string device_id = 3;
+    repeated FileEntry files = 4;
 }
 
 

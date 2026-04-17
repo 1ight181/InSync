@@ -18,7 +18,7 @@ func NewFileUseCase(opts FileUseCaseOptions) *FileUseCase {
 	return &FileUseCase{fileManager: opts.FileManager}
 }
 
-func (f *FileUseCase) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
+func (f *FileUseCase) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.SnapshotWithMetadata, error) {
 	return f.fileManager.GetSnapshot(ctx, rootName)
 }
 

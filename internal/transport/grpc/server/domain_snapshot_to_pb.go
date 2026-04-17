@@ -5,8 +5,11 @@ import (
 	"insync/internal/transport/grpc/insyncpb"
 )
 
-func domainSnapshotToPb(snapshot domain.Snapshot) *insyncpb.Snapshot {
+func domainSnapshotToPb(snapshotWithMetadata domain.SnapshotWithMetadata) *insyncpb.Snapshot {
 	return &insyncpb.Snapshot{
-		Files: domainFileEntriesToPb(snapshot.Files),
+		Files:    domainFileEntriesToPb(snapshotWithMetadata.Snapshot.Files),
+		UnixTime: snapshotWithMetadata.Metadata.UnixTime,
+		RootName: snapshotWithMetadata.Metadata.RootName.String(),
+		DeviceId: snapshotWithMetadata.Metadata.DeviceId.String(),
 	}
 }
