@@ -6,25 +6,25 @@ import (
 )
 
 type PlanResolver struct {
-	previousSnapshotProvider IPreviousSnapshotProvider
-	localSnapshotProvider    ILocalSnapshotProvider
-	remoteSnapshotProvider   IRemoteSnapshotProvider
+	baseSnapshotProvider   IBaseSnapshotProvider
+	localSnapshotProvider  ILocalSnapshotProvider
+	remoteSnapshotProvider IRemoteSnapshotProvider
 
 	changesPlanner IChangesPlanner
 	syncPlanCache  ISyncPlanCache
 }
 
 type PlanResolverOptions struct {
-	PreviousSnapshotProvider IPreviousSnapshotProvider
-	LocalSnapshotProvider    ILocalSnapshotProvider
-	RemoteSnapshotProvider   IRemoteSnapshotProvider
+	BaseSnapshotProvider   IBaseSnapshotProvider
+	LocalSnapshotProvider  ILocalSnapshotProvider
+	RemoteSnapshotProvider IRemoteSnapshotProvider
 
 	ChangesPlanner IChangesPlanner
 	SyncPlanCache  ISyncPlanCache
 }
 
 func NewPlanResolver(options PlanResolverOptions) *PlanResolver {
-	if options.PreviousSnapshotProvider == nil ||
+	if options.BaseSnapshotProvider == nil ||
 		options.LocalSnapshotProvider == nil ||
 		options.RemoteSnapshotProvider == nil ||
 		options.ChangesPlanner == nil ||
@@ -32,11 +32,11 @@ func NewPlanResolver(options PlanResolverOptions) *PlanResolver {
 		panic("Все поля PlanResolverOptions должны быть заполнены")
 	}
 	return &PlanResolver{
-		previousSnapshotProvider: options.PreviousSnapshotProvider,
-		localSnapshotProvider:    options.LocalSnapshotProvider,
-		remoteSnapshotProvider:   options.RemoteSnapshotProvider,
-		changesPlanner:           options.ChangesPlanner,
-		syncPlanCache:            options.SyncPlanCache,
+		baseSnapshotProvider:   options.BaseSnapshotProvider,
+		localSnapshotProvider:  options.LocalSnapshotProvider,
+		remoteSnapshotProvider: options.RemoteSnapshotProvider,
+		changesPlanner:         options.ChangesPlanner,
+		syncPlanCache:          options.SyncPlanCache,
 	}
 }
 
@@ -48,7 +48,7 @@ func (p *PlanResolver) Resolve(ctx context.Context, rootName domain.RootName, sh
 		}
 	}
 
-	baseSnapshot, err := p.previousSnapshotProvider.GetPreviousSnapshot(ctx, rootName)
+	baseSnapshot, err := p.baseSnapshotProvider.GetBaseSnapshot(ctx, rootName)
 	if err != nil {
 		return domain.SyncPlan{}, err
 	}
