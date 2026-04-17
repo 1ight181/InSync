@@ -6,12 +6,12 @@ import (
 )
 
 type BaseSnapshotProvider struct {
-	baseSnapshotRepository IBaseSnapshotRepository
+	baseSnapshotRepository IBaseSnapshotRepositoryReader
 	deviceIdProvider       IDeviceIdProvider
 }
 
 type BaseSnapshotProviderOptions struct {
-	BaseSnapshotRepository IBaseSnapshotRepository
+	BaseSnapshotRepository IBaseSnapshotRepositoryReader
 }
 
 func NewBaseSnapshotProvider(opts BaseSnapshotProviderOptions) *BaseSnapshotProvider {
