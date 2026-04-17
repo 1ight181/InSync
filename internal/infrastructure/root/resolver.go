@@ -2,7 +2,6 @@ package root
 
 import (
 	"insync/internal/domain"
-	"path/filepath"
 )
 
 type RootResolver struct {
@@ -15,7 +14,7 @@ func NewRootResolver() *RootResolver {
 	}
 }
 
-func (p *RootResolver) ResolveRoot(rootName domain.RootName, relativePath domain.Path) (string, error) {
+func (p *RootResolver) ResolveRoot(rootName domain.RootName, relativePath domain.Path) (domain.Path, error) {
 	rootPath, ok := p.rootMap[rootName]
 	if !ok {
 		return "", RootNotFoundError{
@@ -23,7 +22,12 @@ func (p *RootResolver) ResolveRoot(rootName domain.RootName, relativePath domain
 		}
 	}
 
-	return filepath.Join(rootPath.String(), relativePath.String()), nil
+	rootPathWithRelative, err := rootPath.Join(relativePath.String())
+	if err != nil {
+		return "", err
+	}
+
+	return rootPathWithRelative, nil
 }
 
 func (p *RootResolver) AddRoot(rootName domain.RootName, rootPath domain.Path) {

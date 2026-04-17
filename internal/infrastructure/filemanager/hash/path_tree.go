@@ -1,6 +1,8 @@
 package hash
 
+import "insync/internal/domain"
+
 type IPathTreeReader interface {
-	GetChildren(fullPath string) ([]string, error)
-	GetParents(fullPath string) ([]string, error)
+	GetChildren(fullPath domain.Path) ([]domain.Path, error)
+	GetParents(fullPath domain.Path) ([]domain.Path, error)
 }

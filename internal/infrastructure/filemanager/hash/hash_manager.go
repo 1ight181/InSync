@@ -11,7 +11,7 @@ type HashManager struct {
 	hashCache      IHashCache
 	hashCalculator IHashCalculator
 	pathTreeReader IPathTreeReader
-	dirtyPaths     map[string]struct{}
+	dirtyPaths     map[domain.Path]struct{}
 
 	logger    *slog.Logger
 	loggerCtx context.Context
@@ -32,14 +32,14 @@ func NewHashManager(options HashManagerOptions) *HashManager {
 		hashCalculator: options.HashCalculator,
 		pathTreeReader: options.PathTreeReader,
 
-		dirtyPaths: make(map[string]struct{}),
+		dirtyPaths: make(map[domain.Path]struct{}),
 		logger:     options.Logger,
 		loggerCtx:  options.LoggerCtx,
 	}
 }
 
 func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, fullPath domain.Path) (string, error) {
-	if _, isDirty := h.dirtyPaths[fullPath.String()]; !isDirty {
+	if _, isDirty := h.dirtyPaths[fullPath]; !isDirty {
 		if hash, err := h.hashCache.GetHashCache(fullPath); err == nil {
 			return hash, nil
 		}
@@ -86,7 +86,7 @@ func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, fullPath
 	return hash, nil
 }
 
-func (h *HashManager) MarkDirty(fullPath string) error {
+func (h *HashManager) MarkDirty(fullPath domain.Path) error {
 	h.dirtyPaths[fullPath] = struct{}{}
 
 	parents, err := h.pathTreeReader.GetParents(fullPath)
