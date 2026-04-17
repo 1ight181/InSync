@@ -5,26 +5,26 @@ import (
 	"insync/internal/domain"
 )
 
-type NodeNameResolver struct {
+type MDnsUrlResolver struct {
 	mDnsServerServiceType string
 	mDnsServerDomain      string
 }
 
-type NodeNameResolverOptions struct {
+type MDnsUrlResolverOptions struct {
 	MDnsServerServiceType string
 	MDnsServerDomain      string
 }
 
-func NewNodeNameResolver(opts NodeNameResolverOptions) *NodeNameResolver {
+func NewMDnsUrlResolver(opts MDnsUrlResolverOptions) *MDnsUrlResolver {
 	if opts.MDnsServerDomain == "" || opts.MDnsServerServiceType == "" {
-		panic("Все поля NodeNameResolverOptions должны быть заполнены")
+		panic("Все поля MDnsUrlResolverOptions должны быть заполнены")
 	}
-	return &NodeNameResolver{
+	return &MDnsUrlResolver{
 		mDnsServerServiceType: opts.MDnsServerServiceType,
 		mDnsServerDomain:      opts.MDnsServerDomain,
 	}
 }
 
-func (r *NodeNameResolver) ResolveToMDnsUrl(nodeName domain.NodeName) string {
+func (r *MDnsUrlResolver) Resolve(nodeName domain.NodeName) string {
 	return fmt.Sprintf("%s.%s.%s", r.mDnsServerServiceType, nodeName, r.mDnsServerDomain)
 }
