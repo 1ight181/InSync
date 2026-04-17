@@ -37,7 +37,12 @@ func (r *HashRepository) GetHashCache() (map[domain.Path]string, error) {
 }
 
 func (r *HashRepository) SetHashCache(fullPath domain.Path, hash string) error {
-	if err := r.db.Create(&HashCacheEntry{FullPath: fullPath.String(), Hash: hash}).Error; err != nil {
+	entry := &HashCacheEntry{
+		FullPath: fullPath.String(),
+		Hash:     hash,
+	}
+
+	if err := r.db.Save(entry).Error; err != nil {
 		return err
 	}
 
