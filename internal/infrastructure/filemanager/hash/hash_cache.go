@@ -5,7 +5,7 @@ import (
 )
 
 type IHashCache interface {
-	LoadHashCache(fileInfoSet map[string]string) error
+	LoadHashCache(hashSet map[string]string) error
 	GetHashCache(fullPath string) (string, error)
 	SetHashCache(fullPath string, hash string)
 }
@@ -22,11 +22,11 @@ func NewHashCache() *HashCache {
 	}
 }
 
-func (rc *HashCache) LoadHashCache(fileInfoSet map[string]string) error {
+func (rc *HashCache) LoadHashCache(hashSet map[string]string) error {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
-	for fullPath, fileInfo := range fileInfoSet {
-		rc.cache[fullPath] = fileInfo
+	for fullPath, hash := range hashSet {
+		rc.cache[fullPath] = hash
 	}
 	return nil
 }
@@ -34,11 +34,11 @@ func (rc *HashCache) LoadHashCache(fileInfoSet map[string]string) error {
 func (rc *HashCache) GetHashCache(fullPath string) (string, error) {
 	rc.mu.RLock()
 	defer rc.mu.RUnlock()
-	fileInfo, exists := rc.cache[fullPath]
+	hash, exists := rc.cache[fullPath]
 	if !exists {
 		return "", HashCacheNotFoundError{FullPath: fullPath}
 	}
-	return fileInfo, nil
+	return hash, nil
 }
 
 func (rc *HashCache) SetHashCache(fullPath string, hash string) {
