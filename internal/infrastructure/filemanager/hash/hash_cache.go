@@ -1,6 +1,7 @@
 package hash
 
 import (
+	"insync/internal/domain"
 	"sync"
 )
 
@@ -31,18 +32,18 @@ func (rc *HashCache) LoadHashCache(hashSet map[string]string) error {
 	return nil
 }
 
-func (rc *HashCache) GetHashCache(fullPath string) (string, error) {
+func (rc *HashCache) GetHashCache(fullPath domain.Path) (string, error) {
 	rc.mu.RLock()
 	defer rc.mu.RUnlock()
-	hash, exists := rc.cache[fullPath]
+	hash, exists := rc.cache[fullPath.String()]
 	if !exists {
-		return "", HashCacheNotFoundError{FullPath: fullPath}
+		return "", HashCacheNotFoundError{FullPath: fullPath.String()}
 	}
 	return hash, nil
 }
 
-func (rc *HashCache) SetHashCache(fullPath string, hash string) {
+func (rc *HashCache) SetHashCache(fullPath domain.Path, hash string) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
-	rc.cache[fullPath] = hash
+	rc.cache[fullPath.String()] = hash
 }

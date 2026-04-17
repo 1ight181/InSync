@@ -1,18 +1,19 @@
 package filemanager
 
 import (
+	"insync/internal/domain"
 	"io"
 	"io/fs"
 )
 
 type IFileSystem interface {
-	ReadDir(fullPath string) ([]fs.DirEntry, error)
-	WalkDir(fullPath string, walkFn func(path string, d fs.DirEntry, err error) error) error
-	Open(fullPath string) (fs.File, error)
-	Remove(fullPath string) error
-	CreateTempFile(dir, pattern string) (io.ReadWriteCloser, string, error)
-	Rename(oldPath, newPath string) error
-	MkdirAll(path string, perm fs.FileMode) error
-	Create(fullPath string) (io.ReadWriteCloser, error)
-	Stat(fullPath string) (fs.FileInfo, error)
+	ReadDir(fullPath domain.Path) ([]fs.DirEntry, error)
+	WalkDir(fullPath domain.Path, walkFn func(path string, d fs.DirEntry, err error) error) error
+	Open(fullPath domain.Path) (fs.File, error)
+	Remove(fullPath domain.Path) error
+	CreateTempFile(dir, pattern domain.Path) (io.ReadWriteCloser, domain.Path, error)
+	Rename(oldPath, newPath domain.Path) error
+	MkdirAll(path domain.Path, perm fs.FileMode) error
+	Create(fullPath domain.Path) (io.ReadWriteCloser, error)
+	Stat(fullPath domain.Path) (fs.FileInfo, error)
 }

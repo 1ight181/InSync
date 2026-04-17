@@ -2,6 +2,7 @@ package hash
 
 import (
 	"context"
+	"insync/internal/domain"
 	cont "insync/internal/infrastructure/filemanager/content"
 	"log/slog"
 )
@@ -37,23 +38,23 @@ func NewHashManager(options HashManagerOptions) *HashManager {
 	}
 }
 
-func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, fullPath string) (string, error) {
-	if _, isDirty := h.dirtyPaths[fullPath]; !isDirty {
-		if hash, err := h.hashCache.GetHashCache(fullPath); err == nil {
+func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, fullPath domain.Path) (string, error) {
+	if _, isDirty := h.dirtyPaths[fullPath.String()]; !isDirty {
+		if hash, err := h.hashCache.GetHashCache(fullPath.String()); err == nil {
 			return hash, nil
 		}
 		h.logger.LogAttrs(
 			h.loggerCtx,
 			slog.LevelDebug,
 			"Кэш для хэша не найден",
-			slog.String("fullPath", fullPath),
+			slog.String("fullPath", fullPath.String()),
 		)
 	} else {
 		h.logger.LogAttrs(
 			h.loggerCtx,
 			slog.LevelDebug,
 			"Путь является dirty",
-			slog.String("fullPath", fullPath),
+			slog.String("fullPath", fullPath.String()),
 		)
 	}
 
@@ -66,17 +67,17 @@ func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, fullPath
 		h.loggerCtx,
 		slog.LevelDebug,
 		"Хэш успешно рассчитан",
-		slog.String("fullPath", fullPath),
+		slog.String("fullPath", fullPath.String()),
 		slog.String("hash", hash),
 	)
 
-	h.hashCache.SetHashCache(fullPath, hash)
+	h.hashCache.SetHashCache(fullPath.String(), hash)
 
 	h.logger.LogAttrs(
 		h.loggerCtx,
 		slog.LevelDebug,
 		"Хэш успешно сохранен в кэш",
-		slog.String("fullPath", fullPath),
+		slog.String("fullPath", fullPath.String()),
 		slog.String("hash", hash),
 	)
 

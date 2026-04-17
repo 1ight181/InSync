@@ -1,10 +1,13 @@
 package domain
 
-import "io"
+import (
+	"insync/internal/domain"
+	"io"
+)
 
 type ResourceContent struct {
-	FullPath     string
-	RelativePath string
+	FullPath     domain.Path
+	RelativePath domain.Path
 
-	OpenContent func(fullPath string, relativePath string) (io.ReadCloser, error)
+	OpenContent func(fullPath domain.Path, relativePath domain.Path) (io.ReadCloser, error)
 }

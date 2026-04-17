@@ -106,28 +106,28 @@ func (s stubDirEntry) Info() (fs.FileInfo, error) {
 }
 
 type fakeFileSystem struct {
-	readDirFunc    func(fullPath string) ([]fs.DirEntry, error)
-	walkDirFunc    func(fullPath string, walkFn func(path string, d fs.DirEntry, err error) error) error
-	openFunc       func(fullPath string) (fs.File, error)
-	removeFunc     func(fullPath string) error
-	createTempFunc func(dir, pattern string) (io.ReadWriteCloser, string, error)
-	renameFunc     func(oldPath, newPath string) error
-	mkdirAllFunc   func(path string, perm fs.FileMode) error
-	createFunc     func(fullPath string) (io.ReadWriteCloser, error)
-	statFunc       func(fullPath string) (fs.FileInfo, error)
+	readDirFunc    func(fullPath domain.Path) ([]fs.DirEntry, error)
+	walkDirFunc    func(fullPath domain.Path, walkFn func(path string, d fs.DirEntry, err error) error) error
+	openFunc       func(fullPath domain.Path) (fs.File, error)
+	removeFunc     func(fullPath domain.Path) error
+	createTempFunc func(dir, pattern domain.Path) (io.ReadWriteCloser, domain.Path, error)
+	renameFunc     func(oldPath, newPath domain.Path) error
+	mkdirAllFunc   func(path domain.Path, perm fs.FileMode) error
+	createFunc     func(fullPath domain.Path) (io.ReadWriteCloser, error)
+	statFunc       func(fullPath domain.Path) (fs.FileInfo, error)
 
 	mu              sync.Mutex
-	removedPaths    []string
-	renamedPairs    [][2]string
-	mkdirAllPaths   []string
-	createdPaths    []string
-	openedPaths     []string
-	readDirPaths    []string
-	statPaths       []string
-	createTempPaths []string
+	removedPaths    []domain.Path
+	renamedPairs    [][2]domain.Path
+	mkdirAllPaths   []domain.Path
+	createdPaths    []domain.Path
+	openedPaths     []domain.Path
+	readDirPaths    []domain.Path
+	statPaths       []domain.Path
+	createTempPaths []domain.Path
 }
 
-func (f *fakeFileSystem) ReadDir(fullPath string) ([]fs.DirEntry, error) {
+func (f *fakeFileSystem) ReadDir(fullPath domain.Path) ([]fs.DirEntry, error) {
 	f.mu.Lock()
 	f.readDirPaths = append(f.readDirPaths, fullPath)
 	f.mu.Unlock()
@@ -137,14 +137,14 @@ func (f *fakeFileSystem) ReadDir(fullPath string) ([]fs.DirEntry, error) {
 	return nil, nil
 }
 
-func (f *fakeFileSystem) WalkDir(fullPath string, walkFn func(path string, d fs.DirEntry, err error) error) error {
+func (f *fakeFileSystem) WalkDir(fullPath domain.Path, walkFn func(path string, d fs.DirEntry, err error) error) error {
 	if f.walkDirFunc != nil {
 		return f.walkDirFunc(fullPath, walkFn)
 	}
 	return nil
 }
 
-func (f *fakeFileSystem) Open(fullPath string) (fs.File, error) {
+func (f *fakeFileSystem) Open(fullPath domain.Path) (fs.File, error) {
 	f.mu.Lock()
 	f.openedPaths = append(f.openedPaths, fullPath)
 	f.mu.Unlock()
@@ -154,7 +154,7 @@ func (f *fakeFileSystem) Open(fullPath string) (fs.File, error) {
 	return nil, fmt.Errorf("unexpected open: %s", fullPath)
 }
 
-func (f *fakeFileSystem) Remove(fullPath string) error {
+func (f *fakeFileSystem) Remove(fullPath domain.Path) error {
 	f.mu.Lock()
 	f.removedPaths = append(f.removedPaths, fullPath)
 	f.mu.Unlock()
@@ -164,19 +164,19 @@ func (f *fakeFileSystem) Remove(fullPath string) error {
 	return nil
 }
 
-func (f *fakeFileSystem) CreateTempFile(dir, pattern string) (io.ReadWriteCloser, string, error) {
+func (f *fakeFileSystem) CreateTempFile(dir, pattern domain.Path) (io.ReadWriteCloser, domain.Path, error) {
 	f.mu.Lock()
-	f.createTempPaths = append(f.createTempPaths, filepath.Join(dir, pattern))
+	f.createTempPaths = append(f.createTempPaths, domain.Path(filepath.Join(dir.String(), pattern.String())))
 	f.mu.Unlock()
 	if f.createTempFunc != nil {
 		return f.createTempFunc(dir, pattern)
 	}
-	return &tempReadWriteCloser{}, filepath.Join(dir, "temp-file"), nil
+	return &tempReadWriteCloser{}, domain.Path(filepath.Join(dir.String(), "temp-file")), nil
 }
 
-func (f *fakeFileSystem) Rename(oldPath, newPath string) error {
+func (f *fakeFileSystem) Rename(oldPath, newPath domain.Path) error {
 	f.mu.Lock()
-	f.renamedPairs = append(f.renamedPairs, [2]string{oldPath, newPath})
+	f.renamedPairs = append(f.renamedPairs, [2]domain.Path{oldPath, newPath})
 	f.mu.Unlock()
 	if f.renameFunc != nil {
 		return f.renameFunc(oldPath, newPath)
@@ -184,7 +184,7 @@ func (f *fakeFileSystem) Rename(oldPath, newPath string) error {
 	return nil
 }
 
-func (f *fakeFileSystem) MkdirAll(path string, perm fs.FileMode) error {
+func (f *fakeFileSystem) MkdirAll(path domain.Path, perm fs.FileMode) error {
 	f.mu.Lock()
 	f.mkdirAllPaths = append(f.mkdirAllPaths, path)
 	f.mu.Unlock()
@@ -194,7 +194,7 @@ func (f *fakeFileSystem) MkdirAll(path string, perm fs.FileMode) error {
 	return nil
 }
 
-func (f *fakeFileSystem) Create(fullPath string) (io.ReadWriteCloser, error) {
+func (f *fakeFileSystem) Create(fullPath domain.Path) (io.ReadWriteCloser, error) {
 	f.mu.Lock()
 	f.createdPaths = append(f.createdPaths, fullPath)
 	f.mu.Unlock()
@@ -204,23 +204,23 @@ func (f *fakeFileSystem) Create(fullPath string) (io.ReadWriteCloser, error) {
 	return &tempReadWriteCloser{}, nil
 }
 
-func (f *fakeFileSystem) Stat(fullPath string) (fs.FileInfo, error) {
+func (f *fakeFileSystem) Stat(fullPath domain.Path) (fs.FileInfo, error) {
 	f.mu.Lock()
 	f.statPaths = append(f.statPaths, fullPath)
 	f.mu.Unlock()
 	if f.statFunc != nil {
 		return f.statFunc(fullPath)
 	}
-	return stubFileInfo{name: filepath.Base(fullPath), modTime: time.Unix(100, 0)}, nil
+	return stubFileInfo{name: filepath.Base(fullPath.String()), modTime: time.Unix(100, 0)}, nil
 }
 
 type stubRootResolver struct {
-	resolvedPaths []string
+	resolvedPaths []domain.Path
 	calls         int
 	mu            sync.Mutex
 }
 
-func (s *stubRootResolver) ResolveRoot(_ domain.RootName, _ domain.Path) (string, error) {
+func (s *stubRootResolver) ResolveRoot(_ domain.RootName, _ domain.Path) (domain.Path, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.calls >= len(s.resolvedPaths) {
@@ -232,13 +232,13 @@ func (s *stubRootResolver) ResolveRoot(_ domain.RootName, _ domain.Path) (string
 }
 
 type stubHashManager struct {
-	resolveHashFunc func(resourceContent cont.ResourceContent, fullPath string) (string, error)
-	markDirtyFunc   func(fullPath string) error
-	resolveCalls    []string
-	markDirtyCalls  []string
+	resolveHashFunc func(resourceContent cont.ResourceContent, fullPath domain.Path) (string, error)
+	markDirtyFunc   func(fullPath domain.Path) error
+	resolveCalls    []domain.Path
+	markDirtyCalls  []domain.Path
 }
 
-func (s *stubHashManager) ResolveHash(resourceContent cont.ResourceContent, fullPath string) (string, error) {
+func (s *stubHashManager) ResolveHash(resourceContent cont.ResourceContent, fullPath domain.Path) (string, error) {
 	s.resolveCalls = append(s.resolveCalls, fullPath)
 	if s.resolveHashFunc != nil {
 		return s.resolveHashFunc(resourceContent, fullPath)
@@ -246,7 +246,7 @@ func (s *stubHashManager) ResolveHash(resourceContent cont.ResourceContent, full
 	return "hash-value", nil
 }
 
-func (s *stubHashManager) MarkDirty(fullPath string) error {
+func (s *stubHashManager) MarkDirty(fullPath domain.Path) error {
 	s.markDirtyCalls = append(s.markDirtyCalls, fullPath)
 	if s.markDirtyFunc != nil {
 		return s.markDirtyFunc(fullPath)
@@ -261,13 +261,13 @@ type stubPathTreeWriter struct {
 	rErr    error
 }
 
-func (s *stubPathTreeWriter) AddPath(fullPath string) error {
-	s.added = append(s.added, fullPath)
+func (s *stubPathTreeWriter) AddPath(fullPath domain.Path) error {
+	s.added = append(s.added, fullPath.String())
 	return s.aErr
 }
 
-func (s *stubPathTreeWriter) RemovePath(fullPath string) error {
-	s.removed = append(s.removed, fullPath)
+func (s *stubPathTreeWriter) RemovePath(fullPath domain.Path) error {
+	s.removed = append(s.removed, fullPath.String())
 	return s.rErr
 }
 
@@ -288,7 +288,7 @@ func newTestManager(t *testing.T, fsImpl *fakeFileSystem, resolver *stubRootReso
 		HashManager:    hashManager,
 		FileSystem:     fsImpl,
 		PathTreeWriter: pathTreeWriter,
-		TempDir:        t.TempDir(),
+		TempDir:        domain.Path(t.TempDir()),
 		Logger:         slog.New(slog.NewTextHandler(io.Discard, nil)),
 		LoggerCtx:      context.Background(),
 	})
@@ -319,8 +319,8 @@ func TestWriteContentToTemp_RemovesTempFileOnCopyError(t *testing.T) {
 	filesystem := &fakeFileSystem{}
 	manager, _, _ := newTestManager(t, filesystem, nil)
 
-	filesystem.createTempFunc = func(dir, pattern string) (io.ReadWriteCloser, string, error) {
-		return &tempReadWriteCloser{}, filepath.Join(dir, "temp-file.txt"), nil
+	filesystem.createTempFunc = func(dir, pattern domain.Path) (io.ReadWriteCloser, domain.Path, error) {
+		return &tempReadWriteCloser{}, domain.Path(filepath.Join(dir.String(), "temp-file.txt")), nil
 	}
 
 	tempPath, err := manager.writeContentToTemp(failingReadCloser{err: errors.New("copy failed")})
@@ -328,7 +328,7 @@ func TestWriteContentToTemp_RemovesTempFileOnCopyError(t *testing.T) {
 	require.Error(t, err)
 	assert.Empty(t, tempPath)
 	assert.Equal(t,
-		[]string{filepath.Join(manager.tempDir, "temp-file.txt")},
+		[]string{filepath.Join(manager.tempDir.String(), "temp-file.txt")},
 		filesystem.removedPaths,
 	)
 }
@@ -337,10 +337,10 @@ func TestMoveTempToDestination_RenamesAndRemovesTempFile(t *testing.T) {
 	filesystem := &fakeFileSystem{}
 	manager, _, _ := newTestManager(t, filesystem, nil)
 
-	tempFilePath := filepath.Join(manager.tempDir, "temp-file.txt")
-	destinationPath := filepath.Join(manager.tempDir, "nested", "file.txt")
+	tempFilePath := filepath.Join(manager.tempDir.String(), "temp-file.txt")
+	destinationPath := filepath.Join(manager.tempDir.String(), "nested", "file.txt")
 
-	err := manager.moveTempToDestination(context.Background(), tempFilePath, destinationPath)
+	err := manager.moveTempToDestination(context.Background(), domain.Path(tempFilePath), domain.Path(destinationPath))
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{filepath.Dir(destinationPath)}, filesystem.mkdirAllPaths)
@@ -352,25 +352,25 @@ func TestMoveTempToDestination_FallsBackOnEXDEV(t *testing.T) {
 	filesystem := &fakeFileSystem{}
 	manager, _, _ := newTestManager(t, filesystem, nil)
 
-	tempFilePath := filepath.Join(manager.tempDir, "temp-file.txt")
-	destinationPath := filepath.Join(manager.tempDir, "nested", "file.txt")
+	tempFilePath := filepath.Join(manager.tempDir.String(), "temp-file.txt")
+	destinationPath := filepath.Join(manager.tempDir.String(), "nested", "file.txt")
 	sourceContent := []byte("payload")
 	destinationBuffer := &tempReadWriteCloser{}
 
-	filesystem.renameFunc = func(oldPath, newPath string) error { return syscall.EXDEV }
-	filesystem.openFunc = func(fullPath string) (fs.File, error) {
+	filesystem.renameFunc = func(oldPath, newPath domain.Path) error { return syscall.EXDEV }
+	filesystem.openFunc = func(fullPath domain.Path) (fs.File, error) {
 		require.Equal(t, tempFilePath, fullPath)
 		return &readOnlyFile{
 			Reader: bytes.NewReader(sourceContent),
-			info:   stubFileInfo{name: filepath.Base(fullPath)},
+			info:   stubFileInfo{name: filepath.Base(fullPath.String())},
 		}, nil
 	}
-	filesystem.createFunc = func(fullPath string) (io.ReadWriteCloser, error) {
+	filesystem.createFunc = func(fullPath domain.Path) (io.ReadWriteCloser, error) {
 		require.Equal(t, destinationPath, fullPath)
 		return destinationBuffer, nil
 	}
 
-	err := manager.moveTempToDestination(context.Background(), tempFilePath, destinationPath)
+	err := manager.moveTempToDestination(context.Background(), domain.Path(tempFilePath), domain.Path(destinationPath))
 
 	require.NoError(t, err)
 	assert.Equal(t, string(sourceContent), destinationBuffer.String())
@@ -383,15 +383,15 @@ func TestMoveTempToDestination_ReturnsContextErrorDuringFallback(t *testing.T) {
 	filesystem := &fakeFileSystem{}
 	manager, _, _ := newTestManager(t, filesystem, nil)
 
-	tempFilePath := filepath.Join(manager.tempDir, "temp-file.txt")
-	destinationPath := filepath.Join(manager.tempDir, "nested", "file.txt")
+	tempFilePath := filepath.Join(manager.tempDir.String(), "temp-file.txt")
+	destinationPath := filepath.Join(manager.tempDir.String(), "nested", "file.txt")
 
-	filesystem.renameFunc = func(oldPath, newPath string) error { return syscall.EXDEV }
+	filesystem.renameFunc = func(oldPath, newPath domain.Path) error { return syscall.EXDEV }
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := manager.moveTempToDestination(ctx, tempFilePath, destinationPath)
+	err := manager.moveTempToDestination(ctx, domain.Path(tempFilePath), domain.Path(destinationPath))
 
 	require.ErrorIs(t, err, context.Canceled)
 	assert.Equal(t, []string{tempFilePath}, filesystem.removedPaths)
@@ -401,10 +401,10 @@ func TestOpenFileContentWithHeader_PrefixesRelativePath(t *testing.T) {
 	filesystem := &fakeFileSystem{}
 	manager, _, _ := newTestManager(t, filesystem, nil)
 
-	fullPath := filepath.Join(manager.tempDir, "file.txt")
+	fullPath := filepath.Join(manager.tempDir.String(), "file.txt")
 	relativePath := "dir/file.txt"
 
-	filesystem.openFunc = func(path string) (fs.File, error) {
+	filesystem.openFunc = func(path domain.Path) (fs.File, error) {
 		require.Equal(t, fullPath, path)
 		return &readOnlyFile{
 			Reader: bytes.NewReader([]byte("body")),
@@ -412,7 +412,7 @@ func TestOpenFileContentWithHeader_PrefixesRelativePath(t *testing.T) {
 		}, nil
 	}
 
-	content, err := manager.openFileContentWithHeader(fullPath, relativePath)
+	content, err := manager.openFileContentWithHeader(domain.Path(fullPath), domain.Path(relativePath))
 	require.NoError(t, err)
 	defer content.Close()
 
@@ -426,9 +426,9 @@ func TestOpenDirContent_SortsEntriesAndSkipsSymlinks(t *testing.T) {
 	filesystem := &fakeFileSystem{}
 	manager, _, _ := newTestManager(t, filesystem, nil)
 
-	fullPath := filepath.Join(manager.tempDir, "root")
+	fullPath := filepath.Join(manager.tempDir.String(), "root")
 
-	filesystem.readDirFunc = func(path string) ([]fs.DirEntry, error) {
+	filesystem.readDirFunc = func(path domain.Path) ([]fs.DirEntry, error) {
 		require.Equal(t, fullPath, path)
 		return []fs.DirEntry{
 			stubDirEntry{name: "b.txt", contents: "B"},
@@ -437,8 +437,8 @@ func TestOpenDirContent_SortsEntriesAndSkipsSymlinks(t *testing.T) {
 		}, nil
 	}
 
-	filesystem.openFunc = func(path string) (fs.File, error) {
-		switch filepath.Base(path) {
+	filesystem.openFunc = func(path domain.Path) (fs.File, error) {
+		switch filepath.Base(path.String()) {
 		case "a.txt":
 			return &readOnlyFile{Reader: bytes.NewReader([]byte("A")), info: stubFileInfo{name: "a.txt"}}, nil
 		case "b.txt":
@@ -448,7 +448,7 @@ func TestOpenDirContent_SortsEntriesAndSkipsSymlinks(t *testing.T) {
 		}
 	}
 
-	content, err := manager.openDirContent(fullPath, "root")
+	content, err := manager.openDirContent(domain.Path(fullPath), "root")
 	require.NoError(t, err)
 	defer content.Close()
 

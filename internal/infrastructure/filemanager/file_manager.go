@@ -44,7 +44,7 @@ type FileManager struct {
 	pathTreeWriter        IPathTreeWriter
 	localDeviceIdResolver ILocalDeviceIdProvider
 
-	tempDir string
+	tempDir domain.Path
 
 	logger    *slog.Logger
 	loggerCtx context.Context
@@ -57,7 +57,7 @@ type FileManagerOptions struct {
 	PathTreeWriter        IPathTreeWriter
 	LocalDeviceIdResolver ILocalDeviceIdProvider
 
-	TempDir string
+	TempDir domain.Path
 
 	Logger    *slog.Logger
 	LoggerCtx context.Context
@@ -180,7 +180,7 @@ func (f *FileManager) GetFile(ctx context.Context, rootName domain.RootName, rel
 		return nil, err
 	}
 
-	return f.openFileContentWithHeader(resolvedFullPath, relativePath.String())
+	return f.openFileContentWithHeader(resolvedFullPath, relativePath)
 }
 
 func (f *FileManager) PutFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path, content io.Reader) error {
@@ -209,7 +209,7 @@ func (f *FileManager) PutFile(ctx context.Context, rootName domain.RootName, rel
 	return f.hashManager.MarkDirty(resolvedPath)
 }
 
-func (f *FileManager) writeContentToTemp(content io.Reader) (string, error) {
+func (f *FileManager) writeContentToTemp(content io.Reader) (domain.Path, error) {
 	tempFile, tempFilePath, err := f.fileSystem.CreateTempFile(f.tempDir, "filemanager_temp_*")
 	if err != nil {
 		return "", err
@@ -224,7 +224,7 @@ func (f *FileManager) writeContentToTemp(content io.Reader) (string, error) {
 				f.loggerCtx,
 				slog.LevelError,
 				"Не удалось удалить временный файл при ошибке записи в методе writeContentToTemp",
-				slog.String("tempFilePath", tempFilePath),
+				slog.String("tempFilePath", tempFilePath.String()),
 			)
 		}
 		return "", err
@@ -234,19 +234,24 @@ func (f *FileManager) writeContentToTemp(content io.Reader) (string, error) {
 
 }
 
-func (f *FileManager) moveTempToDestination(ctx context.Context, tempFilePath string, destPath string) error {
+func (f *FileManager) moveTempToDestination(ctx context.Context, tempFilePath domain.Path, destPath domain.Path) error {
 	defer func() {
 		if err := f.fileSystem.Remove(tempFilePath); err != nil {
 			f.logger.LogAttrs(
 				f.loggerCtx,
 				slog.LevelError,
 				"Не удалось удалить временный файл при ошибке перемещения в методе moveTempToDestination",
-				slog.String("tempFilePath", tempFilePath),
+				slog.String("tempFilePath", tempFilePath.String()),
 			)
 		}
 	}()
 
-	if err := f.fileSystem.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+	destDir, err := domain.NewPath(filepath.Dir(destPath.String()))
+	if err != nil {
+		return err
+	}
+
+	if err := f.fileSystem.MkdirAll(destDir, 0755); err != nil {
 		return err
 	}
 
@@ -275,7 +280,7 @@ func (f *FileManager) moveTempToDestination(ctx context.Context, tempFilePath st
 	return nil
 }
 
-func (f *FileManager) openDirContent(fullPath, relativePath string) (io.ReadCloser, error) {
+func (f *FileManager) openDirContent(fullPath, relativePath domain.Path) (io.ReadCloser, error) {
 
 	entries, err := f.fileSystem.ReadDir(fullPath)
 	if err != nil {
@@ -298,22 +303,30 @@ func (f *FileManager) openDirContent(fullPath, relativePath string) (io.ReadClos
 				f.loggerCtx,
 				slog.LevelWarn,
 				"Обнаружена и пропущена символическая ссылка при чтении директории",
-				slog.String("fullPath", fullPath),
-				slog.String("symlinkName", filepath.Join(fullPath, entry.Name())),
+				slog.String("fullPath", fullPath.String()),
+				slog.String("symlinkName", filepath.Join(fullPath.String(), entry.Name())),
 			)
 			continue
 		}
 
 		if entry.IsDir() {
-			subDirFullPath := filepath.Join(fullPath, entry.Name())
-			subDirPath := filepath.Join(relativePath, entry.Name())
+			subDirFullPath, err := fullPath.Join(entry.Name())
+			if err != nil {
+				return nil, err
+			}
+
+			subDirPath, err := relativePath.Join(entry.Name())
+			if err != nil {
+				return nil, err
+			}
+
 			subDirContent, err := f.openDirContent(subDirFullPath, subDirPath)
 			if err != nil {
 				f.logger.LogAttrs(
 					f.loggerCtx,
 					slog.LevelError,
 					"Ошибка при чтении директории",
-					slog.String("fullPath", subDirFullPath),
+					slog.String("fullPath", subDirFullPath.String()),
 				)
 
 				NewMultiCloser(closers...).Close()
@@ -326,15 +339,23 @@ func (f *FileManager) openDirContent(fullPath, relativePath string) (io.ReadClos
 			continue
 		}
 
-		fileFullPath := filepath.Join(fullPath, entry.Name())
-		filePath := filepath.Join(relativePath, entry.Name())
+		fileFullPath, err := fullPath.Join(entry.Name())
+		if err != nil {
+			return nil, err
+		}
+
+		filePath, err := relativePath.Join(entry.Name())
+		if err != nil {
+			return nil, err
+		}
+
 		fileContent, err := f.openFileContentWithHeader(fileFullPath, filePath)
 		if err != nil {
 			f.logger.LogAttrs(
 				f.loggerCtx,
 				slog.LevelError,
 				"Ошибка при чтении файла",
-				slog.String("fullPath", fileFullPath),
+				slog.String("fullPath", fileFullPath.String()),
 			)
 
 			NewMultiCloser(closers...).Close()
@@ -358,7 +379,7 @@ func (f *FileManager) openDirContent(fullPath, relativePath string) (io.ReadClos
 
 }
 
-func (f *FileManager) openFileContentWithHeader(fullPath, relativePath string) (io.ReadCloser, error) {
+func (f *FileManager) openFileContentWithHeader(fullPath, relativePath domain.Path) (io.ReadCloser, error) {
 	fileContent, err := f.fileSystem.Open(fullPath)
 	if err != nil {
 		return nil, err
@@ -376,7 +397,7 @@ func (f *FileManager) openFileContentWithHeader(fullPath, relativePath string) (
 	}, nil
 }
 
-func (f *FileManager) openFileContent(fullPath, _ string) (io.ReadCloser, error) {
+func (f *FileManager) openFileContent(fullPath, _ domain.Path) (io.ReadCloser, error) {
 	return f.fileSystem.Open(fullPath)
 }
 
@@ -390,7 +411,7 @@ func (f *FileManager) createMetadata(entryInfo fs.FileInfo) domain.FileMetadata 
 
 func (f *FileManager) collectAllFileEntries(
 	ctx context.Context,
-	rootAbsolutePath string,
+	rootAbsolutePath domain.Path,
 ) ([]domain.FileEntry, error) {
 
 	if ctx.Err() != nil {
@@ -418,8 +439,8 @@ func (f *FileManager) collectAllFileEntries(
 
 func (f *FileManager) collectFileEntriesRecursive(
 	ctx context.Context,
-	currentAbsolutePath string,
-	currentPath string,
+	currentAbsolutePath domain.Path,
+	currentPath domain.Path,
 ) ([]domain.FileEntry, uint64, error) { // добавили возврат размера поддерева
 	directoryEntries, err := f.fileSystem.ReadDir(currentAbsolutePath)
 	if err != nil {
@@ -433,26 +454,40 @@ func (f *FileManager) collectFileEntriesRecursive(
 		if ctx.Err() != nil {
 			return nil, 0, ctx.Err()
 		}
+
+		fullPath, err := currentAbsolutePath.Join(directoryEntry.Name())
+		if err != nil {
+			return nil, 0, err
+		}
+
 		if directoryEntry.Type()&os.ModeSymlink != 0 {
 			f.logger.LogAttrs(
 				f.loggerCtx,
 				slog.LevelWarn,
 				"Обнаружена и пропущена символическая ссылка",
-				slog.String("fullPath", filepath.Join(currentAbsolutePath, directoryEntry.Name())),
+				slog.String("fullPath", fullPath.String()),
 			)
 			continue
 		}
 
 		entryName := directoryEntry.Name()
-		nextAbsolutePath := filepath.Join(currentAbsolutePath, entryName)
-		nextPath := filepath.Join(currentPath, entryName)
+
+		nextAbsolutePath, err := currentAbsolutePath.Join(entryName)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		nextPath, err := currentPath.Join(entryName)
+		if err != nil {
+			return nil, 0, err
+		}
 
 		entryInfo, err := directoryEntry.Info()
 		if err != nil {
 			return nil, 0, err
 		}
 
-		var resourceContentFunc func(string, string) (io.ReadCloser, error)
+		var resourceContentFunc func(domain.Path, domain.Path) (io.ReadCloser, error)
 		if directoryEntry.IsDir() {
 			resourceContentFunc = f.openDirContent
 		} else {
@@ -476,12 +511,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 			return nil, 0, err
 		}
 
-		filePath, err := domain.NewPath(nextPath)
-		if err != nil {
-			return nil, 0, err
-		}
-
-		fileEntry, err := domain.NewFileEntry(filePath, subtreeSize, fileInfo)
+		fileEntry, err := domain.NewFileEntry(nextPath, subtreeSize, fileInfo)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -514,8 +544,8 @@ func (f *FileManager) collectFileEntriesRecursive(
 
 func (f *FileManager) createFileEntryForDirectory(
 	ctx context.Context,
-	absolutePath string,
-	relativePath string,
+	absolutePath domain.Path,
+	relativePath domain.Path,
 	subtreeSize uint64,
 ) (domain.FileEntry, error) {
 	if ctx.Err() != nil {
@@ -542,10 +572,5 @@ func (f *FileManager) createFileEntryForDirectory(
 		return domain.FileEntry{}, err
 	}
 
-	filePath, err := domain.NewPath(relativePath)
-	if err != nil {
-		return domain.FileEntry{}, err
-	}
-
-	return domain.NewFileEntry(filePath, subtreeSize, fileInfo)
+	return domain.NewFileEntry(relativePath, subtreeSize, fileInfo)
 }
