@@ -76,9 +76,11 @@ logger:
   log_file_extension: "txt"
   log_level: "debug"
 
+device_id: &mdns_server_instance_name_postfix "server"
+
 mdns_server:
   instance_name: "server1"
-  instance_name_postfix: "server"
+  instance_name_postfix: *mdns_server_instance_name_postfix
   service_type: "_grpc._tcp"
   domain: "local"
   port: 50051
@@ -93,3 +95,6 @@ mdns_browser:
 
 file_manager:
   temp_dir: "../temp"
+
+remote_device_id_resolver:
+  mdns_server_instance_name_postfix: *mdns_server_instance_name_postfix
