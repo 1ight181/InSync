@@ -42,7 +42,7 @@ type FileManager struct {
 	hashManager           IHashManager
 	fileSystem            IFileSystem
 	pathTreeWriter        IPathTreeWriter
-	localDeviceIdResolver ILocalDeviceIdProvider
+	localDeviceIdProvider ILocalDeviceIdProvider
 
 	tempDir domain.Path
 
@@ -55,7 +55,7 @@ type FileManagerOptions struct {
 	HashManager           IHashManager
 	FileSystem            IFileSystem
 	PathTreeWriter        IPathTreeWriter
-	LocalDeviceIdResolver ILocalDeviceIdProvider
+	LocalDeviceIdProvider ILocalDeviceIdProvider
 
 	TempDir domain.Path
 
@@ -68,7 +68,7 @@ func NewFileManager(opts FileManagerOptions) *FileManager {
 		opts.HashManager == nil ||
 		opts.FileSystem == nil ||
 		opts.PathTreeWriter == nil ||
-		opts.LocalDeviceIdResolver == nil ||
+		opts.LocalDeviceIdProvider == nil ||
 		opts.TempDir == "" ||
 		opts.Logger == nil ||
 		opts.LoggerCtx == nil {
@@ -79,7 +79,7 @@ func NewFileManager(opts FileManagerOptions) *FileManager {
 		hashManager:           opts.HashManager,
 		fileSystem:            opts.FileSystem,
 		pathTreeWriter:        opts.PathTreeWriter,
-		localDeviceIdResolver: opts.LocalDeviceIdResolver,
+		localDeviceIdProvider: opts.LocalDeviceIdProvider,
 
 		tempDir: opts.TempDir,
 
@@ -101,7 +101,7 @@ func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName)
 
 	snapshot := domain.NewSnapshot(allEntries)
 
-	localDeviceId := f.localDeviceIdResolver.GetLocalDeviceId()
+	localDeviceId := f.localDeviceIdProvider.GetLocalDeviceId()
 
 	now := uint64(time.Now().Unix())
 

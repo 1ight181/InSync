@@ -110,7 +110,7 @@ type fakeFileSystem struct {
 	walkDirFunc    func(fullPath domain.Path, walkFn func(path string, d fs.DirEntry, err error) error) error
 	openFunc       func(fullPath domain.Path) (fs.File, error)
 	removeFunc     func(fullPath domain.Path) error
-	createTempFunc func(dir, pattern domain.Path) (io.ReadWriteCloser, domain.Path, error)
+	createTempFunc func(dir domain.Path, pattern string) (io.ReadWriteCloser, domain.Path, error)
 	renameFunc     func(oldPath, newPath domain.Path) error
 	mkdirAllFunc   func(path domain.Path, perm fs.FileMode) error
 	createFunc     func(fullPath domain.Path) (io.ReadWriteCloser, error)
@@ -164,9 +164,9 @@ func (f *fakeFileSystem) Remove(fullPath domain.Path) error {
 	return nil
 }
 
-func (f *fakeFileSystem) CreateTempFile(dir, pattern domain.Path) (io.ReadWriteCloser, domain.Path, error) {
+func (f *fakeFileSystem) CreateTempFile(dir domain.Path, pattern string) (io.ReadWriteCloser, domain.Path, error) {
 	f.mu.Lock()
-	f.createTempPaths = append(f.createTempPaths, domain.Path(filepath.Join(dir.String(), pattern.String())))
+	f.createTempPaths = append(f.createTempPaths, domain.Path(filepath.Join(dir.String(), pattern)))
 	f.mu.Unlock()
 	if f.createTempFunc != nil {
 		return f.createTempFunc(dir, pattern)
@@ -319,7 +319,7 @@ func TestWriteContentToTemp_RemovesTempFileOnCopyError(t *testing.T) {
 	filesystem := &fakeFileSystem{}
 	manager, _, _ := newTestManager(t, filesystem, nil)
 
-	filesystem.createTempFunc = func(dir, pattern domain.Path) (io.ReadWriteCloser, domain.Path, error) {
+	filesystem.createTempFunc = func(dir domain.Path, pattern string) (io.ReadWriteCloser, domain.Path, error) {
 		return &tempReadWriteCloser{}, domain.Path(filepath.Join(dir.String(), "temp-file.txt")), nil
 	}
 
