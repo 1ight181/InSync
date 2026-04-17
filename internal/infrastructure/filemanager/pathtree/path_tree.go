@@ -1,26 +1,26 @@
 package pathtree
 
 import (
-	"path/filepath"
+	"insync/internal/domain"
 )
 
 type node struct {
-	path     string
+	path     domain.Path
 	parent   *node
-	children map[string]*node
+	children map[domain.Path]*node
 }
 
 type PathTree struct {
-	nodes map[string]*node
+	nodes map[domain.Path]*node
 }
 
 func NewPathTree() *PathTree {
 	return &PathTree{
-		nodes: make(map[string]*node),
+		nodes: make(map[domain.Path]*node),
 	}
 }
 
-func (pt *PathTree) AddPath(fullPath string) error {
+func (pt *PathTree) AddPath(fullPath domain.Path) error {
 	normalizedPath, err := pt.normalizePath(fullPath)
 	if err != nil {
 		return err
@@ -33,7 +33,7 @@ func (pt *PathTree) AddPath(fullPath string) error {
 	return nil
 }
 
-func (pt *PathTree) RemovePath(fullPath string) error {
+func (pt *PathTree) RemovePath(fullPath domain.Path) error {
 	normalizedPath, err := pt.normalizePath(fullPath)
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func (pt *PathTree) removeNode(node *node) {
 	delete(pt.nodes, node.path)
 }
 
-func (tree *PathTree) GetParents(fullPath string) ([]string, error) {
+func (tree *PathTree) GetParents(fullPath domain.Path) ([]domain.Path, error) {
 	normalizedPath, err := tree.normalizePath(fullPath)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (tree *PathTree) GetParents(fullPath string) ([]string, error) {
 		return nil, ErrNotFound
 	}
 
-	var parents []string
+	var parents []domain.Path
 	current := node.parent
 
 	for current != nil {
@@ -79,7 +79,7 @@ func (tree *PathTree) GetParents(fullPath string) ([]string, error) {
 	return parents, nil
 }
 
-func (tree *PathTree) GetChildren(fullPath string) ([]string, error) {
+func (tree *PathTree) GetChildren(fullPath domain.Path) ([]domain.Path, error) {
 	normalizedPath, err := tree.normalizePath(fullPath)
 	if err != nil {
 		return nil, err
@@ -89,14 +89,14 @@ func (tree *PathTree) GetChildren(fullPath string) ([]string, error) {
 		return nil, ErrNotFound
 	}
 
-	var children []string
+	var children []domain.Path
 	for childPath := range node.children {
 		children = append(children, childPath)
 	}
 	return children, nil
 }
 
-func (pt *PathTree) ensurePathRecursive(path string) error {
+func (pt *PathTree) ensurePathRecursive(path domain.Path) error {
 	if _, exists := pt.nodes[path]; exists {
 		return nil
 	}
@@ -114,7 +114,7 @@ func (pt *PathTree) ensurePathRecursive(path string) error {
 	newNode := &node{
 		path:     path,
 		parent:   parentNode,
-		children: make(map[string]*node),
+		children: make(map[domain.Path]*node),
 	}
 	pt.nodes[path] = newNode
 	if parentNode != nil {
@@ -124,25 +124,24 @@ func (pt *PathTree) ensurePathRecursive(path string) error {
 	return nil
 }
 
-func (pt *PathTree) normalizePath(path string) (string, error) {
+func (pt *PathTree) normalizePath(path domain.Path) (domain.Path, error) {
 	if path == "" {
 		return "", nil
 	}
 
-	absPath, err := filepath.Abs(path)
+	absPath, err := path.Abs()
 	if err != nil {
 		return "", err
 	}
-	cleaned := filepath.Clean(absPath)
 
-	if cleaned == "." {
+	if absPath == "." {
 		return "", nil
 	}
 
-	return cleaned, nil
+	return absPath, nil
 }
 
-func (pt *PathTree) parentPath(fullPath string) (string, error) {
+func (pt *PathTree) parentPath(fullPath domain.Path) (domain.Path, error) {
 	cleaned, err := pt.normalizePath(fullPath)
 	if err != nil {
 		return "", err
@@ -151,7 +150,7 @@ func (pt *PathTree) parentPath(fullPath string) (string, error) {
 		return "", nil
 	}
 
-	parent := filepath.Dir(cleaned)
+	parent := cleaned.Dir()
 
 	if parent == "." || parent == cleaned || cleaned == "/" {
 		return "", nil

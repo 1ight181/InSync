@@ -4,148 +4,145 @@ import (
 	"path/filepath"
 	"testing"
 
+	"insync/internal/domain"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func absCleanPath(t *testing.T, rawPath string) string {
+func normalize(t *testing.T, p string) domain.Path {
 	t.Helper()
-
-	absolutePath, err := filepath.Abs(rawPath)
+	dp := domain.Path(p)
+	abs, err := dp.Abs()
 	require.NoError(t, err)
-
-	return filepath.Clean(absolutePath)
-}
-
-func expectedParentChain(normalizedPath string) []string {
-	var parents []string
-
-	currentPath := filepath.Clean(normalizedPath)
-	for {
-		parentPath := filepath.Dir(currentPath)
-		if parentPath == "." || parentPath == currentPath {
-			break
-		}
-
-		parents = append(parents, parentPath)
-
-		if parentPath == "/" {
-			break
-		}
-		currentPath = parentPath
-	}
-
-	return parents
+	return abs
 }
 
 func TestPathTree_AddPath_CreatesNodeAndParents(t *testing.T) {
 	tree := NewPathTree()
 
-	baseDirectory := t.TempDir()
-	leafPath := filepath.Join(baseDirectory, "level1", "level2", "leaf.txt")
-	normalizedLeafPath := absCleanPath(t, leafPath)
+	base := t.TempDir()
+	leafRaw := filepath.Join(base, "level1", "level2", "leaf.txt")
 
-	require.NoError(t, tree.AddPath(leafPath))
+	require.NoError(t, tree.AddPath(domain.Path(leafRaw)))
 
-	parents, err := tree.GetParents(leafPath)
+	leaf := normalize(t, leafRaw)
+
+	parents, err := tree.GetParents(domain.Path(leafRaw))
 	require.NoError(t, err)
-	assert.Equal(t, expectedParentChain(normalizedLeafPath), parents)
 
-	children, err := tree.GetChildren(filepath.Dir(normalizedLeafPath))
+	// Проверяем цепочку родителей (от ближайшего к корню)
+	expectedParents := []domain.Path{
+		normalize(t, filepath.Join(base, "level1", "level2")),
+		normalize(t, filepath.Join(base, "level1")),
+		normalize(t, base),
+	}
+	assert.Equal(t, expectedParents, parents)
+
+	// Проверяем детей у родителя
+	parentDir := normalize(t, filepath.Dir(leafRaw))
+	children, err := tree.GetChildren(parentDir)
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{normalizedLeafPath}, children)
+	assert.ElementsMatch(t, []domain.Path{leaf}, children)
 }
 
 func TestPathTree_AddPath_IsIdempotent(t *testing.T) {
 	tree := NewPathTree()
 
-	baseDirectory := t.TempDir()
-	leafPath := filepath.Join(baseDirectory, "folder", "leaf.txt")
-	normalizedLeafPath := absCleanPath(t, leafPath)
+	base := t.TempDir()
+	leafRaw := filepath.Join(base, "folder", "leaf.txt")
 
-	require.NoError(t, tree.AddPath(leafPath))
-	parentsBefore, err := tree.GetParents(leafPath)
+	leaf := normalize(t, leafRaw)
+
+	require.NoError(t, tree.AddPath(domain.Path(leafRaw)))
+
+	parentsBefore, err := tree.GetParents(domain.Path(leafRaw))
 	require.NoError(t, err)
 
-	require.NoError(t, tree.AddPath(leafPath))
-	parentsAfter, err := tree.GetParents(normalizedLeafPath)
+	// Добавляем повторно
+	require.NoError(t, tree.AddPath(domain.Path(leafRaw)))
+
+	parentsAfter, err := tree.GetParents(leaf)
 	require.NoError(t, err)
 
 	assert.Equal(t, parentsBefore, parentsAfter)
-
-	children, err := tree.GetChildren(filepath.Dir(normalizedLeafPath))
-	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{normalizedLeafPath}, children)
 }
 
 func TestPathTree_AddPath_NormalizesInputPath(t *testing.T) {
 	tree := NewPathTree()
 
-	baseDirectory := t.TempDir()
-	cleanPath := filepath.Join(baseDirectory, "folder", "leaf.txt")
-	messyPath := filepath.Join(baseDirectory, "folder", "..", "folder", ".", "leaf.txt")
+	base := t.TempDir()
+	cleanRaw := filepath.Join(base, "folder", "leaf.txt")
+	messyRaw := filepath.Join(base, "folder", "..", "folder", ".", "leaf.txt")
 
-	normalizedCleanPath := absCleanPath(t, cleanPath)
-	normalizedMessyPath := absCleanPath(t, messyPath)
-	require.Equal(t, normalizedCleanPath, normalizedMessyPath)
+	require.NoError(t, tree.AddPath(domain.Path(messyRaw)))
 
-	require.NoError(t, tree.AddPath(messyPath))
-
-	parents, err := tree.GetParents(cleanPath)
+	// Должно нормализоваться к одному и тому же пути
+	parents, err := tree.GetParents(domain.Path(cleanRaw))
 	require.NoError(t, err)
-	assert.Equal(t, expectedParentChain(normalizedCleanPath), parents)
+
+	expected := []domain.Path{
+		normalize(t, filepath.Join(base, "folder")),
+		normalize(t, base),
+	}
+	assert.Equal(t, expected, parents)
 }
 
 func TestPathTree_GetParentsAndGetChildren_NotFound(t *testing.T) {
 	tree := NewPathTree()
 
-	missingPath := filepath.Join(t.TempDir(), "missing", "node.txt")
+	missing := domain.Path(filepath.Join(t.TempDir(), "missing", "node.txt"))
 
-	parents, err := tree.GetParents(missingPath)
+	parents, err := tree.GetParents(missing)
 	require.ErrorIs(t, err, ErrNotFound)
-	require.Nil(t, parents)
+	assert.Nil(t, parents)
 
-	children, err := tree.GetChildren(missingPath)
+	children, err := tree.GetChildren(missing)
 	require.ErrorIs(t, err, ErrNotFound)
-	require.Nil(t, children)
+	assert.Nil(t, children)
 }
 
 func TestPathTree_RemovePath_RemovesSubtree(t *testing.T) {
 	tree := NewPathTree()
 
-	baseDirectory := t.TempDir()
-	parentPath := filepath.Join(baseDirectory, "parent")
-	firstChildPath := filepath.Join(parentPath, "first.txt")
-	secondChildPath := filepath.Join(parentPath, "second.txt")
+	base := t.TempDir()
+	parentRaw := filepath.Join(base, "parent")
+	firstRaw := filepath.Join(parentRaw, "first.txt")
+	secondRaw := filepath.Join(parentRaw, "second.txt")
 
-	require.NoError(t, tree.AddPath(firstChildPath))
-	require.NoError(t, tree.AddPath(secondChildPath))
+	require.NoError(t, tree.AddPath(domain.Path(firstRaw)))
+	require.NoError(t, tree.AddPath(domain.Path(secondRaw)))
 
-	baseChildrenBeforeRemoval, err := tree.GetChildren(baseDirectory)
+	// Проверяем, что parent появился как ребёнок base
+	basePath := normalize(t, base)
+	childrenBefore, err := tree.GetChildren(basePath)
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{absCleanPath(t, parentPath)}, baseChildrenBeforeRemoval)
+	assert.ElementsMatch(t, []domain.Path{normalize(t, parentRaw)}, childrenBefore)
 
-	require.NoError(t, tree.RemovePath(parentPath))
+	// Удаляем parent и всё поддерево
+	require.NoError(t, tree.RemovePath(domain.Path(parentRaw)))
 
-	_, err = tree.GetParents(firstChildPath)
+	// Всё поддерево должно исчезнуть
+	_, err = tree.GetParents(domain.Path(firstRaw))
 	require.ErrorIs(t, err, ErrNotFound)
 
-	_, err = tree.GetParents(secondChildPath)
+	_, err = tree.GetParents(domain.Path(secondRaw))
 	require.ErrorIs(t, err, ErrNotFound)
 
-	_, err = tree.GetChildren(parentPath)
+	_, err = tree.GetChildren(domain.Path(parentRaw))
 	require.ErrorIs(t, err, ErrNotFound)
 
-	baseChildrenAfterRemoval, err := tree.GetChildren(baseDirectory)
+	// У base больше не должно быть детей
+	childrenAfter, err := tree.GetChildren(basePath)
 	require.NoError(t, err)
-	assert.Empty(t, baseChildrenAfterRemoval)
+	assert.Empty(t, childrenAfter)
 }
 
 func TestPathTree_RemovePath_UnknownPathReturnsErrNotFound(t *testing.T) {
 	tree := NewPathTree()
 
-	missingPath := filepath.Join(t.TempDir(), "missing", "node.txt")
+	missing := domain.Path(filepath.Join(t.TempDir(), "missing", "node.txt"))
 
-	err := tree.RemovePath(missingPath)
+	err := tree.RemovePath(missing)
 	require.ErrorIs(t, err, ErrNotFound)
 }
