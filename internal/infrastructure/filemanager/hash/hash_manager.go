@@ -40,7 +40,7 @@ func NewHashManager(options HashManagerOptions) *HashManager {
 
 func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, fullPath domain.Path) (string, error) {
 	if _, isDirty := h.dirtyPaths[fullPath.String()]; !isDirty {
-		if hash, err := h.hashCache.GetHashCache(fullPath.String()); err == nil {
+		if hash, err := h.hashCache.GetHashCache(fullPath); err == nil {
 			return hash, nil
 		}
 		h.logger.LogAttrs(
@@ -71,7 +71,9 @@ func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, fullPath
 		slog.String("hash", hash),
 	)
 
-	h.hashCache.SetHashCache(fullPath.String(), hash)
+	if err := h.hashCache.SetHashCache(fullPath, hash); err != nil {
+		return "", err
+	}
 
 	h.logger.LogAttrs(
 		h.loggerCtx,
