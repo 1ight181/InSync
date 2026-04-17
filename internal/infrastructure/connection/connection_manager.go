@@ -9,8 +9,8 @@ import (
 )
 
 type ConnectionManager struct {
-	nodeNameResolver INodeNameResolver
-	baseGrpcConf     *clt.GrpcConf
+	mdnsUrlResolver IMDnsUrlResolver
+	baseGrpcConf    *clt.GrpcConf
 
 	ctx context.Context
 
@@ -26,8 +26,8 @@ type ConnectionManager struct {
 }
 
 type ConnectionManagerOptions struct {
-	NodeNameResolver INodeNameResolver
-	BaseGrpcConf     *clt.GrpcConf
+	MdnsUrlResolver IMDnsUrlResolver
+	BaseGrpcConf    *clt.GrpcConf
 
 	Ctx context.Context
 
@@ -38,15 +38,15 @@ type ConnectionManagerOptions struct {
 
 func NewConnectionManager(opts ConnectionManagerOptions) *ConnectionManager {
 	if opts.BaseGrpcConf == nil ||
-		opts.NodeNameResolver == nil ||
+		opts.MdnsUrlResolver == nil ||
 		opts.Ctx == nil ||
 		opts.GrpcClientLogger == nil ||
 		opts.Logger == nil {
 		panic("Все поля ConnectionManagerOptions должны быть заполнены")
 	}
 	return &ConnectionManager{
-		nodeNameResolver: opts.NodeNameResolver,
-		baseGrpcConf:     opts.BaseGrpcConf,
+		mdnsUrlResolver: opts.MdnsUrlResolver,
+		baseGrpcConf:    opts.BaseGrpcConf,
 
 		ctx: opts.Ctx,
 
@@ -64,7 +64,7 @@ func (c *ConnectionManager) CurrentNodeName() domain.NodeName {
 }
 
 func (c *ConnectionManager) ConnectToNode(nodeName domain.NodeName) error {
-	mDnsUrl := c.nodeNameResolver.ResolveToMDnsUrl(nodeName)
+	mDnsUrl := c.mdnsUrlResolver.Resolve(nodeName)
 
 	grpcConf := c.baseGrpcConf
 	grpcConf.ServerAddress = mDnsUrl
