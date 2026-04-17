@@ -101,10 +101,14 @@ func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName)
 
 	snapshot := domain.NewSnapshot(allEntries)
 
+	localDeviceId := f.localDeviceIdResolver.GetLocalDeviceId()
+
+	now := uint64(time.Now().Unix())
+
 	snapshotMetadata := domain.SnapshotMetadata{
-		UnixTime: uint64(time.Now().Unix()),
+		UnixTime: now,
 		RootName: rootName,
-		DeviceId: f.localDeviceIdResolver.GetLocalDeviceId(),
+		DeviceId: localDeviceId,
 	}
 
 	snapshotWithMetadata := domain.SnapshotWithMetadata{
