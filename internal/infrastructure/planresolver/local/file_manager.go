@@ -6,5 +6,5 @@ import (
 )
 
 type IFileManager interface {
-	GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error)
+	GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.SnapshotWithMetadata, error)
 }
