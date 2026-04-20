@@ -25,10 +25,16 @@ func NewSyncUseCase(options SyncUseCaseOptions) *SyncUseCase {
 	}
 }
 
-func (s *SyncUseCase) ApplySyncChanges(ctx context.Context, shouldUseCache bool, rootName domain.RootName) (<-chan domain.ChangeEvent, error) {
+func (s *SyncUseCase) ApplySyncChanges(ctx context.Context, shouldUseCache bool, rootName domain.RootName) (
+	appliedChanges <-chan domain.ChangeEvent,
+	conflicts <-chan domain.Conflict,
+	userDecision chan<- domain.Decision,
+	err error,
+) {
 	plan, err := s.syncPlanResolver.Resolve(ctx, rootName, shouldUseCache)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
-	return s.syncer.Sync(plan)
+
+	return s.syncer.Sync(ctx, plan)
 }

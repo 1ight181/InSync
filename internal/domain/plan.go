@@ -33,6 +33,10 @@ func (s SyncPlan) RemoteLength() int {
 	return s.remoteLength()
 }
 
+func (s SyncPlan) ChangeLength() int {
+	return s.localLength() + s.remoteLength()
+}
+
 func (s SyncPlan) ConflictLength() int {
 	return s.conflictLength()
 }

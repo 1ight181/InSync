@@ -1,7 +1,15 @@
 package sync
 
-import "insync/internal/domain"
+import (
+	"context"
+	"insync/internal/domain"
+)
 
 type ISyncer interface {
-	Sync(plan domain.SyncPlan) (<-chan domain.ChangeEvent, error)
+	Sync(ctx context.Context, plan domain.SyncPlan) (
+		appliedChanges <-chan domain.ChangeEvent,
+		conflicts <-chan domain.Conflict,
+		userDecision chan<- domain.Decision,
+		err error,
+	)
 }
