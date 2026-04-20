@@ -318,12 +318,15 @@ func RunApp() {
 
 	planner := planner.NewChangesPlannerWithTreeSkip()
 
+	planCache := planres.NewSyncPlanCache()
+
 	planResolverOpts := planres.PlanResolverOptions{
 		BaseSnapshotProvider:   baseSnapshotProvider,
 		RemoteSnapshotProvider: remoteSnapshotProvider,
 		LocalSnapshotProvider:  localSnapshotProvider,
 
 		ChangesPlanner: planner,
+		SyncPlanCache:  planCache,
 	}
 
 	planResolver := planres.NewPlanResolver(planResolverOpts)
