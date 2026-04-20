@@ -6,7 +6,7 @@ import (
 	"insync/internal/transport/grpc/insyncpb"
 )
 
-func (gc *GrpcClient) RenameFile(ctx context.Context, fileUuid string, rootName domain.RootName, oldRelativePath domain.Path, newRelativePath domain.Path) error {
+func (gc *GrpcClient) RenameFile(ctx context.Context, rootName domain.RootName, oldRelativePath domain.Path, newRelativePath domain.Path) error {
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка переименовать файл, когда клиент не запущен")
 		return ErrClientNotStarted
