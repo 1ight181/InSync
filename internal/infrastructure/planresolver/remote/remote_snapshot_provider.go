@@ -6,22 +6,22 @@ import (
 )
 
 type RemoteSnapshotProvider struct {
-	clientFabric IClientFabric
+	clientFactory IClientFactory
 }
 
 type RemoteSnapshotProviderOptions struct {
-	ClientFabric IClientFabric
+	ClientFactory IClientFactory
 }
 
 func NewRemoteSnapshotProvider(options RemoteSnapshotProviderOptions) *RemoteSnapshotProvider {
-	if options.ClientFabric == nil {
+	if options.ClientFactory == nil {
 		panic("Все поля RemoteSnapshotProviderOptions должны быть заполнены")
 	}
-	return &RemoteSnapshotProvider{clientFabric: options.ClientFabric}
+	return &RemoteSnapshotProvider{clientFactory: options.ClientFactory}
 }
 
 func (p *RemoteSnapshotProvider) GetRemoteSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
-	client := p.clientFabric.CurrentClient()
+	client := p.clientFactory.CurrentClient()
 	snapshotWithMetadata, err := client.GetSnapshot(ctx, rootName)
 	if err != nil {
 		return domain.Snapshot{}, err

@@ -305,7 +305,7 @@ func RunApp() {
 	baseSnapshotProvider := base.NewBaseSnapshotProvider(baseSnapshotProviderOpts)
 
 	remoteSnapshotProviderOpts := remote.RemoteSnapshotProviderOptions{
-		ClientFabric: connectionManager,
+		ClientFactory: connectionManager,
 	}
 	remoteSnapshotProvider := remote.NewRemoteSnapshotProvider(remoteSnapshotProviderOpts)
 

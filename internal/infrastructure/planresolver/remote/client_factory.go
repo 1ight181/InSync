@@ -2,6 +2,6 @@ package remote
 
 import "insync/internal/interfaces"
 
-type IClientFabric interface {
+type IClientFactory interface {
 	CurrentClient() interfaces.IClient
 }
