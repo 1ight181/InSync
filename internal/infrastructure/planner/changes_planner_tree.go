@@ -252,7 +252,7 @@ func (s *ChangesPlannerWithTreeSkip) handleModification(
 			RemoteRelativePath: remote.RelativePath,
 			LocalModifiedUnix:  local.FileInfo.Metadata.ModifiedUnix,
 			RemoteModifiedUnix: remote.FileInfo.Metadata.ModifiedUnix,
-			Conflict:           domain.ConflictBothModifiedConflictAtSameTime,
+			Conflict:           domain.ConflictBothModifiedAtSameTime,
 		}
 	}
 	return &domain.LocalChange{

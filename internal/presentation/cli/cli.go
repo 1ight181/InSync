@@ -461,7 +461,7 @@ func (c *Cli) conflictToHumanReadable(s domain.Conflict) string {
 	case domain.ConflictLocalRenamedRemoteRenamed:
 		conflictType = conflictTypeLocalRenamedRemoteRenamed
 
-	case domain.ConflictBothModifiedConflictAtSameTime:
+	case domain.ConflictBothModifiedAtSameTime:
 		conflictType = conflictTypeBothModifiedConflictAtSameTime
 
 	case domain.ConflictBothCreatedAtSamePathConflict:
