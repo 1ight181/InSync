@@ -36,5 +36,5 @@ func (s *SyncUseCase) ApplySyncChanges(ctx context.Context, shouldUseCache bool,
 		return nil, nil, nil, err
 	}
 
-	return s.syncer.Sync(ctx, plan)
+	return s.syncer.Sync(ctx, plan, rootName)
 }

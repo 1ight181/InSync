@@ -6,7 +6,7 @@ import (
 )
 
 type ISyncer interface {
-	Sync(ctx context.Context, plan domain.SyncPlan) (
+	Sync(ctx context.Context, plan domain.SyncPlan, rootName domain.RootName) (
 		appliedChanges <-chan domain.ChangeEvent,
 		conflicts <-chan domain.Conflict,
 		userDecision chan<- domain.Decision,

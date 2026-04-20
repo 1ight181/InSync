@@ -6,32 +6,27 @@ import (
 )
 
 type Syncer struct {
-	localApplier  ILocalApplier
-	remoteApplier IRemoteApplier
-
+	changeApplier    IChangeApplier
 	conflictResolver IConflictResolver
 }
 
 type SyncerOptions struct {
-	LocalApplier     ILocalApplier
-	RemoteApplier    IRemoteApplier
+	ChangeApplier    IChangeApplier
 	ConflictResolver IConflictResolver
 }
 
 func NewSyncer(opts SyncerOptions) *Syncer {
-	if opts.LocalApplier == nil ||
-		opts.RemoteApplier == nil ||
+	if opts.ChangeApplier == nil ||
 		opts.ConflictResolver == nil {
 		panic("Все поля SyncerOptions должны быть заполнены")
 	}
 	return &Syncer{
-		localApplier:     opts.LocalApplier,
-		remoteApplier:    opts.RemoteApplier,
+		changeApplier:    opts.ChangeApplier,
 		conflictResolver: opts.ConflictResolver,
 	}
 }
 
-func (s *Syncer) Sync(ctx context.Context, plan domain.SyncPlan) (
+func (s *Syncer) Sync(ctx context.Context, plan domain.SyncPlan, rootName domain.RootName) (
 	<-chan domain.ChangeEvent,
 	<-chan domain.Conflict,
 	chan<- domain.Decision,
@@ -43,7 +38,7 @@ func (s *Syncer) Sync(ctx context.Context, plan domain.SyncPlan) (
 
 	go func() {
 		for _, change := range plan.LocalChanges {
-			if err := s.applyLocalChange(change); err != nil {
+			if err := s.applyLocalChange(ctx, rootName, change); err != nil {
 				appliedChanges <- domain.ChangeEvent{Err: err}
 			}
 
@@ -51,7 +46,7 @@ func (s *Syncer) Sync(ctx context.Context, plan domain.SyncPlan) (
 		}
 
 		for _, change := range plan.RemoteChanges {
-			if err := s.applyRemoteChange(change); err != nil {
+			if err := s.applyRemoteChange(ctx, rootName, change); err != nil {
 				appliedChanges <- domain.ChangeEvent{Err: err}
 			}
 
@@ -64,7 +59,7 @@ func (s *Syncer) Sync(ctx context.Context, plan domain.SyncPlan) (
 			case <-ctx.Done():
 				return
 			case decision := <-userDecision:
-				appliedChange, err := s.resolveConflict(conflict, decision)
+				appliedChange, err := s.resolveConflict(ctx, rootName, conflict, decision)
 				if err != nil {
 					appliedChanges <- domain.ChangeEvent{Err: err}
 				}
@@ -81,33 +76,44 @@ func (s *Syncer) Sync(ctx context.Context, plan domain.SyncPlan) (
 	return appliedChanges, conflicts, userDecision, nil
 }
 
-func (s *Syncer) applyLocalChange(change domain.LocalChange) error {
-	if err := s.localApplier.Apply(change); err != nil {
+func (s *Syncer) applyLocalChange(
+	ctx context.Context,
+	rootName domain.RootName, change domain.LocalChange,
+) error {
+	if err := s.changeApplier.ApplyLocal(ctx, rootName, change); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *Syncer) applyRemoteChange(change domain.RemoteChange) error {
-	if err := s.remoteApplier.Apply(change); err != nil {
+func (s *Syncer) applyRemoteChange(
+	ctx context.Context,
+	rootName domain.RootName, change domain.RemoteChange,
+) error {
+	if err := s.changeApplier.ApplyRemote(ctx, rootName, change); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *Syncer) resolveConflict(conflict domain.Conflict, userDecision domain.Decision) (domain.SyncChange, error) {
+func (s *Syncer) resolveConflict(
+	ctx context.Context,
+	rootName domain.RootName,
+	conflict domain.Conflict,
+	userDecision domain.Decision,
+) (domain.SyncChange, error) {
 	requiredChange, isLocal, err := s.conflictResolver.Resolve(conflict, userDecision)
 	if err != nil {
 		return domain.SyncChange{}, err
 	}
 
 	if isLocal {
-		if err := s.localApplier.Apply(requiredChange.ToLocalChange()); err != nil {
+		if err := s.changeApplier.ApplyLocal(ctx, rootName, requiredChange.ToLocalChange()); err != nil {
 			return domain.SyncChange{}, err
 		}
 	} else {
-		if err := s.remoteApplier.Apply(requiredChange.ToRemoteChange()); err != nil {
+		if err := s.changeApplier.ApplyRemote(ctx, rootName, requiredChange.ToRemoteChange()); err != nil {
 			return domain.SyncChange{}, err
 		}
 	}
