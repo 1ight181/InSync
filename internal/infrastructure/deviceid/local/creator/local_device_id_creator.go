@@ -1,6 +1,7 @@
 package creator
 
 import (
+	"bytes"
 	"insync/internal/domain"
 
 	"github.com/google/uuid"
@@ -24,16 +25,14 @@ func NewLocalDeviceIdCreator(opts LocalDeviceIdCreatorOptions) *LocalDeviceIdCre
 }
 
 func (c *LocalDeviceIdCreator) CreateLocalDeviceId() (domain.DeviceId, error) {
-	file, err := c.filsSys.Create(c.deviceIdFilePath)
+	uuid := c.generateDeviceId()
+
+	reader := bytes.NewReader([]byte(uuid))
+
+	err := c.filsSys.AtomicWrite(c.deviceIdFilePath, reader)
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
-
-	uuid := c.generateDeviceId()
-
-	file.Write([]byte(uuid))
-
 	deviceId, err := domain.NewDeviceId(uuid)
 	if err != nil {
 		return "", err

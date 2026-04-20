@@ -5,6 +5,8 @@ import (
 	"io"
 	"io/fs"
 	"os"
+
+	atom "github.com/natefinch/atomic"
 )
 
 type FileSystem struct{}
@@ -29,27 +31,18 @@ func (f *FileSystem) Remove(fullPath domain.Path) error {
 	return os.Remove(fullPath.String())
 }
 
-func (f *FileSystem) CreateTempFile(dir domain.Path, pattern string) (io.ReadWriteCloser, domain.Path, error) {
-	file, err := os.CreateTemp(dir.String(), pattern)
-	fileFullPath, err := dir.Join(file.Name())
-	if err != nil {
-		return nil, "", err
-	}
-	return file, fileFullPath, err
-}
-
 func (f *FileSystem) Rename(oldPath, newPath domain.Path) error {
-	return os.Rename(oldPath.String(), newPath.String())
+	return atom.ReplaceFile(oldPath.String(), newPath.String())
 }
 
 func (f *FileSystem) MkdirAll(path domain.Path, perm fs.FileMode) error {
 	return os.MkdirAll(path.String(), perm)
 }
 
-func (f *FileSystem) Create(fullPath domain.Path) (io.ReadWriteCloser, error) {
-	return os.Create(fullPath.String())
-}
-
 func (f *FileSystem) Stat(fullPath domain.Path) (fs.FileInfo, error) {
 	return os.Stat(fullPath.String())
+}
+
+func (f *FileSystem) AtomicWrite(fullPath domain.Path, data io.Reader) error {
+	return atom.WriteFile(fullPath.String(), data)
 }

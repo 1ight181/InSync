@@ -6,5 +6,5 @@ import (
 )
 
 type IFileSystem interface {
-	Create(fullPath domain.Path) (io.ReadWriteCloser, error)
+	AtomicWrite(fullPath domain.Path, data io.Reader) error
 }

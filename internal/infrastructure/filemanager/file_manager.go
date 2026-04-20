@@ -3,11 +3,9 @@ package filemanager
 import (
 	"bytes"
 	"context"
-	"errors"
 	"insync/internal/domain"
 	cont "insync/internal/infrastructure/filemanager/content"
 	"sort"
-	"syscall"
 	"time"
 
 	"io"
@@ -44,8 +42,6 @@ type FileManager struct {
 	pathTreeWriter        IPathTreeWriter
 	localDeviceIdProvider ILocalDeviceIdProvider
 
-	tempDir domain.Path
-
 	logger    *slog.Logger
 	loggerCtx context.Context
 }
@@ -57,8 +53,6 @@ type FileManagerOptions struct {
 	PathTreeWriter        IPathTreeWriter
 	LocalDeviceIdProvider ILocalDeviceIdProvider
 
-	TempDir domain.Path
-
 	Logger    *slog.Logger
 	LoggerCtx context.Context
 }
@@ -69,7 +63,6 @@ func NewFileManager(opts FileManagerOptions) *FileManager {
 		opts.FileSystem == nil ||
 		opts.PathTreeWriter == nil ||
 		opts.LocalDeviceIdProvider == nil ||
-		opts.TempDir == "" ||
 		opts.Logger == nil ||
 		opts.LoggerCtx == nil {
 		panic("Все поля FileManagerOptions должны быть заполнены")
@@ -80,8 +73,6 @@ func NewFileManager(opts FileManagerOptions) *FileManager {
 		fileSystem:            opts.FileSystem,
 		pathTreeWriter:        opts.PathTreeWriter,
 		localDeviceIdProvider: opts.LocalDeviceIdProvider,
-
-		tempDir: opts.TempDir,
 
 		logger:    opts.Logger,
 		loggerCtx: opts.LoggerCtx,
@@ -196,12 +187,12 @@ func (f *FileManager) PutFile(ctx context.Context, rootName domain.RootName, rel
 		return err
 	}
 
-	tempFilePath, err := f.writeContentToTemp(content)
-	if err != nil {
+	destDir := resolvedPath.Dir()
+	if err := os.MkdirAll(destDir.String(), 0755); err != nil {
 		return err
 	}
 
-	if err := f.moveTempToDestination(ctx, tempFilePath, resolvedPath); err != nil {
+	if err := f.fileSystem.AtomicWrite(resolvedPath, content); err != nil {
 		return err
 	}
 
@@ -210,77 +201,6 @@ func (f *FileManager) PutFile(ctx context.Context, rootName domain.RootName, rel
 	}
 
 	return f.hashManager.MarkDirty(resolvedPath)
-}
-
-func (f *FileManager) writeContentToTemp(content io.Reader) (domain.Path, error) {
-	tempFile, tempFilePath, err := f.fileSystem.CreateTempFile(f.tempDir, "filemanager_temp_*")
-	if err != nil {
-		return "", err
-	}
-
-	defer tempFile.Close()
-
-	_, err = io.Copy(tempFile, content)
-	if err != nil {
-		if err := f.fileSystem.Remove(tempFilePath); err != nil {
-			f.logger.LogAttrs(
-				f.loggerCtx,
-				slog.LevelError,
-				"Не удалось удалить временный файл при ошибке записи в методе writeContentToTemp",
-				slog.String("tempFilePath", tempFilePath.String()),
-			)
-		}
-		return "", err
-	}
-
-	return tempFilePath, nil
-
-}
-
-func (f *FileManager) moveTempToDestination(ctx context.Context, tempFilePath domain.Path, destPath domain.Path) error {
-	defer func() {
-		if err := f.fileSystem.Remove(tempFilePath); err != nil {
-			f.logger.LogAttrs(
-				f.loggerCtx,
-				slog.LevelError,
-				"Не удалось удалить временный файл при ошибке перемещения в методе moveTempToDestination",
-				slog.String("tempFilePath", tempFilePath.String()),
-			)
-		}
-	}()
-
-	destDir, err := domain.NewPath(filepath.Dir(destPath.String()))
-	if err != nil {
-		return err
-	}
-
-	if err := f.fileSystem.MkdirAll(destDir, 0755); err != nil {
-		return err
-	}
-
-	if err := f.fileSystem.Rename(tempFilePath, destPath); errors.Is(err, syscall.EXDEV) {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		// fallback при ошибке перемещения между fs
-		srcFile, err := f.fileSystem.Open(tempFilePath)
-		if err != nil {
-			return err
-		}
-		defer srcFile.Close()
-
-		dstFile, err := f.fileSystem.Create(destPath)
-		if err != nil {
-			return err
-		}
-		defer dstFile.Close()
-
-		if _, err := io.Copy(dstFile, srcFile); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (f *FileManager) openDirContent(fullPath, relativePath domain.Path) (io.ReadCloser, error) {
@@ -444,14 +364,14 @@ func (f *FileManager) collectFileEntriesRecursive(
 	ctx context.Context,
 	currentAbsolutePath domain.Path,
 	currentPath domain.Path,
-) ([]domain.FileEntry, uint64, error) { // добавили возврат размера поддерева
+) ([]domain.FileEntry, uint64, error) {
 	directoryEntries, err := f.fileSystem.ReadDir(currentAbsolutePath)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	var collectedEntries []domain.FileEntry
-	var subtreeSize uint64 = 0 // размер текущего поддерева (включая саму запись)
+	var subtreeSize uint64 = 0
 
 	for _, directoryEntry := range directoryEntries {
 		if ctx.Err() != nil {
@@ -520,13 +440,11 @@ func (f *FileManager) collectFileEntriesRecursive(
 		}
 
 		if directoryEntry.IsDir() {
-			// рекурсия — получаем список и размер поддерева детей
 			nested, nestedSubtreeSize, err := f.collectFileEntriesRecursive(ctx, nextAbsolutePath, nextPath)
 			if err != nil {
 				return nil, 0, err
 			}
 
-			// теперь знаем полный размер поддерева этой директории
 			fileEntry.SubtreeSize = 1 + nestedSubtreeSize
 
 			collectedEntries = append(collectedEntries, fileEntry)
@@ -534,7 +452,6 @@ func (f *FileManager) collectFileEntriesRecursive(
 
 			subtreeSize += 1 + nestedSubtreeSize
 		} else {
-			// для обычного файла размер поддерева всегда 1
 			fileEntry.SubtreeSize = 1
 
 			collectedEntries = append(collectedEntries, fileEntry)
