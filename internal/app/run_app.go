@@ -13,7 +13,7 @@ import (
 	hashcache "insync/internal/infrastructure/filemanager/hash/cache"
 	"insync/internal/infrastructure/filemanager/pathtree"
 	"insync/internal/infrastructure/filesys"
-	node "insync/internal/infrastructure/nodename"
+	mdnsurl "insync/internal/infrastructure/mdnsurl"
 	planner "insync/internal/infrastructure/planner"
 	planres "insync/internal/infrastructure/planresolver"
 	base "insync/internal/infrastructure/planresolver/base"
@@ -266,12 +266,12 @@ func RunApp() {
 
 	connectionManagerLogger := logger.With(moduleAtrributeName, connectionManagerModuleName)
 
-	mdnsUrldResolverOpts := node.MDnsUrlResolverOptions{
+	mdnsUrldResolverOpts := mdnsurl.MDnsUrlResolverOptions{
 		MDnsServerServiceType: mDnsBrowserConfig.ServerServiceType,
 		MDnsServerDomain:      mDnsBrowserConfig.ServerDomain,
 	}
 
-	mdnsUrlResolver := node.NewMDnsUrlResolver(mdnsUrldResolverOpts)
+	mdnsUrlResolver := mdnsurl.NewMDnsUrlResolver(mdnsUrldResolverOpts)
 
 	connectionManagerOpts := conn.ConnectionManagerOptions{
 		MDnsUrlResolver:  mdnsUrlResolver,
