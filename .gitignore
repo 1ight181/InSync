@@ -35,3 +35,4 @@ certs
 
 logs
 config.yaml
+db/app.db

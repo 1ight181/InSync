@@ -9,11 +9,14 @@ tls: &tls
   ca_cert_filename: "ca"
   ca_cert_extension: ".crt"
 
+chunk_size_in_bytes: &chunk_size 1024
+
 server:
   ip: ""
   port: 50051
   network_type: "tcp"
   service_name: "insincpb.FileSyncService"
+  chunk_size_in_bytes: *chunk_size
 
   tls:
     <<: *tls
@@ -34,7 +37,7 @@ client:
     server_network_type: "tcp"
     load_balancing_policy: "pick_first"
     should_use_health_check: true
-    chunk_size_in_bytes: 1024
+    chunk_size_in_bytes: *chunk_size
     rpc_timeout: 5
 
     rpc_retry_policy:
@@ -64,7 +67,8 @@ client:
       client_key_extension: ".key"
 
 db:
-  path: "../db/app.db"
+  dir: "../db"
+  file_name: "app.db"
   pragma: "?_pragma=journal_mode(wal)&_pragma=foreign_keys(1)"
 
 logger:

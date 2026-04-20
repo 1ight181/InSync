@@ -6,10 +6,11 @@ import (
 
 // Реализует интерфейс ConfigModel
 type ServerConfig struct {
-	Address     string `mapstructure:"address"`
-	Port        int    `mapstructure:"port"`
-	NetworkType string `mapstructure:"network_type"`
-	ServiceName string `mapstructure:"service_name"`
+	Ip               string `mapstructure:"ip"`
+	Port             int    `mapstructure:"port"`
+	NetworkType      string `mapstructure:"network_type"`
+	ServiceName      string `mapstructure:"service_name"`
+	ChunkSizeInBytes int    `mapstructure:"chunk_size_in_bytes"`
 
 	TlsConfig ServerTlsConfig `mapstructure:"tls"`
 }
@@ -26,5 +27,5 @@ func (sc *ServerConfig) Validate() error {
 }
 
 func (sc *ServerConfig) GetAddress() string {
-	return sc.Address + ":" + strconv.Itoa(sc.Port)
+	return sc.Ip + ":" + strconv.Itoa(sc.Port)
 }

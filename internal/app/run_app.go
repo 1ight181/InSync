@@ -91,8 +91,8 @@ func RunApp() {
 	pathTree := pathtree.NewPathTree()
 
 	dbConfig := config.DbConfig
-	dbPath := dbConfig.Path
-	if err := os.MkdirAll(dbPath, 0755); err != nil {
+	dbDir := dbConfig.Dir
+	if err := os.MkdirAll(dbDir, 0755); err != nil {
 		panic(fmt.Sprintf("Не удалось создать директорию для БД: %v", err))
 	}
 	dsn := dbConfig.GetDsn()
@@ -175,13 +175,16 @@ func RunApp() {
 	serverConfig := config.ServerConfig
 	grpcServerOpts := server.GrpcServerOptions{
 		FileUseCase: fileUseCase,
-		CertPath:    serverConfig.TlsConfig.GetServerCertPath(),
-		KeyPath:     serverConfig.TlsConfig.GetServerKeyPath(),
-		CaCertPath:  serverConfig.TlsConfig.GetCaCertPath(),
+
+		CertPath:   serverConfig.TlsConfig.GetServerCertPath(),
+		KeyPath:    serverConfig.TlsConfig.GetServerKeyPath(),
+		CaCertPath: serverConfig.TlsConfig.GetCaCertPath(),
 
 		NetworkType: serverConfig.NetworkType,
-		Address:     serverConfig.Address,
+		Address:     serverConfig.GetAddress(),
 		ServiceName: serverConfig.ServiceName,
+
+		ChunkSizeInBytes: serverConfig.ChunkSizeInBytes,
 
 		Ctx: appCtx,
 
