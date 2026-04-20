@@ -1,6 +1,9 @@
 package connect
 
-import "insync/internal/domain"
+import (
+	"context"
+	"insync/internal/domain"
+)
 
 type NodeUseCase struct {
 	nodeNamesBrowser INodeNamesBrowser
@@ -19,6 +22,6 @@ func NewNodeUseCase(opts NodeUseCaseOptions) *NodeUseCase {
 	}
 }
 
-func (c *NodeUseCase) ShowNodeNames() (chan domain.NodeName, error) {
-	return c.nodeNamesBrowser.BrowseNodeNames()
+func (c *NodeUseCase) ShowNodeNames(ctx context.Context) (chan domain.NodeName, error) {
+	return c.nodeNamesBrowser.BrowseNodeNames(ctx)
 }

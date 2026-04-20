@@ -12,8 +12,6 @@ type ConnectionManager struct {
 	mdnsUrlResolver IMDnsUrlResolver
 	baseGrpcConf    *clt.GrpcConf
 
-	ctx context.Context
-
 	grpcClientLogger *slog.Logger
 
 	logger    *slog.Logger
@@ -29,8 +27,6 @@ type ConnectionManagerOptions struct {
 	MDnsUrlResolver IMDnsUrlResolver
 	BaseGrpcConf    *clt.GrpcConf
 
-	Ctx context.Context
-
 	GrpcClientLogger *slog.Logger
 
 	Logger *slog.Logger
@@ -39,7 +35,6 @@ type ConnectionManagerOptions struct {
 func NewConnectionManager(opts ConnectionManagerOptions) *ConnectionManager {
 	if opts.BaseGrpcConf == nil ||
 		opts.MDnsUrlResolver == nil ||
-		opts.Ctx == nil ||
 		opts.GrpcClientLogger == nil ||
 		opts.Logger == nil {
 		panic("Все поля ConnectionManagerOptions должны быть заполнены")
@@ -47,8 +42,6 @@ func NewConnectionManager(opts ConnectionManagerOptions) *ConnectionManager {
 	return &ConnectionManager{
 		mdnsUrlResolver: opts.MDnsUrlResolver,
 		baseGrpcConf:    opts.BaseGrpcConf,
-
-		ctx: opts.Ctx,
 
 		grpcClientLogger: opts.GrpcClientLogger,
 		logger:           opts.Logger,

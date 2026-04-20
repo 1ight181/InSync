@@ -22,8 +22,7 @@ type HashManagerOptions struct {
 	HashCalculator IHashCalculator
 	PathTreeReader IPathTreeReader
 
-	Logger    *slog.Logger
-	LoggerCtx context.Context
+	Logger *slog.Logger
 }
 
 func NewHashManager(options HashManagerOptions) *HashManager {
@@ -34,7 +33,7 @@ func NewHashManager(options HashManagerOptions) *HashManager {
 
 		dirtyPaths: make(map[domain.Path]struct{}),
 		logger:     options.Logger,
-		loggerCtx:  options.LoggerCtx,
+		loggerCtx:  context.Background(),
 	}
 }
 

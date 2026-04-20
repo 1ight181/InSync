@@ -1,7 +1,10 @@
 package cli
 
-import "insync/internal/domain"
+import (
+	"context"
+	"insync/internal/domain"
+)
 
 type INodeUseCase interface {
-	ShowNodeNames() (nodeNamesChan chan domain.NodeName, err error)
+	ShowNodeNames(ctx context.Context) (nodeNamesChan chan domain.NodeName, err error)
 }

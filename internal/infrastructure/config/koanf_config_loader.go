@@ -1,7 +1,6 @@
 package config
 
 import (
-	"context"
 	"insync/internal/infrastructure/config/models"
 	"strings"
 
@@ -19,7 +18,6 @@ type KoanfYamlEnvConfigLoader struct {
 	envPrefix          string
 	envDelimiter       string
 	logger             *slog.Logger
-	ctx                context.Context
 	tag                string
 }
 
@@ -29,7 +27,6 @@ type KoanfYamlEnvConfigLoaderOption struct {
 	EnvPrefix          string
 	EnvDelimiter       string
 	Logger             *slog.Logger
-	Ctx                context.Context
 	Tag                string
 }
 
@@ -39,7 +36,6 @@ func NewConfigLoader(opts KoanfYamlEnvConfigLoaderOption) *KoanfYamlEnvConfigLoa
 		opts.EnvPrefix == "" ||
 		opts.EnvDelimiter == "" ||
 		opts.Logger == nil ||
-		opts.Ctx == nil ||
 		opts.Tag == "" {
 		panic("Все поля KoanfYamlEnvConfigLoaderOption должны быть заполнены")
 	}
@@ -49,7 +45,6 @@ func NewConfigLoader(opts KoanfYamlEnvConfigLoaderOption) *KoanfYamlEnvConfigLoa
 		logger:             opts.Logger,
 		envPrefix:          opts.EnvPrefix,
 		envDelimiter:       opts.EnvDelimiter,
-		ctx:                opts.Ctx,
 		tag:                opts.Tag,
 	}
 }

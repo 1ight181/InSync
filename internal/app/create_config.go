@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	cnf "insync/internal/infrastructure/config"
 	cnfmodels "insync/internal/infrastructure/config/models"
 	"log/slog"
@@ -29,7 +28,7 @@ func getConfigFileInfoFromEnv() (string, string) {
 	return configFileDir, configFileName
 }
 
-func createConfig(ctx context.Context) (*cnfmodels.GeneralConfig, error) {
+func createConfig() (*cnfmodels.GeneralConfig, error) {
 	configFileDir, configFileName := getConfigFileInfoFromEnv()
 	if configFileDir == "" || configFileName == "" {
 		if isDebug {
@@ -53,7 +52,6 @@ func createConfig(ctx context.Context) (*cnfmodels.GeneralConfig, error) {
 		EnvPrefix:    defaultEnvPrefix,
 		EnvDelimiter: defaultEnvDelimiter,
 		Logger:       stubLogger,
-		Ctx:          ctx,
 		Tag:          defaultTag,
 	}
 

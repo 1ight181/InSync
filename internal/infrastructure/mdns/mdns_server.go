@@ -19,7 +19,6 @@ type MDnsServer struct {
 
 	logger    *slog.Logger
 	loggerCtx context.Context
-	ctx       context.Context
 
 	server    *zeroconf.Server
 	isStarted atomic.Bool
@@ -32,7 +31,6 @@ type MDnsServerOptions struct {
 	Port         int
 	Interfaces   []string
 	Logger       *slog.Logger
-	Ctx          context.Context
 }
 
 func NewMDnsServer(opts MDnsServerOptions) *MDnsServer {
@@ -41,8 +39,7 @@ func NewMDnsServer(opts MDnsServerOptions) *MDnsServer {
 		opts.Domain == "" ||
 		opts.Port == 0 ||
 		opts.Interfaces == nil ||
-		opts.Logger == nil ||
-		opts.Ctx == nil {
+		opts.Logger == nil {
 		panic("Все поля MDnsServerOptions должны быть заполнены")
 	}
 	loggerCtx := context.Background()
@@ -54,7 +51,6 @@ func NewMDnsServer(opts MDnsServerOptions) *MDnsServer {
 		interfaces:   opts.Interfaces,
 		logger:       opts.Logger,
 		loggerCtx:    loggerCtx,
-		ctx:          opts.Ctx,
 	}
 }
 

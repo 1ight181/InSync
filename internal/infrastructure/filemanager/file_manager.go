@@ -53,8 +53,7 @@ type FileManagerOptions struct {
 	PathTreeWriter        IPathTreeWriter
 	LocalDeviceIdProvider ILocalDeviceIdProvider
 
-	Logger    *slog.Logger
-	LoggerCtx context.Context
+	Logger *slog.Logger
 }
 
 func NewFileManager(opts FileManagerOptions) *FileManager {
@@ -63,8 +62,7 @@ func NewFileManager(opts FileManagerOptions) *FileManager {
 		opts.FileSystem == nil ||
 		opts.PathTreeWriter == nil ||
 		opts.LocalDeviceIdProvider == nil ||
-		opts.Logger == nil ||
-		opts.LoggerCtx == nil {
+		opts.Logger == nil {
 		panic("Все поля FileManagerOptions должны быть заполнены")
 	}
 	return &FileManager{
@@ -75,7 +73,7 @@ func NewFileManager(opts FileManagerOptions) *FileManager {
 		localDeviceIdProvider: opts.LocalDeviceIdProvider,
 
 		logger:    opts.Logger,
-		loggerCtx: opts.LoggerCtx,
+		loggerCtx: context.Background(),
 	}
 }
 

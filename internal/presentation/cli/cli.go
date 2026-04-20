@@ -68,9 +68,8 @@ type Cli struct {
 	logger    *slog.Logger
 	loggerCtx context.Context
 
-	ctx context.Context
-
 	shouldUseCache *bool
+	nodeNameCache  []domain.NodeName
 }
 
 type CliOptions struct {
@@ -81,8 +80,6 @@ type CliOptions struct {
 	RootUseCase    IRootUseCase
 
 	Logger *slog.Logger
-
-	Ctx context.Context
 }
 
 func NewCli(opts CliOptions) *Cli {
@@ -91,8 +88,7 @@ func NewCli(opts CliOptions) *Cli {
 		opts.NodeUseCase == nil ||
 		opts.ConnectUseCase == nil ||
 		opts.RootUseCase == nil ||
-		opts.Logger == nil ||
-		opts.Ctx == nil {
+		opts.Logger == nil {
 		panic("Не все обязательные параметры были переданы при инициализации Cli")
 	}
 	loggerCtx := context.Background()
@@ -103,10 +99,9 @@ func NewCli(opts CliOptions) *Cli {
 		connectUseCase: opts.ConnectUseCase,
 		rootUseCase:    opts.RootUseCase,
 
-		logger:    opts.Logger,
-		loggerCtx: loggerCtx,
-
-		ctx: opts.Ctx,
+		logger:        opts.Logger,
+		loggerCtx:     loggerCtx,
+		nodeNameCache: make([]domain.NodeName, 0),
 	}
 }
 
@@ -259,18 +254,27 @@ func (c *Cli) createSyncCmd() *cobra.Command {
 
 func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) {
 	c.logger.Debug("Выполнение команды nodes")
-	nodeNamesChan, err := c.nodeUseCase.ShowNodeNames()
+
+	cmdCtx := cmd.Context()
+	interruptCtx, interruptCancel := signal.NotifyContext(cmdCtx, os.Interrupt)
+	defer interruptCancel()
+
+	nodeNamesChan, err := c.nodeUseCase.ShowNodeNames(interruptCtx)
 	if err != nil {
 		c.logger.Error("Не удалось получить узлы", "error", err)
 		return
 	}
 
-	c.logger.Info("Доступные узлы:")
+	c.logger.Info("Доступные узлы (динамический список, нажмите Ctrl+C для завершения):")
 
 	i := 1
-	for nodeName := range nodeNamesChan {
+	select {
+	case nodeName := <-nodeNamesChan:
 		c.logger.Info(fmt.Sprintf("%d. %s", i, nodeName))
 		i++
+		c.nodeNameCache = append(c.nodeNameCache, nodeName)
+	case <-interruptCtx.Done():
+		return
 	}
 }
 
@@ -567,13 +571,8 @@ func (c *Cli) suggestionFunc(annotationValue string, document *prompt.Document) 
 }
 
 func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
-	nodeNamesChan, err := c.nodeUseCase.ShowNodeNames()
-	if err != nil {
-		return nil
-	}
-
 	suggestions := make([]prompt.Suggest, 0)
-	for nodeName := range nodeNamesChan {
+	for _, nodeName := range c.nodeNameCache {
 		if strings.HasPrefix(nodeName.String(), prefix) {
 			suggestions = append(suggestions, prompt.Suggest{
 				Text: nodeName.String(),

@@ -1,7 +1,10 @@
 package connect
 
-import "insync/internal/domain"
+import (
+	"context"
+	"insync/internal/domain"
+)
 
 type INodeNamesBrowser interface {
-	BrowseNodeNames() (nodeNamesChan chan domain.NodeName, err error)
+	BrowseNodeNames(ctx context.Context) (nodeNamesChan chan domain.NodeName, err error)
 }

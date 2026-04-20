@@ -20,6 +20,8 @@ import (
 	local "insync/internal/infrastructure/planresolver/local"
 	remote "insync/internal/infrastructure/planresolver/remote"
 	"insync/internal/infrastructure/root"
+	syncer "insync/internal/infrastructure/syncer"
+	changeappl "insync/internal/infrastructure/syncer/applier"
 	cli "insync/internal/presentation/cli"
 	repo "insync/internal/repository/sqlite"
 	baserepo "insync/internal/repository/sqlite/base"
@@ -30,15 +32,13 @@ import (
 	nodeusecase "insync/internal/usecase/node"
 	rootusecase "insync/internal/usecase/root"
 	scanusecase "insync/internal/usecase/scan"
+	syncusecase "insync/internal/usecase/sync"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 )
 
 const (
-	exitTimeoutSeconds                   = 5
-	grpcServerGracefulStopTimeoutSeconds = 3
+	grpcServerGracefulStopTimeoutSeconds = 4
 	moduleAtrributeName                  = "module"
 	mDnsServerModuleName                 = "mdns_server"
 	mDnsBrowserModuleName                = "mdns_browser"
@@ -51,12 +51,7 @@ const (
 )
 
 func RunApp() {
-	stopSignal := make(chan os.Signal, 1)
-	signal.Notify(stopSignal, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-
-	appCtx, cancel := context.WithCancel(context.Background())
-
-	config, err := createConfig(appCtx)
+	config, err := createConfig()
 	if err != nil {
 		panic(fmt.Sprintf("Не удалось загрузить и проверить конфиг: %v", err))
 	}
@@ -81,7 +76,6 @@ func RunApp() {
 		mDnsServerConfig.Port,
 		mDnsServerConfig.GetInterfaces(),
 		mDnsServerLogger,
-		appCtx,
 	); err != nil {
 		panic(fmt.Sprintf("Не удалось запустить mDNS сервер: %v", err))
 	}
@@ -105,6 +99,16 @@ func RunApp() {
 
 	db := repo.NewGorm(dbOpts)
 
+	defer func() {
+		sqlDb, err := db.DB()
+		if err != nil {
+			logger.Warn("Не удалось получить sqlDb для закрытия sqlite")
+		}
+		if err := sqlDb.Close(); err != nil {
+			logger.Warn("Не удалось коректно закрыть sqlite")
+		}
+	}()
+
 	hashCacheRepoOpts := hashrepo.HashRepositoryOptions{
 		Db: db,
 	}
@@ -125,7 +129,6 @@ func RunApp() {
 		HashCalculator: hashCalc,
 		PathTreeReader: pathTree,
 		Logger:         hashManagerLogger,
-		LoggerCtx:      appCtx,
 	}
 
 	hashManager := hash.NewHashManager(hashManagerOpts)
@@ -157,8 +160,7 @@ func RunApp() {
 		PathTreeWriter:        pathTree,
 		LocalDeviceIdProvider: localIdDeviceResolver,
 
-		Logger:    fileManagerLogger,
-		LoggerCtx: appCtx,
+		Logger: fileManagerLogger,
 	}
 
 	fileManager := filemanager.NewFileManager(fileManagerOpts)
@@ -184,8 +186,6 @@ func RunApp() {
 
 		ChunkSizeInBytes: serverConfig.ChunkSizeInBytes,
 
-		Ctx: appCtx,
-
 		Logger: serverLogger,
 	}
 
@@ -195,8 +195,7 @@ func RunApp() {
 		panic("Не удалось запустить gRPC сервер")
 	}
 
-	go func() {
-		<-appCtx.Done()
+	defer func() {
 		timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), grpcServerGracefulStopTimeoutSeconds*time.Second)
 		defer timeoutCancel()
 
@@ -214,7 +213,6 @@ func RunApp() {
 		mDnsBrowserConfig.ServerDomain,
 		mDnsBrowserConfig.GetInterfaces(),
 		mDnsBrowserLogger,
-		appCtx,
 	)
 	if err != nil {
 		panic(fmt.Sprintf("Не удалось создать MDnsNodeNamesBrowser: %v", err))
@@ -232,7 +230,6 @@ func RunApp() {
 		CaCertPath: clientConfig.TlsConfig.GetCaCertPath(),
 
 		ServerNetworkType: clientConfig.ServerNetworkType,
-		ServerAddress:     clientConfig.ServerAddress,
 		ServerServiceName: clientConfig.ServerServiceName,
 
 		ResolverScheme:     clientConfig.ResolverScheme,
@@ -276,7 +273,6 @@ func RunApp() {
 		BaseGrpcConf:     &grpcClientConf,
 		GrpcClientLogger: clientLogger,
 		Logger:           connectionManagerLogger,
-		Ctx:              appCtx,
 	}
 
 	connectionManager := conn.NewConnectionManager(connectionManagerOpts)
@@ -341,28 +337,39 @@ func RunApp() {
 
 	rootUseCase := rootusecase.NewRootUseCase(rootUseCaseOpts)
 
+	changeApplierOpts := changeappl.ChangeApplierOptions{
+		FileManager:   fileManager,
+		ClientFactory: connectionManager,
+	}
+	changeApplier := changeappl.NewChangeApplier(changeApplierOpts)
+
+	conflictResolver := syncer.NewConflictResolver()
+
+	syncerOpts := syncer.SyncerOptions{
+		ChangeApplier:    changeApplier,
+		ConflictResolver: conflictResolver,
+	}
+	syncer := syncer.NewSyncer(syncerOpts)
+
+	syncusecaseOpts := syncusecase.SyncUseCaseOptions{
+		SyncPlanResolver: planResolver,
+		Syncer:           syncer,
+	}
+
+	syncUseCase := syncusecase.NewSyncUseCase(syncusecaseOpts)
+
 	cliLogger := logger.With(moduleAtrributeName, cliModuleName)
 
 	cliInstanceOpts := cli.CliOptions{
-		SyncUseCase:    nil, // TODO: добавить SyncUseCase
+		SyncUseCase:    syncUseCase,
 		ScanUseCase:    scanUseCase,
 		NodeUseCase:    nodeUseCase,
 		ConnectUseCase: connectUseCase,
 		RootUseCase:    rootUseCase,
 
 		Logger: cliLogger,
-
-		Ctx: appCtx,
 	}
 
 	cliInstance := cli.NewCli(cliInstanceOpts)
-	go func() { cliInstance.Start() }()
-
-	<-stopSignal
-	cancel()
-
-	exitCtx, exitCancel := context.WithTimeout(context.Background(), exitTimeoutSeconds*time.Second)
-	defer exitCancel()
-
-	<-exitCtx.Done()
+	cliInstance.Start()
 }

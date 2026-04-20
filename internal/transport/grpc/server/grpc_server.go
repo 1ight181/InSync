@@ -31,8 +31,6 @@ type GrpcServer struct {
 
 	chunkSizeInBytes int
 
-	ctx context.Context
-
 	logger    *slog.Logger
 	loggerCtx context.Context
 
@@ -55,10 +53,7 @@ type GrpcServerOptions struct {
 	ServiceName string
 
 	ChunkSizeInBytes int
-
-	Ctx context.Context
-
-	Logger *slog.Logger
+	Logger           *slog.Logger
 }
 
 func NewGrpcServer(opts GrpcServerOptions) *GrpcServer {
@@ -72,8 +67,6 @@ func NewGrpcServer(opts GrpcServerOptions) *GrpcServer {
 		opts.ServiceName == "" ||
 
 		opts.ChunkSizeInBytes <= 0 ||
-
-		opts.Ctx == nil ||
 
 		opts.Logger == nil {
 		panic("Все поля GrpcServerOption должны быть заполнены")
@@ -91,8 +84,6 @@ func NewGrpcServer(opts GrpcServerOptions) *GrpcServer {
 		serviceName: opts.ServiceName,
 
 		chunkSizeInBytes: opts.ChunkSizeInBytes,
-
-		ctx: opts.Ctx,
 
 		logger:    opts.Logger,
 		loggerCtx: loggerCtx,
@@ -129,11 +120,6 @@ func (gs *GrpcServer) Start() (err error) {
 
 	listener, err := net.Listen(gs.networkType, gs.address)
 	if err != nil {
-		return err
-	}
-
-	ctx := gs.ctx
-	if err := ctx.Err(); err != nil {
 		return err
 	}
 
