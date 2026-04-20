@@ -245,7 +245,6 @@ func (s *ChangesPlannerWithTreeSkip) handleModification(
 		return nil, &domain.RemoteChange{
 			OldRelativePath: local.RelativePath,
 			ChangeType:      domain.Modify,
-			ModifiedUnix:    local.FileInfo.Metadata.ModifiedUnix,
 		}, nil
 	} else if local.FileInfo.Metadata.ModifiedUnix == remote.FileInfo.Metadata.ModifiedUnix {
 		return nil, nil, &domain.Conflict{
@@ -259,7 +258,6 @@ func (s *ChangesPlannerWithTreeSkip) handleModification(
 	return &domain.LocalChange{
 		OldRelativePath: remote.RelativePath,
 		ChangeType:      domain.Modify,
-		ModifiedUnix:    remote.FileInfo.Metadata.ModifiedUnix,
 	}, nil, nil
 }
 func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
@@ -332,14 +330,14 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 		case localCreate != nil:
 			// изменение произошло на remote - требуется применить на local
 			localChanges = append(localChanges,
-				s.buildLocalRenameOrMove(baseEntry, localCreate.Path, localCreate.Modify),
+				s.buildLocalRenameOrMove(baseEntry, localCreate.Path),
 			)
 			delete(localByHash, hash)
 
 		case remoteCreate != nil:
 			// изменение произошло на local - требуется применить на remote
 			remoteChanges = append(remoteChanges,
-				s.buildRemoteRenameOrMove(baseEntry, remoteCreate.Path, remoteCreate.Modify),
+				s.buildRemoteRenameOrMove(baseEntry, remoteCreate.Path),
 			)
 			delete(remoteByHash, hash)
 		}
@@ -378,7 +376,6 @@ func (s *ChangesPlannerWithTreeSkip) extractCreateDeletePair(
 func (s *ChangesPlannerWithTreeSkip) buildLocalRenameOrMove(
 	baseEntry domain.FileEntry,
 	newPath domain.Path,
-	modifiedUnix uint64,
 ) domain.LocalChange {
 
 	baseDir, baseName := filepath.Split(baseEntry.RelativePath.String())
@@ -389,7 +386,6 @@ func (s *ChangesPlannerWithTreeSkip) buildLocalRenameOrMove(
 			OldRelativePath: baseEntry.RelativePath,
 			NewRelativePath: newPath,
 			ChangeType:      domain.Rename,
-			ModifiedUnix:    modifiedUnix,
 		}
 	}
 
@@ -397,13 +393,11 @@ func (s *ChangesPlannerWithTreeSkip) buildLocalRenameOrMove(
 		OldRelativePath: baseEntry.RelativePath,
 		NewRelativePath: newPath,
 		ChangeType:      domain.Move,
-		ModifiedUnix:    modifiedUnix,
 	}
 }
 func (s *ChangesPlannerWithTreeSkip) buildRemoteRenameOrMove(
 	baseEntry domain.FileEntry,
 	newPath domain.Path,
-	modifiedUnix uint64,
 ) domain.RemoteChange {
 
 	baseDir, baseName := filepath.Split(baseEntry.RelativePath.String())
@@ -414,7 +408,6 @@ func (s *ChangesPlannerWithTreeSkip) buildRemoteRenameOrMove(
 			OldRelativePath: baseEntry.RelativePath,
 			NewRelativePath: newPath,
 			ChangeType:      domain.Rename,
-			ModifiedUnix:    modifiedUnix,
 		}
 	}
 
@@ -422,7 +415,6 @@ func (s *ChangesPlannerWithTreeSkip) buildRemoteRenameOrMove(
 		OldRelativePath: baseEntry.RelativePath,
 		NewRelativePath: newPath,
 		ChangeType:      domain.Move,
-		ModifiedUnix:    modifiedUnix,
 	}
 }
 
@@ -472,13 +464,11 @@ func (s *ChangesPlannerWithTreeSkip) appendRemainingRemoteChanges(
 				*target = append(*target, domain.RemoteChange{
 					ChangeType:      domain.Create,
 					NewRelativePath: change.Path,
-					ModifiedUnix:    change.Modify,
 				})
 			case domain.Delete:
 				*target = append(*target, domain.RemoteChange{
 					ChangeType:      domain.Delete,
 					OldRelativePath: change.Path,
-					ModifiedUnix:    change.Modify,
 				})
 			}
 		}
@@ -496,13 +486,11 @@ func (s *ChangesPlannerWithTreeSkip) appendRemainingLocalChanges(
 				*target = append(*target, domain.LocalChange{
 					ChangeType:      domain.Create,
 					NewRelativePath: change.Path,
-					ModifiedUnix:    change.Modify,
 				})
 			case domain.Delete:
 				*target = append(*target, domain.LocalChange{
 					ChangeType:      domain.Delete,
 					OldRelativePath: change.Path,
-					ModifiedUnix:    change.Modify,
 				})
 			}
 		}

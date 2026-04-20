@@ -16,7 +16,6 @@ type SyncChange struct {
 	OldRelativePath Path
 	NewRelativePath Path
 	ChangeType      SyncChangeType
-	ModifiedUnix    uint64
 }
 
 func (c SyncChange) ToLocalChange() LocalChange {
