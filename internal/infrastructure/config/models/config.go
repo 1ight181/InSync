@@ -8,7 +8,6 @@ type GeneralConfig struct {
 	LoggerConfig                 LoggerConfig                 `mapstructure:"logger"`
 	MDnsServerConfig             MDnsServerConfig             `mapstructure:"mdns_server"`
 	MDnsBrowserConfig            MDnsBrowserConfig            `mapstructure:"mdns_browser"`
-	FileManagerConfig            FileManagerConfig            `mapstructure:"file_manager"`
 	RemoteDeviceIdResolverConfig RemoteDeviceIdResolverConfig `mapstructure:"remote_device_id_resolver"`
 	DeviceIdResolverConfig       DeviceIdResolverConfig       `mapstructure:"device_id_resolver"`
 }
@@ -30,9 +29,6 @@ func (gc *GeneralConfig) Validate() error {
 		return err
 	}
 	if err := gc.MDnsBrowserConfig.Validate(); err != nil {
-		return err
-	}
-	if err := gc.FileManagerConfig.Validate(); err != nil {
 		return err
 	}
 	if err := gc.RemoteDeviceIdResolverConfig.Validate(); err != nil {

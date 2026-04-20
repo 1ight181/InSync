@@ -130,7 +130,6 @@ func RunApp() {
 
 	hashManager := hash.NewHashManager(hashManagerOpts)
 
-	fileManagerConfig := config.FileManagerConfig
 	fileManagerLogger := logger.With(moduleAtrributeName, fileManagerModuleName)
 
 	deviceIdResolverConfig := config.DeviceIdResolverConfig
@@ -158,7 +157,6 @@ func RunApp() {
 		PathTreeWriter:        pathTree,
 		LocalDeviceIdProvider: localIdDeviceResolver,
 
-		TempDir:   domain.Path(fileManagerConfig.TempDir),
 		Logger:    fileManagerLogger,
 		LoggerCtx: appCtx,
 	}

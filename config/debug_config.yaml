@@ -99,8 +99,5 @@ mdns_browser:
   # формат "eth0;wlan0"
   interfaces: ""
 
-file_manager:
-  temp_dir: "../temp"
-
 remote_device_id_resolver:
   mdns_server_instance_name_postfix: *mdns_server_instance_name_postfix
