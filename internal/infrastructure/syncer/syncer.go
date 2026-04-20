@@ -2,6 +2,7 @@ package syncer
 
 import (
 	"context"
+	"errors"
 	"insync/internal/domain"
 )
 
@@ -61,6 +62,10 @@ func (s *Syncer) Sync(ctx context.Context, plan domain.SyncPlan, rootName domain
 			case decision := <-userDecision:
 				appliedChange, err := s.resolveConflict(ctx, rootName, conflict, decision)
 				if err != nil {
+					if errors.Is(err, ErrShouldSkip) {
+						continue
+					}
+
 					appliedChanges <- domain.ChangeEvent{Err: err}
 				}
 
