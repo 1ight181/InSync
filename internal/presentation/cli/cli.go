@@ -12,6 +12,8 @@ import (
 	prompt "github.com/c-bata/go-prompt"
 	"github.com/spf13/cobra"
 	cobraprompt "github.com/stromland/cobra-prompt"
+
+	promptui "github.com/manifoldco/promptui"
 )
 
 const (
@@ -27,13 +29,20 @@ const (
 )
 
 const (
-	conflictTypeLocalDeletedRemoteModified     = "LOCAL_DELETED_REMOTE_MODIFIED"
-	conflictTypeRemoteDeletedLocalModified     = "REMOTE_DELETED_LOCAL_MODIFIED"
-	conflictTypeLocalMovedRemoteMoved          = "LOCAL_MOVED_REMOTE_MOVED"
-	conflictTypeLocalRenamedRemoteRenamed      = "LOCAL_RENAMED_REMOTE_RENAMED"
-	conflictTypeBothModifiedConflictAtSameTime = "BOTH_MODIFIED_CONFLICT_AT_SAME_TIME"
-	conflictTypeBothCreatedAtSamePathConflict  = "BOTH_CREATED_AT_SAME_PATH_CONFLICT"
-	conflictTypeUnknown                        = "UNKNOWN"
+	conflictTypeLocalDeletedRemoteModified    = "Файл удален на локальном узле и модифицирован на удалённом"
+	conflictTypeRemoteDeletedLocalModified    = "Файл удален на удалённом узле и модифицирован на локальном"
+	conflictTypeLocalMovedRemoteMoved         = "Файл перемещен и на локальном узле, и на удалённом"
+	conflictTypeLocalRenamedRemoteRenamed     = "Файл переименован и на локальном узле, и на удалённом"
+	conflictTypeBothModifiedAtSameTime        = "Обе стороны модифицировали один и тот же файл в одно и то же время"
+	conflictTypeBothCreatedAtSamePathConflict = "Обе стороны создали файл по одному и тому же пути, но содержимое отличается"
+	conflictTypeUnknown                       = "Неизвестный тип конфликта"
+)
+
+const (
+	decisionLocalWin  = "Применить локальное изменение"
+	decisionRemoteWin = "Применить удалённое изменение"
+	decisionSkip      = "Пропустить конфликт"
+	decisionUnknown   = "Неизвестное решение"
 )
 
 const (
@@ -354,23 +363,76 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 	defer interruptCancel()
 
 	shouldUseCache := *c.shouldUseCache
-	changeEventChan, err := c.syncUseCase.ApplySyncChanges(interruptCtx, shouldUseCache, rootName)
+	appliedChanges, conflicts, userDecision, err := c.syncUseCase.ApplySyncChanges(interruptCtx, shouldUseCache, rootName)
 	if err != nil {
 		return err
 	}
 
-	for changeEvent := range changeEventChan {
+	go func() {
+		for changeEvent := range appliedChanges {
 
-		changeEventErr := changeEvent.Err
-		if changeEventErr != nil {
-			return changeEventErr
+			changeEventErr := changeEvent.Err
+			if changeEventErr != nil {
+				c.logger.Error(fmt.Sprintf("Не удалось применить изменение: %s", changeEventErr))
+				continue
+			}
+			c.logger.Info(fmt.Sprintf("Применено изменение: %s\n", c.changeToHumanReadable(changeEvent.Change)))
 		}
-		c.logger.Info(fmt.Sprintf("Применено изменение: %s\n", c.changeToHumanReadable(changeEvent.Change)))
+	}()
+
+	for conflict := range conflicts {
+		conflictLabel := c.conflictToHumanReadable(conflict)
+		prompt := promptui.Select{
+			Label: conflictLabel,
+			Items: []string{
+				c.decisionToHumanReadable(domain.LocalWin),
+				c.decisionToHumanReadable(domain.RemoteWin),
+				c.decisionToHumanReadable(domain.Skip),
+			},
+		}
+
+		_, decision, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+
+		userDecision <- c.fromHumanReadableDecision(decision)
+	}
+
+	if interruptCtx.Err() != nil {
+		c.logger.Error("Синхронизация прервана пользователем")
+		return nil
 	}
 
 	c.logger.Info("Синхронизация завершена")
 
 	return nil
+}
+
+func (c *Cli) decisionToHumanReadable(decision domain.Decision) string {
+	switch decision {
+	case domain.LocalWin:
+		return decisionLocalWin
+	case domain.RemoteWin:
+		return decisionRemoteWin
+	case domain.Skip:
+		return decisionSkip
+	default:
+		return decisionUnknown
+	}
+}
+
+func (c *Cli) fromHumanReadableDecision(decision string) domain.Decision {
+	switch decision {
+	case decisionLocalWin:
+		return domain.LocalWin
+	case decisionRemoteWin:
+		return domain.RemoteWin
+	case decisionSkip:
+		return domain.Skip
+	default:
+		return -1
+	}
 }
 
 func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
@@ -462,7 +524,7 @@ func (c *Cli) conflictToHumanReadable(s domain.Conflict) string {
 		conflictType = conflictTypeLocalRenamedRemoteRenamed
 
 	case domain.ConflictBothModifiedAtSameTime:
-		conflictType = conflictTypeBothModifiedConflictAtSameTime
+		conflictType = conflictTypeBothModifiedAtSameTime
 
 	case domain.ConflictBothCreatedAtSamePathConflict:
 		conflictType = conflictTypeBothCreatedAtSamePathConflict
@@ -472,7 +534,13 @@ func (c *Cli) conflictToHumanReadable(s domain.Conflict) string {
 	}
 
 	return fmt.Sprintf(
-		"Тип конфликта: %s\nLocalRelativePath : %s\nRemoteRelativePath : %s\nBaseRelativePath : %s\nLocalModifiedUnix : %d\nRemoteModifiedUnix : %d\nBaseModifiedUnix : %d\n",
+		`Тип конфликта: %s
+		Файл на локальном узле: %s
+		Файл на удалённом узле: %s
+		Файл на базовом снимке: %s
+		Последний раз модифицирован на локальном узле: %d
+		Последний раз модифицирован на удалённом узле: %d
+		Последний раз модифицирован по базовому снимку: %d`,
 		conflictType,
 		s.LocalRelativePath,
 		s.RemoteRelativePath,
