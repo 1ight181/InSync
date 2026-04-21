@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"insync/internal/infrastructure/config/models"
 	"strings"
 
@@ -30,14 +31,18 @@ type KoanfYamlEnvConfigLoaderOption struct {
 	Tag                string
 }
 
-func NewConfigLoader(opts KoanfYamlEnvConfigLoaderOption) *KoanfYamlEnvConfigLoader {
+var (
+	ErrInvalidOpts = errors.New("Все поля должны быть заполнены")
+)
+
+func NewConfigLoader(opts KoanfYamlEnvConfigLoaderOption) (*KoanfYamlEnvConfigLoader, error) {
 	if opts.KoanfDelimiter == "" ||
 		opts.YamlConfigFilePath == "" ||
 		opts.EnvPrefix == "" ||
 		opts.EnvDelimiter == "" ||
 		opts.Logger == nil ||
 		opts.Tag == "" {
-		panic("Все поля KoanfYamlEnvConfigLoaderOption должны быть заполнены")
+		return nil, ErrInvalidOpts
 	}
 	return &KoanfYamlEnvConfigLoader{
 		koanfDelimiter:     opts.KoanfDelimiter,
@@ -46,7 +51,7 @@ func NewConfigLoader(opts KoanfYamlEnvConfigLoaderOption) *KoanfYamlEnvConfigLoa
 		envPrefix:          opts.EnvPrefix,
 		envDelimiter:       opts.EnvDelimiter,
 		tag:                opts.Tag,
-	}
+	}, nil
 }
 
 func (kyecl *KoanfYamlEnvConfigLoader) LoadAndValidateConfig() (*models.GeneralConfig, error) {

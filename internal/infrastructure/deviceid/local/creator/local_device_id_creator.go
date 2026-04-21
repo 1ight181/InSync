@@ -2,6 +2,7 @@ package creator
 
 import (
 	"bytes"
+	"errors"
 	"insync/internal/domain"
 
 	"github.com/google/uuid"
@@ -17,11 +18,15 @@ type LocalDeviceIdCreatorOptions struct {
 	DeviceIdFilePath domain.Path
 }
 
-func NewLocalDeviceIdCreator(opts LocalDeviceIdCreatorOptions) *LocalDeviceIdCreator {
+var (
+	ErrInvalidOpts = errors.New("Все поля LocalDeviceIdCreatorOptions должны быть заполнены")
+)
+
+func NewLocalDeviceIdCreator(opts LocalDeviceIdCreatorOptions) (*LocalDeviceIdCreator, error) {
 	if opts.FileSys == nil || opts.DeviceIdFilePath == "" {
-		panic("Все поля LocalDeviceIdCreatorOptions должны быть заполнены")
+		return nil, ErrInvalidOpts
 	}
-	return &LocalDeviceIdCreator{filsSys: opts.FileSys}
+	return &LocalDeviceIdCreator{filsSys: opts.FileSys}, nil
 }
 
 func (c *LocalDeviceIdCreator) CreateLocalDeviceId() (domain.DeviceId, error) {

@@ -20,15 +20,19 @@ type ChangeApplierOptions struct {
 	ClientFactory IClientFactory
 }
 
-func NewChangeApplier(opts ChangeApplierOptions) *ChangeApplier {
+var (
+	ErrInvalidOpts = errors.New("Все поля ChangeApplierOptions должны быть заполнены")
+)
+
+func NewChangeApplier(opts ChangeApplierOptions) (*ChangeApplier, error) {
 	if opts.FileManager == nil ||
 		opts.ClientFactory == nil {
-		panic("Все поля ChangeApplierOptions должны быть заполнены")
+		return nil, ErrInvalidOpts
 	}
 	return &ChangeApplier{
 		fileManager:   opts.FileManager,
 		clientFactory: opts.ClientFactory,
-	}
+	}, nil
 }
 
 func (a *ChangeApplier) ApplyLocal(ctx context.Context, rootName domain.RootName, change domain.LocalChange) error {

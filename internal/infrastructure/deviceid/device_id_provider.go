@@ -1,6 +1,9 @@
 package deviceid
 
-import "insync/internal/domain"
+import (
+	"errors"
+	"insync/internal/domain"
+)
 
 type DeviceIdProvider struct {
 	localDeviceIdResolver  ILocalDeviceIdResolver
@@ -12,26 +15,25 @@ type DeviceIdProviderOptions struct {
 	RemoteDeviceIdResolver IRemoteDeviceIdResolver
 }
 
-func NewDeviceIdProvider(opts DeviceIdProviderOptions) *DeviceIdProvider {
+var (
+	ErrDeviceIdProviderInvalidOpts = errors.New("Все поля DeviceIdProviderOptions должны быть заполнены")
+)
+
+func NewDeviceIdProvider(opts DeviceIdProviderOptions) (*DeviceIdProvider, error) {
 	if opts.LocalDeviceIdResolver == nil ||
 		opts.RemoteDeviceIdResolver == nil {
-		panic("Все поля DeviceIdProviderOptions должны быть заполнены")
+		return nil, ErrDeviceIdProviderInvalidOpts
 	}
 	return &DeviceIdProvider{
 		localDeviceIdResolver:  opts.LocalDeviceIdResolver,
 		remoteDeviceIdResolver: opts.RemoteDeviceIdResolver,
-	}
+	}, nil
 }
 
-func (d *DeviceIdProvider) GetCurrentLocalDeviceId() domain.DeviceId {
+func (d *DeviceIdProvider) GetCurrentLocalDeviceId() (domain.DeviceId, error) {
 	return d.localDeviceIdResolver.Resolve()
 }
 
-func (d *DeviceIdProvider) GetCurrentRemoteDeviceId(nodeName domain.NodeName) (domain.DeviceId, error) {
-	remoteDeviceId, err := d.remoteDeviceIdResolver.Resolve(nodeName)
-	if err != nil {
-		return "", err
-	}
-
-	return remoteDeviceId, nil
+func (d *DeviceIdProvider) GetCurrentRemoteDeviceId() (domain.DeviceId, error) {
+	return d.remoteDeviceIdResolver.Resolve()
 }

@@ -2,6 +2,7 @@ package file
 
 import (
 	"context"
+	"errors"
 	"insync/internal/domain"
 	"io"
 )
@@ -14,11 +15,18 @@ type FileUseCaseOptions struct {
 	FileManager IFileManager
 }
 
-func NewFileUseCase(opts FileUseCaseOptions) *FileUseCase {
-	return &FileUseCase{fileManager: opts.FileManager}
+var (
+	ErrInvalidOpts = errors.New("Все поля FileUseCaseOptions должны быть заполнены")
+)
+
+func NewFileUseCase(opts FileUseCaseOptions) (*FileUseCase, error) {
+	if opts.FileManager == nil {
+		return nil, ErrInvalidOpts
+	}
+	return &FileUseCase{fileManager: opts.FileManager}, nil
 }
 
-func (f *FileUseCase) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.SnapshotWithMetadata, error) {
+func (f *FileUseCase) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
 	return f.fileManager.GetSnapshot(ctx, rootName)
 }
 

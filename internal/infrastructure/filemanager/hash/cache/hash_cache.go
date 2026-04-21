@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"errors"
 	"insync/internal/domain"
 	"sync"
 )
@@ -16,9 +17,13 @@ type HashCacheOptions struct {
 	HashCacheRepository IHashCacheRepository
 }
 
-func NewHashCache(opts HashCacheOptions) *HashCache {
+var (
+	ErrInvalidOpts = errors.New("Все поля HashCacheOptions должны быть заполнены")
+)
+
+func NewHashCache(opts HashCacheOptions) (*HashCache, error) {
 	if opts.HashCacheRepository == nil {
-		panic("Все поля HashCacheOptions должны быть заполнены")
+		return nil, ErrInvalidOpts
 	}
 
 	hashCache := &HashCache{
@@ -27,10 +32,10 @@ func NewHashCache(opts HashCacheOptions) *HashCache {
 	}
 
 	if err := hashCache.loadHashCache(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return hashCache
+	return hashCache, nil
 }
 
 func (rc *HashCache) loadHashCache() error {

@@ -2,6 +2,7 @@ package hash
 
 import (
 	"context"
+	"errors"
 	"insync/internal/domain"
 	cont "insync/internal/infrastructure/filemanager/content"
 	"log/slog"
@@ -25,7 +26,17 @@ type HashManagerOptions struct {
 	Logger *slog.Logger
 }
 
-func NewHashManager(options HashManagerOptions) *HashManager {
+var (
+	ErrInvalidOpts = errors.New("Все поля HashManagerOptions должны быть заполнены")
+)
+
+func NewHashManager(options HashManagerOptions) (*HashManager, error) {
+	if options.HashCache == nil ||
+		options.HashCalculator == nil ||
+		options.PathTreeReader == nil ||
+		options.Logger == nil {
+		return nil, ErrInvalidOpts
+	}
 	return &HashManager{
 		hashCache:      options.HashCache,
 		hashCalculator: options.HashCalculator,
@@ -34,7 +45,7 @@ func NewHashManager(options HashManagerOptions) *HashManager {
 		dirtyPaths: make(map[domain.Path]struct{}),
 		logger:     options.Logger,
 		loggerCtx:  context.Background(),
-	}
+	}, nil
 }
 
 func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, fullPath domain.Path) (string, error) {

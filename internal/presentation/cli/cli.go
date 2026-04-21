@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"insync/internal/domain"
 	"log/slog"
@@ -82,14 +83,18 @@ type CliOptions struct {
 	Logger *slog.Logger
 }
 
-func NewCli(opts CliOptions) *Cli {
+var (
+	ErrInvalidCliOptions = errors.New("Все поля CliOptions должны быть заполнены")
+)
+
+func NewCli(opts CliOptions) (*Cli, error) {
 	if opts.SyncUseCase == nil ||
 		opts.ScanUseCase == nil ||
 		opts.NodeUseCase == nil ||
 		opts.ConnectUseCase == nil ||
 		opts.RootUseCase == nil ||
 		opts.Logger == nil {
-		panic("Не все обязательные параметры были переданы при инициализации Cli")
+		return nil, ErrInvalidCliOptions
 	}
 	loggerCtx := context.Background()
 	return &Cli{
@@ -102,7 +107,7 @@ func NewCli(opts CliOptions) *Cli {
 		logger:        opts.Logger,
 		loggerCtx:     loggerCtx,
 		nodeNameCache: make([]domain.NodeName, 0),
-	}
+	}, nil
 }
 
 func (c *Cli) Start() {
@@ -367,7 +372,7 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 	defer interruptCancel()
 
 	shouldUseCache := *c.shouldUseCache
-	appliedChanges, conflicts, userDecision, err := c.syncUseCase.ApplySyncChanges(interruptCtx, shouldUseCache, rootName)
+	appliedChanges, conflicts, baseSnapshotSaveError, userDecision, err := c.syncUseCase.ApplySyncChanges(interruptCtx, shouldUseCache, rootName)
 	if err != nil {
 		return err
 	}
@@ -401,6 +406,12 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 		}
 
 		userDecision <- c.fromHumanReadableDecision(decision)
+	}
+
+	select {
+	case err := <-baseSnapshotSaveError:
+		return err
+	default:
 	}
 
 	if interruptCtx.Err() != nil {

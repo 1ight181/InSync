@@ -16,16 +16,20 @@ type BaseSnapshotRepositoryOptions struct {
 	Db *gorm.DB
 }
 
-func NewBaseSnapshotRepository(opts BaseSnapshotRepositoryOptions) *BaseSnapshotRepository {
+var (
+	ErrInvalidBaseSnapshotRepositoryOptions = errors.New("Все поля BaseSnapshotRepositoryOptions должны быть заполнены")
+)
+
+func NewBaseSnapshotRepository(opts BaseSnapshotRepositoryOptions) (*BaseSnapshotRepository, error) {
 	if opts.Db == nil {
-		panic("все поля BaseSnapshotRepositoryOptions должны быть заполнены")
+		return nil, ErrInvalidBaseSnapshotRepositoryOptions
 	}
-	return &BaseSnapshotRepository{db: opts.Db}
+	return &BaseSnapshotRepository{db: opts.Db}, nil
 }
 
 func (b *BaseSnapshotRepository) GetLastBaseSnapshotByDeviceIdAndRootName(
 	ctx context.Context,
-	localDeviceId, remoteDeviceId string,
+	localDeviceId, remoteDeviceId domain.DeviceId,
 	rootName domain.RootName,
 ) (
 	domain.Snapshot, error,
@@ -34,11 +38,11 @@ func (b *BaseSnapshotRepository) GetLastBaseSnapshotByDeviceIdAndRootName(
 
 	err := b.db.
 		WithContext(ctx).
-		Preload("Files.FileEntry.FileInfo.FileMetadata").
-		Order("unix_time desc").
+		Preload("Files.FileInfo.FileMetadata").
+		Order("created_at desc").
 		First(&baseSnapshot,
 			"local_device_id = ? AND remote_device_id = ? AND root_name = ?",
-			localDeviceId, remoteDeviceId, rootName).
+			localDeviceId.String(), remoteDeviceId.String(), rootName.String()).
 		Error
 
 	if err != nil {
@@ -54,7 +58,11 @@ func (b *BaseSnapshotRepository) GetLastBaseSnapshotByDeviceIdAndRootName(
 	return domainBaseSnapshot, nil
 }
 
-func (b *BaseSnapshotRepository) CreateBaseSnapshot(ctx context.Context, baseSnapshot domain.SnapshotWithMetadata) error {
-	baseSnapshotModel := ToBaseSnapshot(baseSnapshot)
-	return b.db.WithContext(ctx).Create(baseSnapshotModel).Error
+func (b *BaseSnapshotRepository) CreateBaseSnapshot(ctx context.Context,
+	baseSnapshot domain.Snapshot,
+	localDeviceId, remoteDeviceId domain.DeviceId,
+	rootName domain.RootName,
+) error {
+	baseSnapshotModel := ToBaseSnapshot(baseSnapshot, localDeviceId, remoteDeviceId, rootName)
+	return b.db.WithContext(ctx).Create(&baseSnapshotModel).Error
 }

@@ -55,7 +55,10 @@ func createConfig() (*cnfmodels.GeneralConfig, error) {
 		Tag:          defaultTag,
 	}
 
-	configLoader := cnf.NewConfigLoader(configOpts)
+	configLoader, err := cnf.NewConfigLoader(configOpts)
+	if err != nil {
+		return nil, err
+	}
 	config, err := configLoader.LoadAndValidateConfig()
 	if err != nil {
 		return nil, err

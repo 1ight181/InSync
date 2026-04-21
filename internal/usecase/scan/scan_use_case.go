@@ -2,6 +2,7 @@ package scan
 
 import (
 	"context"
+	"errors"
 	"insync/internal/domain"
 )
 
@@ -13,13 +14,17 @@ type ScanUseCaseOptions struct {
 	PlanResolver IPlanResolver
 }
 
-func NewScanUseCase(opts ScanUseCaseOptions) *ScanUseCase {
+var (
+	ErrInvalidScanUseCaseOptions = errors.New("Все поля ScanUseCaseOptions должны быть заполнены")
+)
+
+func NewScanUseCase(opts ScanUseCaseOptions) (*ScanUseCase, error) {
 	if opts.PlanResolver == nil {
-		panic("Все поля ScanUseCaseOptions должны быть заполнены")
+		return nil, ErrInvalidScanUseCaseOptions
 	}
 	return &ScanUseCase{
 		planResolver: opts.PlanResolver,
-	}
+	}, nil
 }
 
 func (s *ScanUseCase) PlanSyncChanges(ctx context.Context, rootName domain.RootName) (domain.SyncPlan, error) {

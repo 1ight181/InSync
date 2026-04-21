@@ -7,30 +7,19 @@ import (
 	"go.uber.org/multierr"
 )
 
-func pbSnapshotToDomain(pbSnapshot *insyncpb.Snapshot) (domain.SnapshotWithMetadata, error) {
+func pbSnapshotToDomain(pbSnapshot *insyncpb.Snapshot) (domain.Snapshot, error) {
 	if pbSnapshot == nil {
-		return domain.SnapshotWithMetadata{}, nil
+		return domain.Snapshot{}, nil
 	}
 
 	files, err := pbFileEntriesToDomain(pbSnapshot.Files)
 	if err != nil {
-		return domain.SnapshotWithMetadata{}, err
+		return domain.Snapshot{}, err
 	}
 
 	snapshot := domain.NewSnapshot(files)
 
-	snapshotMetadata := domain.SnapshotMetadata{
-		UnixTime: pbSnapshot.UnixTime,
-		RootName: domain.RootName(pbSnapshot.RootName),
-		DeviceId: domain.DeviceId(pbSnapshot.DeviceId),
-	}
-
-	snapshotWithMetadata := domain.SnapshotWithMetadata{
-		Snapshot: snapshot,
-		Metadata: snapshotMetadata,
-	}
-
-	return snapshotWithMetadata, nil
+	return snapshot, nil
 }
 
 func pbFileEntriesToDomain(pbFileEntries []*insyncpb.FileEntry) ([]domain.FileEntry, error) {

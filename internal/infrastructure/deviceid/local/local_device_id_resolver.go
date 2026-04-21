@@ -1,6 +1,9 @@
 package local
 
-import "insync/internal/domain"
+import (
+	"errors"
+	"insync/internal/domain"
+)
 
 type LocalDeviceIdResolver struct {
 	localDeviceIdCreator ILocalDeviceIdCreator
@@ -11,14 +14,18 @@ type LocalDeviceIdResolverOptions struct {
 	LocalDeviceIdCreator ILocalDeviceIdCreator
 }
 
-func NewLocalDeviceIdResolver(opts LocalDeviceIdResolverOptions) *LocalDeviceIdResolver {
+var (
+	ErrInvalidOpts = errors.New("Все поля LocalDeviceIdResolverOptions должны быть заполнены")
+)
+
+func NewLocalDeviceIdResolver(opts LocalDeviceIdResolverOptions) (*LocalDeviceIdResolver, error) {
 	if opts.LocalDeviceIdCreator == nil {
-		panic("Все поля LocalDeviceIdResolverOptions должны быть заполнены")
+		return nil, ErrInvalidOpts
 	}
-	return &LocalDeviceIdResolver{localDeviceIdCreator: opts.LocalDeviceIdCreator}
+	return &LocalDeviceIdResolver{localDeviceIdCreator: opts.LocalDeviceIdCreator}, nil
 }
 
-func (r *LocalDeviceIdResolver) GetLocalDeviceId() (domain.DeviceId, error) {
+func (r *LocalDeviceIdResolver) Resolve() (domain.DeviceId, error) {
 	if r.currentDeviceId == "" {
 		newDeviceId, err := r.localDeviceIdCreator.CreateLocalDeviceId()
 		if err != nil {

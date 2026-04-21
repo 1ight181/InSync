@@ -1,6 +1,7 @@
 package nodename
 
 import (
+	"errors"
 	"fmt"
 	"insync/internal/domain"
 )
@@ -15,14 +16,18 @@ type MDnsUrlResolverOptions struct {
 	MDnsServerDomain      string
 }
 
-func NewMDnsUrlResolver(opts MDnsUrlResolverOptions) *MDnsUrlResolver {
+var (
+	ErrInvalidMDnsUrlResolverOptions = errors.New("Все поля MDnsUrlResolverOptions должны быть заполнены")
+)
+
+func NewMDnsUrlResolver(opts MDnsUrlResolverOptions) (*MDnsUrlResolver, error) {
 	if opts.MDnsServerDomain == "" || opts.MDnsServerServiceType == "" {
-		panic("Все поля MDnsUrlResolverOptions должны быть заполнены")
+		return nil, ErrInvalidMDnsUrlResolverOptions
 	}
 	return &MDnsUrlResolver{
 		mDnsServerServiceType: opts.MDnsServerServiceType,
 		mDnsServerDomain:      opts.MDnsServerDomain,
-	}
+	}, nil
 }
 
 func (r *MDnsUrlResolver) Resolve(nodeName domain.NodeName) string {

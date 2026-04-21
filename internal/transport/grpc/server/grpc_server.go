@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"insync/internal/transport/grpc/insyncpb"
 	"log/slog"
 	"net"
@@ -56,7 +57,11 @@ type GrpcServerOptions struct {
 	Logger           *slog.Logger
 }
 
-func NewGrpcServer(opts GrpcServerOptions) *GrpcServer {
+var (
+	ErrInvalidGrpcServerOptions = errors.New("Все поля GrpcServerOptions должны быть заполнены")
+)
+
+func NewGrpcServer(opts GrpcServerOptions) (*GrpcServer, error) {
 	if opts.FileUseCase == nil ||
 		opts.CertPath == "" ||
 		opts.KeyPath == "" ||
@@ -69,7 +74,7 @@ func NewGrpcServer(opts GrpcServerOptions) *GrpcServer {
 		opts.ChunkSizeInBytes <= 0 ||
 
 		opts.Logger == nil {
-		panic("Все поля GrpcServerOption должны быть заполнены")
+		return nil, ErrInvalidGrpcServerOptions
 	}
 	loggerCtx := context.Background()
 	return &GrpcServer{
@@ -87,7 +92,7 @@ func NewGrpcServer(opts GrpcServerOptions) *GrpcServer {
 
 		logger:    opts.Logger,
 		loggerCtx: loggerCtx,
-	}
+	}, nil
 }
 
 // Start блокирует выполнение, поэтому его нужно запускать в отдельной горутине. Он будет работать до тех пор, пока сервер не будет остановлен через метод Stop.

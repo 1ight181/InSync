@@ -2,6 +2,7 @@ package connection
 
 import (
 	"context"
+	"errors"
 	"insync/internal/domain"
 	clt "insync/internal/infrastructure/client"
 	"insync/internal/interfaces"
@@ -32,12 +33,16 @@ type ConnectionManagerOptions struct {
 	Logger *slog.Logger
 }
 
-func NewConnectionManager(opts ConnectionManagerOptions) *ConnectionManager {
+var (
+	ErrInvalidOpts = errors.New("Все поля ConnectionManagerOptions должны быть заполнены")
+)
+
+func NewConnectionManager(opts ConnectionManagerOptions) (*ConnectionManager, error) {
 	if opts.BaseGrpcConf == nil ||
 		opts.MDnsUrlResolver == nil ||
 		opts.GrpcClientLogger == nil ||
 		opts.Logger == nil {
-		panic("Все поля ConnectionManagerOptions должны быть заполнены")
+		return nil, ErrInvalidOpts
 	}
 	return &ConnectionManager{
 		mdnsUrlResolver: opts.MDnsUrlResolver,
@@ -45,7 +50,7 @@ func NewConnectionManager(opts ConnectionManagerOptions) *ConnectionManager {
 
 		grpcClientLogger: opts.GrpcClientLogger,
 		logger:           opts.Logger,
-	}
+	}, nil
 }
 
 func (c *ConnectionManager) CurrentClient() interfaces.IClient {

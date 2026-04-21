@@ -1,6 +1,9 @@
 package root
 
-import "insync/internal/domain"
+import (
+	"errors"
+	"insync/internal/domain"
+)
 
 type RootUseCase struct {
 	rootRegistrar IRootRegistrar
@@ -10,11 +13,15 @@ type RootUseCaseOptions struct {
 	RootRegistrar IRootRegistrar
 }
 
-func NewRootUseCase(opts RootUseCaseOptions) *RootUseCase {
+var (
+	ErrInvalidRootUseCaseOptions = errors.New("Все поля RootUseCase должны быть заполнены")
+)
+
+func NewRootUseCase(opts RootUseCaseOptions) (*RootUseCase, error) {
 	if opts.RootRegistrar == nil {
-		panic("Не все обязательные параметры были переданы при инициализации RootUseCase")
+		return nil, ErrInvalidRootUseCaseOptions
 	}
-	return &RootUseCase{rootRegistrar: opts.RootRegistrar}
+	return &RootUseCase{rootRegistrar: opts.RootRegistrar}, nil
 }
 
 func (r *RootUseCase) AddRoot(rootName domain.RootName, rootPath domain.Path) {

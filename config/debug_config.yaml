@@ -78,7 +78,7 @@ logger:
   log_file_extension: "txt"
   log_level: "debug"
 
-device_id: &mdns_server_instance_name_postfix "server"
+postfix: &mdns_server_instance_name_postfix "server"
 
 mdns_server:
   instance_name: "server1"

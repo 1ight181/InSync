@@ -2,6 +2,7 @@ package local
 
 import (
 	"context"
+	"errors"
 	"insync/internal/domain"
 )
 
@@ -13,11 +14,15 @@ type LocalSnapshotProviderOptions struct {
 	FileManager IFileManager
 }
 
-func NewLocalSnapshotProvider(opts LocalSnapshotProviderOptions) *LocalSnapshotProvider {
+var (
+	ErrInvalidOpts = errors.New("Все поля LocalSnapshotProviderOptions должны быть заполнены")
+)
+
+func NewLocalSnapshotProvider(opts LocalSnapshotProviderOptions) (*LocalSnapshotProvider, error) {
 	if opts.FileManager == nil {
-		panic("Все поля LocalSnapshotProviderOptions должны быть заполнены")
+		return nil, ErrInvalidOpts
 	}
-	return &LocalSnapshotProvider{fileManager: opts.FileManager}
+	return &LocalSnapshotProvider{fileManager: opts.FileManager}, nil
 }
 
 func (p *LocalSnapshotProvider) GetLocalSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
@@ -26,5 +31,5 @@ func (p *LocalSnapshotProvider) GetLocalSnapshot(ctx context.Context, rootName d
 		return domain.Snapshot{}, err
 	}
 
-	return snapshot.Snapshot, nil
+	return snapshot, nil
 }

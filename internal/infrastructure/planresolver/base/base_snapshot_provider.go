@@ -2,6 +2,7 @@ package base
 
 import (
 	"context"
+	"errors"
 	"insync/internal/domain"
 )
 
@@ -12,13 +13,22 @@ type BaseSnapshotProvider struct {
 
 type BaseSnapshotProviderOptions struct {
 	BaseSnapshotRepository IBaseSnapshotRepositoryReader
+	DeviceIdProvider       IDeviceIdProvider
 }
 
-func NewBaseSnapshotProvider(opts BaseSnapshotProviderOptions) *BaseSnapshotProvider {
-	if opts.BaseSnapshotRepository == nil {
-		panic("Все поля BaseSnapshotProviderOptions должны быть заполнены")
+var (
+	ErrInvalidOpts = errors.New("Все поля BaseSnapshotProviderOptions должны быть заполнены")
+)
+
+func NewBaseSnapshotProvider(opts BaseSnapshotProviderOptions) (*BaseSnapshotProvider, error) {
+	if opts.BaseSnapshotRepository == nil ||
+		opts.DeviceIdProvider == nil {
+		return nil, ErrInvalidOpts
 	}
-	return &BaseSnapshotProvider{baseSnapshotRepository: opts.BaseSnapshotRepository}
+	return &BaseSnapshotProvider{
+		baseSnapshotRepository: opts.BaseSnapshotRepository,
+		deviceIdProvider:       opts.DeviceIdProvider,
+	}, nil
 }
 
 func (b *BaseSnapshotProvider) GetBaseSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
@@ -27,7 +37,10 @@ func (b *BaseSnapshotProvider) GetBaseSnapshot(ctx context.Context, rootName dom
 		return domain.Snapshot{}, err
 	}
 
-	localDeviceId := b.deviceIdProvider.GetCurrentLocalDeviceId()
+	localDeviceId, err := b.deviceIdProvider.GetCurrentLocalDeviceId()
+	if err != nil {
+		return domain.Snapshot{}, err
+	}
 
 	return b.baseSnapshotRepository.GetLastBaseSnapshotByDeviceIdAndRootName(
 		ctx,

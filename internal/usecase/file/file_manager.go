@@ -7,7 +7,7 @@ import (
 )
 
 type IFileManager interface {
-	GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.SnapshotWithMetadata, error)
+	GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error)
 	DeleteFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) error
 	PutFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path, fileData io.Reader) error
 	RenameFile(ctx context.Context, rootName domain.RootName, oldRelativePath domain.Path, newRelativePath domain.Path) error

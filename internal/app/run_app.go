@@ -6,8 +6,10 @@ import (
 	"insync/internal/domain"
 	clt "insync/internal/infrastructure/client"
 	conn "insync/internal/infrastructure/connection"
+	deviceid "insync/internal/infrastructure/deviceid"
 	deviceidlocal "insync/internal/infrastructure/deviceid/local"
 	deviceidcreator "insync/internal/infrastructure/deviceid/local/creator"
+	deviceidremote "insync/internal/infrastructure/deviceid/remote"
 	"insync/internal/infrastructure/filemanager"
 	"insync/internal/infrastructure/filemanager/hash"
 	hashcache "insync/internal/infrastructure/filemanager/hash/cache"
@@ -97,7 +99,10 @@ func RunApp() {
 		Migrator: migrator,
 	}
 
-	db := repo.NewGorm(dbOpts)
+	db, err := repo.NewGorm(dbOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать gorm: %v", err))
+	}
 
 	defer func() {
 		sqlDb, err := db.DB()
@@ -113,13 +118,19 @@ func RunApp() {
 		Db: db,
 	}
 
-	hashCacheRepo := hashrepo.NewHashRepository(hashCacheRepoOpts)
+	hashCacheRepo, err := hashrepo.NewHashRepository(hashCacheRepoOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать HashRepository: %v", err))
+	}
 
 	hashCacheOpts := hashcache.HashCacheOptions{
 		HashCacheRepository: hashCacheRepo,
 	}
 
-	hashCache := hashcache.NewHashCache(hashCacheOpts)
+	hashCache, err := hashcache.NewHashCache(hashCacheOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать HashCache: %v", err))
+	}
 	hashCalc := hash.NewHashCalculator()
 
 	hashManagerLogger := logger.With(moduleAtrributeName, hashManagerModuleName)
@@ -131,7 +142,10 @@ func RunApp() {
 		Logger:         hashManagerLogger,
 	}
 
-	hashManager := hash.NewHashManager(hashManagerOpts)
+	hashManager, err := hash.NewHashManager(hashManagerOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать HashManager: %v", err))
+	}
 
 	fileManagerLogger := logger.With(moduleAtrributeName, fileManagerModuleName)
 
@@ -141,35 +155,28 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать директорию для хранения device id: %v", err))
 	}
 
-	deviceidLocalCreatorOpts := deviceidcreator.LocalDeviceIdCreatorOptions{
-		FileSys:          fileSystem,
-		DeviceIdFilePath: domain.Path(deviceIdResolverConfig.GetDeviceIdFilePath()),
-	}
-
-	deviceidlocalCreator := deviceidcreator.NewLocalDeviceIdCreator(deviceidLocalCreatorOpts)
-	localDeviceIdResolverOpts := deviceidlocal.LocalDeviceIdResolverOptions{
-		LocalDeviceIdCreator: deviceidlocalCreator,
-	}
-
-	localIdDeviceResolver := deviceidlocal.NewLocalDeviceIdResolver(localDeviceIdResolverOpts)
-
 	fileManagerOpts := filemanager.FileManagerOptions{
-		RootResolver:          rootResolver,
-		HashManager:           hashManager,
-		FileSystem:            fileSystem,
-		PathTreeWriter:        pathTree,
-		LocalDeviceIdProvider: localIdDeviceResolver,
+		RootResolver:   rootResolver,
+		HashManager:    hashManager,
+		FileSystem:     fileSystem,
+		PathTreeWriter: pathTree,
 
 		Logger: fileManagerLogger,
 	}
 
-	fileManager := filemanager.NewFileManager(fileManagerOpts)
+	fileManager, err := filemanager.NewFileManager(fileManagerOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать fileManager: %v", err))
+	}
 
 	fileUseCaseOpts := fileusecase.FileUseCaseOptions{
 		FileManager: fileManager,
 	}
 
-	fileUseCase := fileusecase.NewFileUseCase(fileUseCaseOpts)
+	fileUseCase, err := fileusecase.NewFileUseCase(fileUseCaseOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать fileUseCase: %v", err))
+	}
 
 	serverLogger := logger.With(moduleAtrributeName, grpcServerModuleName)
 	serverConfig := config.ServerConfig
@@ -189,7 +196,10 @@ func RunApp() {
 		Logger: serverLogger,
 	}
 
-	grpcServer := server.NewGrpcServer(grpcServerOpts)
+	grpcServer, err := server.NewGrpcServer(grpcServerOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать gRPC сервер: %v", err))
+	}
 	err = grpcServer.Start()
 	if err != nil {
 		panic("Не удалось запустить gRPC сервер")
@@ -266,7 +276,10 @@ func RunApp() {
 		MDnsServerDomain:      mDnsBrowserConfig.ServerDomain,
 	}
 
-	mdnsUrlResolver := mdnsurl.NewMDnsUrlResolver(mdnsUrldResolverOpts)
+	mdnsUrlResolver, err := mdnsurl.NewMDnsUrlResolver(mdnsUrldResolverOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать MDnsUrlResolver: %v", err))
+	}
 
 	connectionManagerOpts := conn.ConnectionManagerOptions{
 		MDnsUrlResolver:  mdnsUrlResolver,
@@ -274,8 +287,10 @@ func RunApp() {
 		GrpcClientLogger: clientLogger,
 		Logger:           connectionManagerLogger,
 	}
-
-	connectionManager := conn.NewConnectionManager(connectionManagerOpts)
+	connectionManager, err := conn.NewConnectionManager(connectionManagerOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать ConnectionManager: %v", err))
+	}
 
 	connectUseCaseOpts := connusecase.ConnectUseCaseOptions{
 
@@ -286,29 +301,87 @@ func RunApp() {
 		NodeNamesBrowser: mDnsNodeNamesBrowser,
 	}
 
-	nodeUseCase := nodeusecase.NewNodeUseCase(nodeUseCaseOpts)
+	nodeUseCase, err := nodeusecase.NewNodeUseCase(nodeUseCaseOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать NodeUseCase: %v", err))
+	}
 
-	connectUseCase := connusecase.NewConnectUseCase(connectUseCaseOpts)
+	connectUseCase, err := connusecase.NewConnectUseCase(connectUseCaseOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать ConnectUseCase: %v", err))
+	}
 
 	baseSnapshotRepositoryOpts := baserepo.BaseSnapshotRepositoryOptions{
 		Db: db,
 	}
-	baseSnapshotRepository := baserepo.NewBaseSnapshotRepository(baseSnapshotRepositoryOpts)
+	baseSnapshotRepository, err := baserepo.NewBaseSnapshotRepository(baseSnapshotRepositoryOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать BaseSnapshotRepository: %v", err))
+	}
+
+	deviceidLocalCreatorOpts := deviceidcreator.LocalDeviceIdCreatorOptions{
+		FileSys:          fileSystem,
+		DeviceIdFilePath: domain.Path(deviceIdResolverConfig.GetDeviceIdFilePath()),
+	}
+
+	deviceidlocalCreator, err := deviceidcreator.NewLocalDeviceIdCreator(deviceidLocalCreatorOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать LocalDeviceIdCreator: %v", err))
+	}
+	localDeviceIdResolverOpts := deviceidlocal.LocalDeviceIdResolverOptions{
+		LocalDeviceIdCreator: deviceidlocalCreator,
+	}
+
+	localIdDeviceResolver, err := deviceidlocal.NewLocalDeviceIdResolver(localDeviceIdResolverOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать LocalDeviceIdResolver: %v", err))
+	}
+
+	remoteDeviceIdResolverConfig := config.RemoteDeviceIdResolverConfig
+
+	remoteDeviceIdResolverOpts := deviceidremote.RemoteDeviceIdResolverOptions{
+		MDnsServerInstanceNamePostfix: remoteDeviceIdResolverConfig.MDnsServerInstanceNamePostfix,
+		NodeNameProvider:              connectionManager,
+	}
+	remoteDeviceIdResolver, err := deviceidremote.NewRemoteDeviceIdResolver(remoteDeviceIdResolverOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать RemoteDeviceIdResolver: %v", err))
+	}
+
+	deviceIdProviderOpts := deviceid.DeviceIdProviderOptions{
+		LocalDeviceIdResolver:  localIdDeviceResolver,
+		RemoteDeviceIdResolver: remoteDeviceIdResolver,
+	}
+
+	deviceIdProvider, err := deviceid.NewDeviceIdProvider(deviceIdProviderOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать DeviceIdProvider: %v", err))
+	}
 
 	baseSnapshotProviderOpts := base.BaseSnapshotProviderOptions{
 		BaseSnapshotRepository: baseSnapshotRepository,
+		DeviceIdProvider:       deviceIdProvider,
 	}
-	baseSnapshotProvider := base.NewBaseSnapshotProvider(baseSnapshotProviderOpts)
+	baseSnapshotProvider, err := base.NewBaseSnapshotProvider(baseSnapshotProviderOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать BaseSnapshotProvider: %v", err))
+	}
 
 	remoteSnapshotProviderOpts := remote.RemoteSnapshotProviderOptions{
 		ClientFactory: connectionManager,
 	}
-	remoteSnapshotProvider := remote.NewRemoteSnapshotProvider(remoteSnapshotProviderOpts)
+	remoteSnapshotProvider, err := remote.NewRemoteSnapshotProvider(remoteSnapshotProviderOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать RemoteSnapshotProvider: %v", err))
+	}
 
 	localSnapshotProviderOpts := local.LocalSnapshotProviderOptions{
 		FileManager: fileManager,
 	}
-	localSnapshotProvider := local.NewLocalSnapshotProvider(localSnapshotProviderOpts)
+	localSnapshotProvider, err := local.NewLocalSnapshotProvider(localSnapshotProviderOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать LocalSnapshotProvider: %v", err))
+	}
 
 	planner := planner.NewChangesPlannerWithTreeSkip()
 
@@ -323,25 +396,35 @@ func RunApp() {
 		SyncPlanCache:  planCache,
 	}
 
-	planResolver := planres.NewPlanResolver(planResolverOpts)
+	planResolver, err := planres.NewPlanResolver(planResolverOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать PlanResolver: %v", err))
+	}
 
 	scanUseCaseOpts := scanusecase.ScanUseCaseOptions{
 		PlanResolver: planResolver,
 	}
-
-	scanUseCase := scanusecase.NewScanUseCase(scanUseCaseOpts)
+	scanUseCase, err := scanusecase.NewScanUseCase(scanUseCaseOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать ScanUseCase: %v", err))
+	}
 
 	rootUseCaseOpts := rootusecase.RootUseCaseOptions{
 		RootRegistrar: rootResolver,
 	}
-
-	rootUseCase := rootusecase.NewRootUseCase(rootUseCaseOpts)
+	rootUseCase, err := rootusecase.NewRootUseCase(rootUseCaseOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать RootUseCase: %v", err))
+	}
 
 	changeApplierOpts := changeappl.ChangeApplierOptions{
 		FileManager:   fileManager,
 		ClientFactory: connectionManager,
 	}
-	changeApplier := changeappl.NewChangeApplier(changeApplierOpts)
+	changeApplier, err := changeappl.NewChangeApplier(changeApplierOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать ChangeApplier: %v", err))
+	}
 
 	conflictResolver := syncer.NewConflictResolver()
 
@@ -349,14 +432,20 @@ func RunApp() {
 		ChangeApplier:    changeApplier,
 		ConflictResolver: conflictResolver,
 	}
-	syncer := syncer.NewSyncer(syncerOpts)
+	syncer, err := syncer.NewSyncer(syncerOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать Syncer: %v", err))
+	}
 
 	syncusecaseOpts := syncusecase.SyncUseCaseOptions{
 		SyncPlanResolver: planResolver,
 		Syncer:           syncer,
 	}
 
-	syncUseCase := syncusecase.NewSyncUseCase(syncusecaseOpts)
+	syncUseCase, err := syncusecase.NewSyncUseCase(syncusecaseOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать SyncUseCase: %v", err))
+	}
 
 	cliLogger := logger.With(moduleAtrributeName, cliModuleName)
 
@@ -370,6 +459,9 @@ func RunApp() {
 		Logger: cliLogger,
 	}
 
-	cliInstance := cli.NewCli(cliInstanceOpts)
+	cliInstance, err := cli.NewCli(cliInstanceOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать Cli: %v", err))
+	}
 	cliInstance.Start()
 }

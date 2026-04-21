@@ -2,6 +2,7 @@ package connect
 
 import (
 	"context"
+	"errors"
 	"insync/internal/domain"
 )
 
@@ -13,13 +14,17 @@ type NodeUseCaseOptions struct {
 	NodeNamesBrowser INodeNamesBrowser
 }
 
-func NewNodeUseCase(opts NodeUseCaseOptions) *NodeUseCase {
+var (
+	ErrInvalidNodeUseCaseOptions = errors.New("Все поля NodeUseCaseOptions должны быть заполнены")
+)
+
+func NewNodeUseCase(opts NodeUseCaseOptions) (*NodeUseCase, error) {
 	if opts.NodeNamesBrowser == nil {
-		panic("Все поля NodeUseCaseOptions должны быть заполнены")
+		return nil, ErrInvalidNodeUseCaseOptions
 	}
 	return &NodeUseCase{
 		nodeNamesBrowser: opts.NodeNamesBrowser,
-	}
+	}, nil
 }
 
 func (c *NodeUseCase) ShowNodeNames(ctx context.Context) (chan domain.NodeName, error) {

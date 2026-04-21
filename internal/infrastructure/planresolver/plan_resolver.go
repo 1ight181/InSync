@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"insync/internal/domain"
 )
 
@@ -23,13 +24,17 @@ type PlanResolverOptions struct {
 	SyncPlanCache  ISyncPlanCache
 }
 
-func NewPlanResolver(options PlanResolverOptions) *PlanResolver {
+var (
+	ErrInvalidOpts = errors.New("Все поля PlanResolverOptions должны быть заполнены")
+)
+
+func NewPlanResolver(options PlanResolverOptions) (*PlanResolver, error) {
 	if options.BaseSnapshotProvider == nil ||
 		options.LocalSnapshotProvider == nil ||
 		options.RemoteSnapshotProvider == nil ||
 		options.ChangesPlanner == nil ||
 		options.SyncPlanCache == nil {
-		panic("Все поля PlanResolverOptions должны быть заполнены")
+		return nil, ErrInvalidOpts
 	}
 	return &PlanResolver{
 		baseSnapshotProvider:   options.BaseSnapshotProvider,
@@ -37,7 +42,7 @@ func NewPlanResolver(options PlanResolverOptions) *PlanResolver {
 		remoteSnapshotProvider: options.RemoteSnapshotProvider,
 		changesPlanner:         options.ChangesPlanner,
 		syncPlanCache:          options.SyncPlanCache,
-	}
+	}, nil
 }
 
 func (p *PlanResolver) Resolve(ctx context.Context, rootName domain.RootName, shouldUseCache bool) (domain.SyncPlan, error) {

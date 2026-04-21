@@ -1,4 +1,4 @@
-package repository
+package sqlite
 
 import (
 	snap "insync/internal/repository/sqlite/base"

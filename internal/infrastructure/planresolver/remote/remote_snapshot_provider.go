@@ -2,6 +2,7 @@ package remote
 
 import (
 	"context"
+	"errors"
 	"insync/internal/domain"
 )
 
@@ -13,19 +14,23 @@ type RemoteSnapshotProviderOptions struct {
 	ClientFactory IClientFactory
 }
 
-func NewRemoteSnapshotProvider(options RemoteSnapshotProviderOptions) *RemoteSnapshotProvider {
+var (
+	ErrInvalidOpts = errors.New("Все поля RemoteSnapshotProviderOptions должны быть заполнены")
+)
+
+func NewRemoteSnapshotProvider(options RemoteSnapshotProviderOptions) (*RemoteSnapshotProvider, error) {
 	if options.ClientFactory == nil {
-		panic("Все поля RemoteSnapshotProviderOptions должны быть заполнены")
+		return nil, ErrInvalidOpts
 	}
-	return &RemoteSnapshotProvider{clientFactory: options.ClientFactory}
+	return &RemoteSnapshotProvider{clientFactory: options.ClientFactory}, nil
 }
 
 func (p *RemoteSnapshotProvider) GetRemoteSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
 	client := p.clientFactory.CurrentClient()
-	snapshotWithMetadata, err := client.GetSnapshot(ctx, rootName)
+	snapshot, err := client.GetSnapshot(ctx, rootName)
 	if err != nil {
 		return domain.Snapshot{}, err
 	}
 
-	return snapshotWithMetadata.Snapshot, nil
+	return snapshot, nil
 }

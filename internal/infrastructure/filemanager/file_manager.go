@@ -3,10 +3,10 @@ package filemanager
 import (
 	"bytes"
 	"context"
+	"errors"
 	"insync/internal/domain"
 	cont "insync/internal/infrastructure/filemanager/content"
 	"sort"
-	"time"
 
 	"io"
 	"io/fs"
@@ -36,79 +36,61 @@ func NewMultiCloser(closers ...io.Closer) io.Closer {
 }
 
 type FileManager struct {
-	rootResolver          IRootResolver
-	hashManager           IHashManager
-	fileSystem            IFileSystem
-	pathTreeWriter        IPathTreeWriter
-	localDeviceIdProvider ILocalDeviceIdProvider
+	rootResolver   IRootResolver
+	hashManager    IHashManager
+	fileSystem     IFileSystem
+	pathTreeWriter IPathTreeWriter
 
 	logger    *slog.Logger
 	loggerCtx context.Context
 }
 
 type FileManagerOptions struct {
-	RootResolver          IRootResolver
-	HashManager           IHashManager
-	FileSystem            IFileSystem
-	PathTreeWriter        IPathTreeWriter
-	LocalDeviceIdProvider ILocalDeviceIdProvider
+	RootResolver   IRootResolver
+	HashManager    IHashManager
+	FileSystem     IFileSystem
+	PathTreeWriter IPathTreeWriter
 
 	Logger *slog.Logger
 }
 
-func NewFileManager(opts FileManagerOptions) *FileManager {
+var (
+	ErrInvalidOpts = errors.New("Все поля FileManagerOptions должны быть заполнены")
+)
+
+func NewFileManager(opts FileManagerOptions) (*FileManager, error) {
 	if opts.RootResolver == nil ||
 		opts.HashManager == nil ||
 		opts.FileSystem == nil ||
 		opts.PathTreeWriter == nil ||
-		opts.LocalDeviceIdProvider == nil ||
 		opts.Logger == nil {
-		panic("Все поля FileManagerOptions должны быть заполнены")
+		return nil, ErrInvalidOpts
 	}
 	return &FileManager{
-		rootResolver:          opts.RootResolver,
-		hashManager:           opts.HashManager,
-		fileSystem:            opts.FileSystem,
-		pathTreeWriter:        opts.PathTreeWriter,
-		localDeviceIdProvider: opts.LocalDeviceIdProvider,
+		rootResolver:   opts.RootResolver,
+		hashManager:    opts.HashManager,
+		fileSystem:     opts.FileSystem,
+		pathTreeWriter: opts.PathTreeWriter,
 
 		logger:    opts.Logger,
 		loggerCtx: context.Background(),
-	}
+	}, nil
 }
 
-func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.SnapshotWithMetadata, error) {
+func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
 	resolvedRootPath, err := f.rootResolver.ResolveRoot(rootName, "")
 	if err != nil {
-		return domain.SnapshotWithMetadata{}, err
+		return domain.Snapshot{}, err
 	}
 
 	allEntries, err := f.collectAllFileEntries(ctx, resolvedRootPath)
 	if err != nil {
-		return domain.SnapshotWithMetadata{}, err
+		return domain.Snapshot{}, err
 	}
 
 	snapshot := domain.NewSnapshot(allEntries)
 
-	localDeviceId, err := f.localDeviceIdProvider.GetLocalDeviceId()
-	if err != nil {
-		return domain.SnapshotWithMetadata{}, err
-	}
-
-	now := uint64(time.Now().Unix())
-
-	snapshotMetadata := domain.SnapshotMetadata{
-		UnixTime: now,
-		RootName: rootName,
-		DeviceId: localDeviceId,
-	}
-
-	snapshotWithMetadata := domain.SnapshotWithMetadata{
-		Snapshot: snapshot,
-		Metadata: snapshotMetadata,
-	}
-
-	return snapshotWithMetadata, nil
+	return snapshot, nil
 }
 
 func (f *FileManager) RenameFile(ctx context.Context, rootName domain.RootName, oldPath domain.Path, newPath domain.Path) error {

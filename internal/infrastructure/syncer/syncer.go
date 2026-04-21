@@ -7,34 +7,43 @@ import (
 )
 
 type Syncer struct {
-	changeApplier    IChangeApplier
-	conflictResolver IConflictResolver
+	changeApplier                 IChangeApplier
+	conflictResolver              IConflictResolver
+	postSyncBaseSnapshotPersister IPostSyncBaseSnapshotPersister
 }
 
 type SyncerOptions struct {
-	ChangeApplier    IChangeApplier
-	ConflictResolver IConflictResolver
+	ChangeApplier                 IChangeApplier
+	ConflictResolver              IConflictResolver
+	PostSyncBaseSnapshotPersister IPostSyncBaseSnapshotPersister
 }
 
-func NewSyncer(opts SyncerOptions) *Syncer {
+var (
+	ErrInvalidSyncerOptions = errors.New("Все поля SyncerOptions должны быть заполнены")
+)
+
+func NewSyncer(opts SyncerOptions) (*Syncer, error) {
 	if opts.ChangeApplier == nil ||
-		opts.ConflictResolver == nil {
-		panic("Все поля SyncerOptions должны быть заполнены")
+		opts.ConflictResolver == nil ||
+		opts.PostSyncBaseSnapshotPersister == nil {
+		return nil, ErrInvalidSyncerOptions
 	}
 	return &Syncer{
 		changeApplier:    opts.ChangeApplier,
 		conflictResolver: opts.ConflictResolver,
-	}
+	}, nil
 }
 
 func (s *Syncer) Sync(ctx context.Context, plan domain.SyncPlan, rootName domain.RootName) (
 	<-chan domain.ChangeEvent,
 	<-chan domain.Conflict,
+	<-chan error,
 	chan<- domain.Decision,
 	error,
 ) {
 	appliedChanges := make(chan domain.ChangeEvent, plan.ChangeLength())
 	conflicts := make(chan domain.Conflict, plan.ConflictLength())
+	baseSnapshotSaveError := make(chan error, 1)
 	userDecision := make(chan domain.Decision, 1)
 
 	go func() {
@@ -73,12 +82,17 @@ func (s *Syncer) Sync(ctx context.Context, plan domain.SyncPlan, rootName domain
 			}
 		}
 
+		if err := s.postSyncBaseSnapshotPersister.UpdateBaseSnapshot(ctx, rootName); err != nil {
+			baseSnapshotSaveError <- err
+		}
+
 		close(appliedChanges)
 		close(conflicts)
 		close(userDecision)
+
 	}()
 
-	return appliedChanges, conflicts, userDecision, nil
+	return appliedChanges, conflicts, baseSnapshotSaveError, userDecision, nil
 }
 
 func (s *Syncer) applyLocalChange(

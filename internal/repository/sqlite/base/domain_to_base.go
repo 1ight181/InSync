@@ -4,16 +4,15 @@ import (
 	"insync/internal/domain"
 )
 
-func ToBaseSnapshot(s domain.SnapshotWithMetadata) BaseSnapshot {
+func ToBaseSnapshot(snapshot domain.Snapshot, localDeviceId, remoteDeviceId domain.DeviceId, rootName domain.RootName) BaseSnapshot {
 	baseSnap := BaseSnapshot{
-		UnixTime:       s.Metadata.UnixTime,
-		RootName:       s.Metadata.RootName.String(),
-		LocalDeviceId:  s.Metadata.DeviceId.String(),
-		RemoteDeviceId: s.Metadata.DeviceId.String(),
-		Files:          make([]FileEntry, len(s.Snapshot.Files)),
+		RootName:       rootName.String(),
+		LocalDeviceId:  localDeviceId.String(),
+		RemoteDeviceId: remoteDeviceId.String(),
+		Files:          make([]FileEntry, len(snapshot.Files)),
 	}
 
-	for i, file := range s.Snapshot.Files {
+	for i, file := range snapshot.Files {
 		baseSnap.Files[i] = toBaseFileEntry(file)
 	}
 

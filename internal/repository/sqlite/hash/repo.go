@@ -1,6 +1,7 @@
 package hash
 
 import (
+	"errors"
 	"insync/internal/domain"
 
 	"gorm.io/gorm"
@@ -14,11 +15,15 @@ type HashRepositoryOptions struct {
 	Db *gorm.DB
 }
 
-func NewHashRepository(opts HashRepositoryOptions) *HashRepository {
+var (
+	ErrInvalidHashRepositoryOptions = errors.New("Все поля HashRepositoryOptions должны быть заполнены")
+)
+
+func NewHashRepository(opts HashRepositoryOptions) (*HashRepository, error) {
 	if opts.Db == nil {
-		panic("все поля HashRepositoryOptions должны быть заполнены")
+		return nil, ErrInvalidHashRepositoryOptions
 	}
-	return &HashRepository{db: opts.Db}
+	return &HashRepository{db: opts.Db}, nil
 }
 
 func (r *HashRepository) GetHashCache() (map[domain.Path]string, error) {

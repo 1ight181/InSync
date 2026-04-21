@@ -17,14 +17,3 @@ func NewSnapshot(files []FileEntry) Snapshot {
 		Files: files,
 	}
 }
-
-type SnapshotMetadata struct {
-	UnixTime uint64
-	RootName RootName
-	DeviceId DeviceId
-}
-
-type SnapshotWithMetadata struct {
-	Snapshot Snapshot
-	Metadata SnapshotMetadata
-}

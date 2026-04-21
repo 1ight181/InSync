@@ -1,6 +1,9 @@
 package connect
 
-import "insync/internal/domain"
+import (
+	"errors"
+	"insync/internal/domain"
+)
 
 type ConnectUseCase struct {
 	connectionManager IConnectionManager
@@ -10,13 +13,17 @@ type ConnectUseCaseOptions struct {
 	ConnectionManager IConnectionManager
 }
 
-func NewConnectUseCase(opts ConnectUseCaseOptions) *ConnectUseCase {
+var (
+	ErrInvalidConnectUseCaseOptions = errors.New("Все поля ConnectUseCaseOptions должны быть заполнены")
+)
+
+func NewConnectUseCase(opts ConnectUseCaseOptions) (*ConnectUseCase, error) {
 	if opts.ConnectionManager == nil {
-		panic("Все поля ConnectUseCaseOptions должны быть заполнены")
+		return nil, ErrInvalidConnectUseCaseOptions
 	}
 	return &ConnectUseCase{
 		connectionManager: opts.ConnectionManager,
-	}
+	}, nil
 }
 
 func (c *ConnectUseCase) CurrentNodeName() domain.NodeName {
