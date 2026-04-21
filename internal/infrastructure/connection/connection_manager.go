@@ -73,7 +73,10 @@ func (c *ConnectionManager) ConnectToNode(nodeName domain.NodeName) error {
 		Logger: nil,
 	}
 
-	newClient := clt.NewGrpcClient(grpcClientOpts)
+	newClient, err := clt.NewGrpcClient(grpcClientOpts)
+	if err != nil {
+		return err
+	}
 
 	if err := newClient.Connect(); err != nil {
 		return err

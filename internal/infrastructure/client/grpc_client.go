@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"insync/internal/transport/grpc/insyncpb"
 	"net"
@@ -67,6 +68,11 @@ type GrpcConf struct {
 	ConnectionConfig *ConnectionConfig
 
 	ChunkSizeInBytes int
+
+	DefaultServiceConf string
+	Creds              credentials.TransportCredentials
+	Dialer             func(context.Context, string) (net.Conn, error)
+	Resolvers          []resolver.Builder
 }
 
 type GrpcClient struct {
@@ -92,22 +98,43 @@ type GrpcClientOptions struct {
 	Logger *slog.Logger
 }
 
-func NewGrpcClient(opts GrpcClientOptions) *GrpcClient {
-	if opts.Conf == nil ||
-		opts.Conf.CertPath == "" ||
-		opts.Conf.KeyPath == "" ||
+var (
+	ErrInvalidOpts = errors.New("Все поля GrpcClientOption и GrpcConf в том числе должны быть заполнены")
+)
+
+func NewGrpcClient(opts GrpcClientOptions) (*GrpcClient, error) {
+	if opts.Conf == nil {
+		return nil, ErrInvalidOpts
+	}
+
+	if opts.Conf.Creds == nil &&
 		opts.Conf.CaCertPath == "" ||
+		opts.Conf.CertPath == "" ||
+		opts.Conf.KeyPath == "" {
+		return nil, ErrInvalidOpts
+	}
 
+	if opts.Conf.Dialer == nil &&
 		opts.Conf.ServerNetworkType == "" ||
-		opts.Conf.ServerAddress == "" ||
-		opts.Conf.ServerServiceName == "" ||
 		opts.Conf.ServerName == "" ||
+		opts.Conf.ServerAddress == "" {
+		return nil, ErrInvalidOpts
+	}
 
-		opts.Conf.ResolverScheme == "" ||
-
+	if opts.Conf.DefaultServiceConf == "" &&
 		opts.Conf.LoadBalancingPolicy == "" ||
-
+		opts.Conf.ServerServiceName == "" ||
+		opts.Conf.RpcTimeout <= 0 ||
 		opts.Conf.RetryPolicy == nil ||
+		opts.Conf.RetryPolicy.MaxAttempts <= 0 ||
+		opts.Conf.RetryPolicy.InitialBackoff <= 0 ||
+		opts.Conf.RetryPolicy.MaxBackoff <= 0 ||
+		opts.Conf.RetryPolicy.BackoffMultiplier <= 0 ||
+		len(opts.Conf.RetryPolicy.RetryableStatusCodes) == 0 {
+		return nil, ErrInvalidOpts
+	}
+
+	if opts.Conf.ResolverScheme == "" ||
 		opts.Conf.ConnectionConfig == nil ||
 
 		opts.Ctx == nil ||
@@ -115,8 +142,9 @@ func NewGrpcClient(opts GrpcClientOptions) *GrpcClient {
 		opts.Conf.ChunkSizeInBytes <= 0 ||
 
 		opts.Logger == nil {
-		panic("Все поля GrpcClientOption и GrpcConf в том числе должны быть заполнены")
+		return nil, ErrInvalidOpts
 	}
+
 	loggerCtx := context.Background()
 	return &GrpcClient{
 		conf: opts.Conf,
@@ -125,7 +153,7 @@ func NewGrpcClient(opts GrpcClientOptions) *GrpcClient {
 
 		logger:    opts.Logger,
 		loggerCtx: loggerCtx,
-	}
+	}, nil
 }
 
 // Connect устанавливает защищенное TLS соединение с gRPC сервером и создает gRPC клиент для взаимодействия с сервером.
@@ -148,24 +176,40 @@ func (gc *GrpcClient) Connect() (err error) {
 
 	gc.logger.LogAttrs(gc.loggerCtx, slog.LevelDebug, "Клиент подключается по адресу:", slog.String("address", address))
 
-	transportCreds, err := gc.createTransportCreds()
-	if err != nil {
-		return err
+	var withTransportCreds grpc.DialOption
+	if gc.conf.Creds != nil {
+		withTransportCreds = grpc.WithTransportCredentials(gc.conf.Creds)
+	} else {
+		transportCreds, err := gc.createTransportCreds()
+		if err != nil {
+			return err
+		}
+
+		withTransportCreds = grpc.WithTransportCredentials(transportCreds)
 	}
-	withTransportCreds := grpc.WithTransportCredentials(transportCreds)
 
-	networkAwareDialer := gc.createNetworkAwareDialer()
-	withContextDialer := grpc.WithContextDialer(networkAwareDialer)
+	var withContextDialer grpc.DialOption
+	if gc.conf.Dialer != nil {
+		withContextDialer = grpc.WithContextDialer(gc.conf.Dialer)
+	} else {
+		networkAwareDialer := gc.createNetworkAwareDialer()
+		withContextDialer = grpc.WithContextDialer(networkAwareDialer)
+	}
 
-	serviceConfig := gc.createServiceConfig()
-	withDefaultServiceConf := grpc.WithDefaultServiceConfig(
-		serviceConfig,
-	)
+	var withDefaultServiceConf grpc.DialOption
+	if gc.conf.DefaultServiceConf != "" {
+		withDefaultServiceConf = grpc.WithDefaultServiceConfig(gc.conf.DefaultServiceConf)
+	} else {
+		withDefaultServiceConf = grpc.WithDefaultServiceConfig(gc.createServiceConfig())
+	}
 
-	gc.logger.LogAttrs(gc.loggerCtx, slog.LevelDebug, "Клиент будет запущен с следующим serviceConfig:", slog.String("serviceConfig", serviceConfig))
-
-	mdnsResolver := gc.createMDnsResolver()
-	withResolvers := grpc.WithResolvers(mdnsResolver)
+	var withResolvers grpc.DialOption
+	if len(gc.conf.Resolvers) > 0 {
+		withResolvers = grpc.WithResolvers(gc.conf.Resolvers...)
+	} else {
+		mdnsResolver := gc.createMDnsResolver()
+		withResolvers = grpc.WithResolvers(mdnsResolver)
+	}
 
 	withConnectParams := grpc.WithConnectParams(grpc.ConnectParams{
 		Backoff: backoff.Config{
