@@ -196,6 +196,8 @@ func RunApp() {
 
 		ChunkSizeInBytes: serverConfig.ChunkSizeInBytes,
 
+		ShouldStartHealthServer: true,
+
 		Logger: serverLogger,
 	}
 

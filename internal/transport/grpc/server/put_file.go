@@ -85,6 +85,10 @@ func (gs *GrpcServer) PutFile(stream grpc.ClientStreamingServer[insyncpb.PutFile
 		}
 	}
 
+	if err := pipeWriter.Close(); err != nil {
+		return err
+	}
+
 	return stream.SendAndClose(
 		&emptypb.Empty{},
 	)

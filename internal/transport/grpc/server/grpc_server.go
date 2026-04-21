@@ -22,6 +22,8 @@ type GrpcServer struct {
 
 	fileUseCase IFileUseCase
 
+	creds credentials.TransportCredentials
+
 	certPath   string
 	keyPath    string
 	caCertPath string
@@ -35,15 +37,20 @@ type GrpcServer struct {
 	logger    *slog.Logger
 	loggerCtx context.Context
 
+	listener net.Listener
+
 	server *grpc.Server
 
-	healthServer *health.Server
+	shouldStartHealthServer bool
+	healthServer            *health.Server
 
 	isStarted atomic.Bool
 }
 
 type GrpcServerOptions struct {
 	FileUseCase IFileUseCase
+
+	Creds credentials.TransportCredentials
 
 	CertPath   string
 	KeyPath    string
@@ -52,6 +59,9 @@ type GrpcServerOptions struct {
 	NetworkType string
 	Address     string
 	ServiceName string
+
+	ShouldStartHealthServer bool
+	Listener                net.Listener
 
 	ChunkSizeInBytes int
 	Logger           *slog.Logger
@@ -62,11 +72,13 @@ var (
 )
 
 func NewGrpcServer(opts GrpcServerOptions) (*GrpcServer, error) {
-	if opts.FileUseCase == nil ||
-		opts.CertPath == "" ||
+	if opts.Creds == nil && (opts.CertPath == "" ||
 		opts.KeyPath == "" ||
-		opts.CaCertPath == "" ||
+		opts.CaCertPath == "") {
+		return nil, ErrInvalidGrpcServerOptions
+	}
 
+	if opts.FileUseCase == nil ||
 		opts.NetworkType == "" ||
 		opts.Address == "" ||
 		opts.ServiceName == "" ||
@@ -90,12 +102,14 @@ func NewGrpcServer(opts GrpcServerOptions) (*GrpcServer, error) {
 
 		chunkSizeInBytes: opts.ChunkSizeInBytes,
 
+		creds:    opts.Creds,
+		listener: opts.Listener,
+
 		logger:    opts.Logger,
 		loggerCtx: loggerCtx,
 	}, nil
 }
 
-// Start блокирует выполнение, поэтому его нужно запускать в отдельной горутине. Он будет работать до тех пор, пока сервер не будет остановлен через метод Stop.
 func (gs *GrpcServer) Start() (err error) {
 	if !gs.isStarted.CompareAndSwap(false, true) {
 		gs.logger.Warn("Попытка запустить сервер, который уже запущен")
@@ -109,23 +123,36 @@ func (gs *GrpcServer) Start() (err error) {
 
 	gs.logger.Info("Запуск gRPC сервера...")
 
-	transportCreds, err := gs.createTransportCreds()
-	if err != nil {
-		return err
+	var withTransportCreds grpc.ServerOption
+	if gs.creds != nil {
+		withTransportCreds = grpc.Creds(gs.creds)
+	} else {
+		transportCreds, err := gs.createTransportCreds()
+		if err != nil {
+			return err
+		}
+		withTransportCreds = grpc.Creds(transportCreds)
 	}
-	withTransportCreds := grpc.Creds(transportCreds)
 
 	server := grpc.NewServer(withTransportCreds)
 	gs.server = server
 	insyncpb.RegisterFileSyncServiceServer(server, gs)
 
-	healthServer := health.NewServer()
-	gs.healthServer = healthServer
-	grpc_health_v1.RegisterHealthServer(server, healthServer)
+	var healthServer *health.Server
+	if gs.shouldStartHealthServer {
+		healthServer = health.NewServer()
+		gs.healthServer = healthServer
+		grpc_health_v1.RegisterHealthServer(server, healthServer)
+	}
 
-	listener, err := net.Listen(gs.networkType, gs.address)
-	if err != nil {
-		return err
+	var listener net.Listener
+	if gs.listener != nil {
+		listener = gs.listener
+	} else {
+		listener, err = net.Listen(gs.networkType, gs.address)
+		if err != nil {
+			return err
+		}
 	}
 
 	go func() {
@@ -140,8 +167,9 @@ func (gs *GrpcServer) Start() (err error) {
 		}
 	}()
 
-	healthServer.SetServingStatus(gs.serviceName, grpc_health_v1.HealthCheckResponse_SERVING)
-
+	if gs.shouldStartHealthServer {
+		healthServer.SetServingStatus(gs.serviceName, grpc_health_v1.HealthCheckResponse_SERVING)
+	}
 	gs.logger.Info("gRPC сервер успешно запущен")
 
 	return nil
