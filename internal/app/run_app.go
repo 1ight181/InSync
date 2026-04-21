@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"insync/internal/domain"
 	clt "insync/internal/infrastructure/client"
+	mdnsresolver "insync/internal/infrastructure/client/resolver"
 	conn "insync/internal/infrastructure/connection"
 	deviceid "insync/internal/infrastructure/deviceid"
 	deviceidlocal "insync/internal/infrastructure/deviceid/local"
@@ -37,6 +38,8 @@ import (
 	syncusecase "insync/internal/usecase/sync"
 	"os"
 	"time"
+
+	"google.golang.org/grpc/resolver"
 )
 
 const (
@@ -231,6 +234,19 @@ func RunApp() {
 	clientConfig := config.ClientConfig
 	clientLogger := logger.With(moduleAtrributeName, grpcClientModuleName)
 
+	builderOptions := mdnsresolver.BuilderOptions{
+		ResolverIfaces:              mDnsBrowserConfig.GetInterfaces(),
+		BackgroundListenTimeout:     time.Second * 30,
+		ShouldResolveIpv6:           true,
+		ShouldDisableResolverOnIdle: true,
+		ShouldReportError:           true,
+		Logger:                      logger,
+	}
+
+	mDnsResolverBuilder := mdnsresolver.NewBuilder(
+		builderOptions,
+	)
+
 	// В GrpcConf не передается ServerAddress, т.к. он добавляется в ConnectionManager при подключении к конкретному узлу
 	// Данная конфигурация является основой для подключения к любому узлу
 	grpcClientConf := clt.GrpcConf{
@@ -242,8 +258,7 @@ func RunApp() {
 		ServerNetworkType: clientConfig.ServerNetworkType,
 		ServerServiceName: clientConfig.ServerServiceName,
 
-		ResolverScheme:     clientConfig.ResolverScheme,
-		MDnsResolverIfaces: mDnsBrowserConfig.GetInterfaces(),
+		ResolverScheme: clientConfig.ResolverScheme,
 
 		LoadBalancingPolicy:  clientConfig.LoadBalancingPolicy,
 		ShouldUseHealthCheck: clientConfig.ShouldUseHealthCheck,
@@ -267,6 +282,7 @@ func RunApp() {
 		},
 
 		ChunkSizeInBytes: clientConfig.ChunkSizeInBytes,
+		Resolvers:        []resolver.Builder{mDnsResolverBuilder},
 	}
 
 	connectionManagerLogger := logger.With(moduleAtrributeName, connectionManagerModuleName)

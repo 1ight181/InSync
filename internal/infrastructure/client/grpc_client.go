@@ -19,13 +19,20 @@ import (
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/credentials"
 
-	mdnsresolver "insync/internal/infrastructure/client/resolver"
-
 	resolver "google.golang.org/grpc/resolver"
 )
 
 const (
+	defaultBaseDelay         = 100 * time.Millisecond
+	defaultMultiplier        = 2.0
+	defaultMaxDelay          = 10 * time.Second
+	defaultJitter            = 0.1
+	defaultMinConnectTimeout = 5 * time.Second
+)
+
+const (
 	resolverSchemeSeparator = "://"
+	defaultScheme           = "passthrough"
 )
 
 type RpcRetryPolicy struct {
@@ -56,9 +63,6 @@ type GrpcConf struct {
 	ServerName        string
 
 	ResolverScheme string
-
-	// опциональный список интерфейсов, которые будут использоваться для работы mdns клиента
-	MDnsResolverIfaces []string
 
 	LoadBalancingPolicy  string
 	ShouldUseHealthCheck bool
@@ -107,22 +111,27 @@ func NewGrpcClient(opts GrpcClientOptions) (*GrpcClient, error) {
 		return nil, ErrInvalidOpts
 	}
 
-	if opts.Conf.Creds == nil &&
-		opts.Conf.CaCertPath == "" ||
+	if opts.Conf.Creds == nil && (opts.Conf.CaCertPath == "" ||
 		opts.Conf.CertPath == "" ||
-		opts.Conf.KeyPath == "" {
+		opts.Conf.ServerName == "" ||
+		opts.Conf.KeyPath == "") {
 		return nil, ErrInvalidOpts
 	}
 
 	if opts.Conf.Dialer == nil &&
-		opts.Conf.ServerNetworkType == "" ||
-		opts.Conf.ServerName == "" ||
-		opts.Conf.ServerAddress == "" {
+		opts.Conf.ServerNetworkType == "" {
 		return nil, ErrInvalidOpts
 	}
 
-	if opts.Conf.DefaultServiceConf == "" &&
-		opts.Conf.LoadBalancingPolicy == "" ||
+	if opts.Conf.ServerAddress == "" {
+		return nil, ErrInvalidOpts
+	}
+
+	if len(opts.Conf.Resolvers) > 0 && opts.Conf.ResolverScheme == "" {
+		return nil, ErrInvalidOpts
+	}
+
+	if opts.Conf.DefaultServiceConf == "" && (opts.Conf.LoadBalancingPolicy == "" ||
 		opts.Conf.ServerServiceName == "" ||
 		opts.Conf.RpcTimeout <= 0 ||
 		opts.Conf.RetryPolicy == nil ||
@@ -130,14 +139,11 @@ func NewGrpcClient(opts GrpcClientOptions) (*GrpcClient, error) {
 		opts.Conf.RetryPolicy.InitialBackoff <= 0 ||
 		opts.Conf.RetryPolicy.MaxBackoff <= 0 ||
 		opts.Conf.RetryPolicy.BackoffMultiplier <= 0 ||
-		len(opts.Conf.RetryPolicy.RetryableStatusCodes) == 0 {
+		len(opts.Conf.RetryPolicy.RetryableStatusCodes) == 0) {
 		return nil, ErrInvalidOpts
 	}
 
-	if opts.Conf.ResolverScheme == "" ||
-		opts.Conf.ConnectionConfig == nil ||
-
-		opts.Ctx == nil ||
+	if opts.Ctx == nil ||
 
 		opts.Conf.ChunkSizeInBytes <= 0 ||
 
@@ -176,50 +182,76 @@ func (gc *GrpcClient) Connect() (err error) {
 
 	gc.logger.LogAttrs(gc.loggerCtx, slog.LevelDebug, "Клиент подключается по адресу:", slog.String("address", address))
 
-	var withTransportCreds grpc.DialOption
+	var dialOptions []grpc.DialOption
+
 	if gc.conf.Creds != nil {
-		withTransportCreds = grpc.WithTransportCredentials(gc.conf.Creds)
+		withTransportCreds := grpc.WithTransportCredentials(gc.conf.Creds)
+		dialOptions = append(dialOptions, withTransportCreds)
 	} else {
 		transportCreds, err := gc.createTransportCreds()
 		if err != nil {
 			return err
 		}
 
-		withTransportCreds = grpc.WithTransportCredentials(transportCreds)
+		withTransportCreds := grpc.WithTransportCredentials(transportCreds)
+		dialOptions = append(dialOptions, withTransportCreds)
 	}
 
-	var withContextDialer grpc.DialOption
 	if gc.conf.Dialer != nil {
-		withContextDialer = grpc.WithContextDialer(gc.conf.Dialer)
+		dialOptions = append(dialOptions,
+			grpc.WithContextDialer(gc.conf.Dialer),
+		)
 	} else {
-		networkAwareDialer := gc.createNetworkAwareDialer()
-		withContextDialer = grpc.WithContextDialer(networkAwareDialer)
+		dialOptions = append(dialOptions,
+			grpc.WithContextDialer(gc.createNetworkAwareDialer()),
+		)
 	}
 
-	var withDefaultServiceConf grpc.DialOption
-	if gc.conf.DefaultServiceConf != "" {
-		withDefaultServiceConf = grpc.WithDefaultServiceConfig(gc.conf.DefaultServiceConf)
-	} else {
-		withDefaultServiceConf = grpc.WithDefaultServiceConfig(gc.createServiceConfig())
-	}
-
-	var withResolvers grpc.DialOption
 	if len(gc.conf.Resolvers) > 0 {
-		withResolvers = grpc.WithResolvers(gc.conf.Resolvers...)
-	} else {
-		mdnsResolver := gc.createMDnsResolver()
-		withResolvers = grpc.WithResolvers(mdnsResolver)
+		dialOptions = append(dialOptions,
+			grpc.WithResolvers(gc.conf.Resolvers...),
+		)
 	}
 
-	withConnectParams := grpc.WithConnectParams(grpc.ConnectParams{
-		Backoff: backoff.Config{
-			BaseDelay:  gc.conf.ConnectionConfig.BaseDelay,
-			Multiplier: gc.conf.ConnectionConfig.Multiplier,
-			MaxDelay:   gc.conf.ConnectionConfig.MaxDelay,
-			Jitter:     gc.conf.ConnectionConfig.Jitter,
-		},
-		MinConnectTimeout: gc.conf.ConnectionConfig.MinConnectTimeout,
-	})
+	if gc.conf.DefaultServiceConf != "" {
+		withDefaultServiceConf := grpc.WithDefaultServiceConfig(gc.conf.DefaultServiceConf)
+		dialOptions = append(dialOptions, withDefaultServiceConf)
+	} else {
+		withDefaultServiceConf := grpc.WithDefaultServiceConfig(gc.createServiceConfig())
+		dialOptions = append(dialOptions, withDefaultServiceConf)
+	}
+
+	if gc.conf.ConnectionConfig != nil {
+		withConnectParams := grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff: backoff.Config{
+				BaseDelay:  gc.conf.ConnectionConfig.BaseDelay,
+				Multiplier: gc.conf.ConnectionConfig.Multiplier,
+				MaxDelay:   gc.conf.ConnectionConfig.MaxDelay,
+				Jitter:     gc.conf.ConnectionConfig.Jitter,
+			},
+			MinConnectTimeout: gc.conf.ConnectionConfig.MinConnectTimeout,
+		})
+
+		dialOptions = append(dialOptions, withConnectParams)
+	} else {
+		defaultConnectionConfig := ConnectionConfig{
+			BaseDelay:         defaultBaseDelay,
+			Multiplier:        defaultMultiplier,
+			MaxDelay:          defaultMaxDelay,
+			Jitter:            defaultJitter,
+			MinConnectTimeout: defaultMinConnectTimeout,
+		}
+		withConnectParams := grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff: backoff.Config{
+				BaseDelay:  defaultConnectionConfig.BaseDelay,
+				Multiplier: defaultConnectionConfig.Multiplier,
+				MaxDelay:   defaultConnectionConfig.MaxDelay,
+				Jitter:     defaultConnectionConfig.Jitter,
+			},
+			MinConnectTimeout: defaultConnectionConfig.MinConnectTimeout,
+		})
+		dialOptions = append(dialOptions, withConnectParams)
+	}
 
 	ctx := gc.ctx
 	if ctx.Err() != nil {
@@ -228,11 +260,7 @@ func (gc *GrpcClient) Connect() (err error) {
 
 	conn, err := grpc.NewClient(
 		address,
-		withTransportCreds,
-		withContextDialer,
-		withDefaultServiceConf,
-		withResolvers,
-		withConnectParams,
+		dialOptions...,
 	)
 	if err != nil {
 		return err
@@ -345,20 +373,10 @@ func (gc *GrpcClient) createNetworkAwareDialer() func(context.Context, string) (
 }
 
 func (gc *GrpcClient) createAddress() string {
-	return fmt.Sprintf("%s%s%s", gc.conf.ResolverScheme, resolverSchemeSeparator, gc.conf.ServerAddress)
-}
-
-func (gc *GrpcClient) createMDnsResolver() resolver.Builder {
-	builderOptions := mdnsresolver.BuilderOptions{
-		ResolverIfaces:              gc.conf.MDnsResolverIfaces,
-		BackgroundListenTimeout:     time.Second * 30,
-		ShouldResolveIpv6:           true,
-		ShouldDisableResolverOnIdle: true,
-		ShouldReportError:           true,
-		Logger:                      gc.logger,
+	scheme := gc.conf.ResolverScheme
+	if scheme != "" && len(gc.conf.Resolvers) > 0 {
+		return fmt.Sprintf("%s%s%s", scheme, resolverSchemeSeparator, gc.conf.ServerAddress)
 	}
 
-	return mdnsresolver.NewBuilder(
-		builderOptions,
-	)
+	return fmt.Sprintf("%s%s%s", defaultScheme, resolverSchemeSeparator, gc.conf.ServerAddress)
 }
