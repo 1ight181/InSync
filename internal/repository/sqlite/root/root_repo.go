@@ -1,6 +1,7 @@
 package root
 
 import (
+	"errors"
 	"insync/internal/domain"
 
 	"gorm.io/gorm"
@@ -29,7 +30,15 @@ func (r *RootRepository) GetRoots() (map[domain.RootName]domain.Path, error) {
 }
 
 func (r *RootRepository) AddRoot(rootName domain.RootName, path domain.Path) error {
-	root := r.toRoot(rootName, path)
+	var root Root
+	err := r.db.First(&root, "root_name = ?", rootName).Error
+	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	root.RootName = rootName.String()
+	root.RootPath = path.String()
+
 	return r.db.Save(&root).Error
 }
 

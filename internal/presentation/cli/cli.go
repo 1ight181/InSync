@@ -9,11 +9,13 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"syscall"
+	"unsafe"
 
 	prompt "github.com/c-bata/go-prompt"
-	"github.com/google/shlex"
 	"github.com/spf13/cobra"
 	cobraprompt "github.com/stromland/cobra-prompt"
+	"golang.org/x/sys/windows"
 
 	promptui "github.com/manifoldco/promptui"
 )
@@ -119,7 +121,7 @@ func (c *Cli) Start() {
 
 	addRootCmd := c.createAddRootCmd()
 	removeRootCmd := c.createRemoveRootCmd()
-	getRootsCmd := c.createGetRootsCmd()
+	getRootsCmd := c.createRootsCmd()
 
 	dryRunCmd := c.createDryRunCmd()
 	syncCmd := c.createSyncCmd()
@@ -155,20 +157,34 @@ func (c *Cli) Start() {
 				fmt.Printf("%s\n", err)
 			}
 		},
-
-		InArgsParser: c.argsParser,
+		InArgsParser: c.parseWindowsCommandLine,
 	}
 
 	cobraPrompt.Run()
 }
 
-func (c *Cli) argsParser(commandLine string) []string {
-	parsedArguments, parseErr := shlex.Split(commandLine)
-	if parseErr != nil {
-		fmt.Printf("Не удалось разобрать аргументы: %v\n", parseErr)
+func (c *Cli) parseWindowsCommandLine(commandLine string) []string {
+	commandLinePointer, err := syscall.UTF16PtrFromString(commandLine)
+	if err != nil {
 		return strings.Fields(commandLine)
 	}
-	return parsedArguments
+
+	var argumentCount int32
+
+	argumentVector, err := windows.CommandLineToArgv(commandLinePointer, &argumentCount)
+	if err != nil {
+		return strings.Fields(commandLine)
+	}
+	defer windows.LocalFree(windows.Handle(uintptr(unsafe.Pointer(argumentVector))))
+
+	arguments := make([]string, 0, argumentCount)
+
+	for index := int32(0); index < argumentCount; index++ {
+		argument := syscall.UTF16ToString(argumentVector[index][:])
+		arguments = append(arguments, argument)
+	}
+
+	return arguments
 }
 
 func (c *Cli) createRootCmd() *cobra.Command {
@@ -221,12 +237,12 @@ func (c *Cli) createRemoveRootCmd() *cobra.Command {
 	}
 }
 
-func (c *Cli) createGetRootsCmd() *cobra.Command {
+func (c *Cli) createRootsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   fmt.Sprintf("%s", getRootsCmdName),
 		Short: "Получить список корневых каталогов",
 		Args:  cobra.NoArgs,
-		Run:   c.getRootsCmd,
+		Run:   c.rootsCmd,
 	}
 }
 
@@ -287,16 +303,16 @@ func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) {
 
 	nodeNamesChan, err := c.nodeUseCase.ShowNodeNames(interruptCtx)
 	if err != nil {
-		fmt.Print("Не удалось получить узлы")
+		fmt.Print("Не удалось получить узлы\n")
 		return
 	}
 
-	fmt.Printf("Доступные узлы (динамический список, нажмите Ctrl+C для завершения):")
+	fmt.Println("Доступные узлы (динамический список, нажмите Ctrl+C для завершения):")
 
 	i := 1
 	select {
 	case nodeName := <-nodeNamesChan:
-		fmt.Printf("%d. %s", i, nodeName)
+		fmt.Printf("%d. %s\n", i, nodeName)
 		i++
 		c.nodeNameCache = append(c.nodeNameCache, nodeName)
 	case <-interruptCtx.Done():
@@ -308,7 +324,7 @@ func (c *Cli) currentNodeCmd(cmd *cobra.Command, args []string) {
 	c.logger.Debug("Выполнение команды current-node")
 
 	currentNode := c.connectUseCase.CurrentNodeName()
-	fmt.Printf("Текущий подключенный узел: %s", currentNode)
+	fmt.Printf("Текущий подключенный узел: %s\n", currentNode)
 }
 
 func (c *Cli) addRootCmd(cmd *cobra.Command, args []string) error {
@@ -316,19 +332,21 @@ func (c *Cli) addRootCmd(cmd *cobra.Command, args []string) error {
 
 	rootName, err := domain.NewRootName(args[0])
 	if err != nil {
-		fmt.Printf("Не удалось создать корневой каталог")
+		fmt.Println("Не удалось создать корневой каталог")
 		return err
 	}
 
 	rootRelativePath, err := domain.NewPath(args[1])
 	if err != nil {
-		fmt.Printf("Не удалось создать корневой каталог")
+		fmt.Println("Не удалось создать корневой каталог")
 		return err
 	}
 
-	c.rootUseCase.AddRoot(rootName, rootRelativePath)
+	if err := c.rootUseCase.AddRoot(rootName, rootRelativePath); err != nil {
+		return err
+	}
 
-	fmt.Printf("Корневой каталог %s добавлен", rootName)
+	fmt.Printf("Корневой каталог %s добавлен\n", rootName)
 	return nil
 }
 
@@ -337,26 +355,27 @@ func (c *Cli) removeRootCmd(cmd *cobra.Command, args []string) error {
 
 	rootName, err := domain.NewRootName(args[0])
 	if err != nil {
-		fmt.Printf("Не удалось создать удалить корневой каталог")
+		fmt.Println("Не удалось создать удалить корневой каталог")
 		return err
 	}
 
 	c.rootUseCase.RemoveRoot(rootName)
 
-	fmt.Printf("Корневой каталог %s удален", rootName)
+	fmt.Printf("Корневой каталог %s удален\n", rootName)
 
 	return nil
 }
 
-func (c *Cli) getRootsCmd(cmd *cobra.Command, args []string) {
-	c.logger.Debug("Выполнение команды get-roots")
+func (c *Cli) rootsCmd(cmd *cobra.Command, args []string) {
+	c.logger.Debug("Выполнение команды roots")
 
 	roots := c.rootUseCase.GetRoots()
 
-	fmt.Printf("Список корневых каталогов:")
-
-	for i, root := range roots {
-		fmt.Printf("%d. %s", i+1, root)
+	fmt.Println("Список корневых каталогов:")
+	var i int
+	for root, path := range roots {
+		i++
+		fmt.Printf("%d. %s = %s\n", i, root, path)
 	}
 }
 
@@ -365,16 +384,16 @@ func (c *Cli) connectCmd(cmd *cobra.Command, args []string) error {
 
 	nodeName, err := domain.NewNodeName(args[0])
 	if err != nil {
-		fmt.Printf("Не удалось подключиться к узлу")
+		fmt.Println("Не удалось подключиться к узлу")
 		return err
 	}
-	fmt.Printf("Подключение к узлу %s", nodeName)
+	fmt.Printf("Подключение к узлу %s\n", nodeName)
 
 	if err := c.connectUseCase.ConnectToNode(nodeName); err != nil {
 		return err
 	}
 
-	fmt.Printf("Подключение к узлу %s прошло успешно", nodeName)
+	fmt.Printf("Подключение к узлу %s прошло успешно\n", nodeName)
 
 	return nil
 }
@@ -384,7 +403,7 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 
 	rootName, err := domain.NewRootName(args[0])
 	if err != nil {
-		fmt.Printf("Не удалось выполнить sync")
+		fmt.Println("Не удалось выполнить sync")
 		return err
 	}
 
@@ -403,7 +422,7 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 
 			changeEventErr := changeEvent.Err
 			if changeEventErr != nil {
-				fmt.Printf("Не удалось применить изменение: %s", changeEventErr)
+				fmt.Printf("Не удалось применить изменение: %s\n", changeEventErr)
 				continue
 			}
 			fmt.Printf("Применено изменение: %s\n", c.changeToHumanReadable(changeEvent.Change))
@@ -436,11 +455,11 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	if interruptCtx.Err() != nil {
-		fmt.Printf("Синхронизация прервана пользователем")
+		fmt.Println("Синхронизация прервана пользователем")
 		return nil
 	}
 
-	fmt.Printf("Синхронизация завершена")
+	fmt.Println("Синхронизация завершена")
 
 	return nil
 }
@@ -475,7 +494,7 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 	c.logger.Debug("Выполнение команды dry-run")
 	rootName, err := domain.NewRootName(args[0])
 	if err != nil {
-		fmt.Printf("Не удалось выполнить dry-run")
+		fmt.Println("Не удалось выполнить dry-run")
 		return err
 	}
 
@@ -485,12 +504,12 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 
 	plan, err := c.scanUseCase.PlanSyncChanges(interruptCtx, rootName)
 	if err != nil {
-		fmt.Print("Не удалось получить изменения для синхронизации")
+		fmt.Print("Не удалось получить изменения для синхронизации\n")
 		return err
 	}
 
 	if plan.IsEmpty() {
-		fmt.Print("Нет изменений для синхронизации")
+		fmt.Print("Нет изменений для синхронизации\n")
 	}
 
 	changesHeader := c.getChangesHeader()
@@ -499,7 +518,7 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Всего локальных изменений: %d\n%s", plan.LocalLength(), changesHeader)
 		localChanges := plan.LocalChanges
 		for i, change := range localChanges {
-			fmt.Printf("%d. %s", i+1, c.changeToHumanReadable(change.ToSyncChange()))
+			fmt.Printf("%d. %s\n", i+1, c.changeToHumanReadable(change.ToSyncChange()))
 		}
 	}
 
@@ -507,7 +526,7 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Всего удалённых изменений: %d\n%s", plan.RemoteLength(), changesHeader)
 		remoteChanges := plan.RemoteChanges
 		for i, change := range remoteChanges {
-			fmt.Printf("%d. %s", i+1, c.changeToHumanReadable(change.ToSyncChange()))
+			fmt.Printf("%d. %s\n", i+1, c.changeToHumanReadable(change.ToSyncChange()))
 		}
 	}
 
@@ -515,7 +534,7 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Всего конфликтов: %d\n%s", plan.ConflictLength(), changesHeader)
 		conflicts := plan.Conflicts
 		for i, conflict := range conflicts {
-			fmt.Printf("%d. %s", i+1, c.conflictToHumanReadable(conflict))
+			fmt.Printf("%d. %s\n", i+1, c.conflictToHumanReadable(conflict))
 		}
 	}
 

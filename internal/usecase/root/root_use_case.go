@@ -24,14 +24,14 @@ func NewRootUseCase(opts RootUseCaseOptions) (*RootUseCase, error) {
 	return &RootUseCase{rootRegistrar: opts.RootRegistrar}, nil
 }
 
-func (r *RootUseCase) AddRoot(rootName domain.RootName, rootPath domain.Path) {
-	r.rootRegistrar.AddRoot(rootName, rootPath)
+func (r *RootUseCase) AddRoot(rootName domain.RootName, rootPath domain.Path) error {
+	return r.rootRegistrar.AddRoot(rootName, rootPath)
 }
 
-func (r *RootUseCase) RemoveRoot(rootName domain.RootName) {
-	r.rootRegistrar.RemoveRoot(rootName)
+func (r *RootUseCase) RemoveRoot(rootName domain.RootName) error {
+	return r.rootRegistrar.RemoveRoot(rootName)
 }
 
-func (r *RootUseCase) GetRoots() []domain.RootName {
+func (r *RootUseCase) GetRoots() map[domain.RootName]domain.Path {
 	return r.rootRegistrar.GetRoots()
 }

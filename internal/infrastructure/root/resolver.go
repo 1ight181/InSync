@@ -43,20 +43,16 @@ func (p *RootResolver) ResolveRoot(scopedPath domain.ScopedPath) (domain.Path, e
 	return rootPathWithRelative, nil
 }
 
-func (p *RootResolver) AddRoot(rootName domain.RootName, rootPath domain.Path) {
-	p.rootRepo.AddRoot(rootName, rootPath)
+func (p *RootResolver) AddRoot(rootName domain.RootName, rootPath domain.Path) error {
 	p.rootMap[rootName] = rootPath
+	return p.rootRepo.AddRoot(rootName, rootPath)
 }
 
-func (p *RootResolver) RemoveRoot(rootName domain.RootName) {
-	p.rootRepo.RemoveRoot(rootName)
+func (p *RootResolver) RemoveRoot(rootName domain.RootName) error {
 	delete(p.rootMap, rootName)
+	return p.rootRepo.RemoveRoot(rootName)
 }
 
-func (p *RootResolver) GetRoots() []domain.RootName {
-	roots := make([]domain.RootName, 0, len(p.rootMap))
-	for rootName := range p.rootMap {
-		roots = append(roots, rootName)
-	}
-	return roots
+func (p *RootResolver) GetRoots() map[domain.RootName]domain.Path {
+	return p.rootMap
 }
