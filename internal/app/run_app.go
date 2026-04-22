@@ -30,6 +30,7 @@ import (
 	repo "insync/internal/repository/sqlite"
 	baserepo "insync/internal/repository/sqlite/base"
 	hashrepo "insync/internal/repository/sqlite/hash"
+	rootrepo "insync/internal/repository/sqlite/root"
 	server "insync/internal/transport/grpc/server"
 	connusecase "insync/internal/usecase/connect"
 	fileusecase "insync/internal/usecase/file"
@@ -86,10 +87,6 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось запустить mDNS сервер: %v", err))
 	}
 
-	rootResolver := root.NewRootResolver()
-	fileSystem := filesys.NewFileSystem()
-	pathTree := pathtree.NewPathTree()
-
 	dbConfig := config.DbConfig
 	dbDir := dbConfig.Dir
 	if err := os.MkdirAll(dbDir, 0755); err != nil {
@@ -117,6 +114,15 @@ func RunApp() {
 			logger.Warn("Не удалось коректно закрыть sqlite")
 		}
 	}()
+
+	rootRepo := rootrepo.NewRootRepository(db)
+
+	rootResolver, err := root.NewRootResolver(rootRepo)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать RootResolver: %v", err))
+	}
+	fileSystem := filesys.NewFileSystem()
+	pathTree := pathtree.NewPathTree()
 
 	hashCacheRepoOpts := hashrepo.HashRepositoryOptions{
 		Db: db,

@@ -5,13 +5,26 @@ import (
 )
 
 type RootResolver struct {
-	rootMap map[domain.RootName]domain.Path
+	rootMap  map[domain.RootName]domain.Path
+	rootRepo IRootResolverRepository
 }
 
-func NewRootResolver() *RootResolver {
-	return &RootResolver{
-		rootMap: make(map[domain.RootName]domain.Path),
+func NewRootResolver(rootRepo IRootResolverRepository) (*RootResolver, error) {
+	rootResolver := RootResolver{
+		rootMap:  make(map[domain.RootName]domain.Path),
+		rootRepo: rootRepo,
 	}
+
+	roots, err := rootResolver.rootRepo.GetRoots()
+	if err != nil {
+		return nil, err
+	}
+
+	for rootName, rootPath := range roots {
+		rootResolver.rootMap[rootName] = rootPath
+	}
+
+	return &rootResolver, nil
 }
 
 func (p *RootResolver) ResolveRoot(scopedPath domain.ScopedPath) (domain.Path, error) {
@@ -31,10 +44,12 @@ func (p *RootResolver) ResolveRoot(scopedPath domain.ScopedPath) (domain.Path, e
 }
 
 func (p *RootResolver) AddRoot(rootName domain.RootName, rootPath domain.Path) {
+	p.rootRepo.AddRoot(rootName, rootPath)
 	p.rootMap[rootName] = rootPath
 }
 
 func (p *RootResolver) RemoveRoot(rootName domain.RootName) {
+	p.rootRepo.RemoveRoot(rootName)
 	delete(p.rootMap, rootName)
 }
 
