@@ -1,148 +1,166 @@
 package pathtree
 
 import (
-	"errors"
 	"insync/internal/domain"
 	"path/filepath"
 )
 
+type ScopedPath struct {
+	RootName domain.RootName
+	Path     domain.Path
+}
+
 type node struct {
-	path     domain.Path
+	path     ScopedPath
 	parent   *node
-	children map[domain.Path]*node
+	children map[ScopedPath]*node
 }
 
 type PathTree struct {
-	nodes map[domain.Path]*node
+	nodes map[ScopedPath]*node
 }
 
 func NewPathTree() *PathTree {
 	return &PathTree{
-		nodes: make(map[domain.Path]*node),
+		nodes: make(map[ScopedPath]*node),
 	}
 }
 
-func (pt *PathTree) AddPath(fullPath domain.Path) error {
-	normalizedPath, err := pt.normalizePath(fullPath)
+func (pt *PathTree) AddPath(rootName domain.RootName, relativePath domain.Path) error {
+	normalizedPath, err := pt.normalizePath(relativePath)
 	if err != nil {
 		return err
 	}
-	if _, ok := pt.nodes[normalizedPath]; ok {
+
+	scoped := ScopedPath{
+		RootName: rootName,
+		Path:     normalizedPath,
+	}
+
+	if _, exists := pt.nodes[scoped]; exists {
 		return nil
 	}
 
-	pt.ensurePathRecursive(normalizedPath)
-	return nil
+	return pt.ensurePathRecursive(scoped)
 }
 
-func (pt *PathTree) RemovePath(fullPath domain.Path) error {
-	normalizedPath, err := pt.normalizePath(fullPath)
+func (pt *PathTree) RemovePath(rootName domain.RootName, relativePath domain.Path) error {
+	normalizedPath, err := pt.normalizePath(relativePath)
 	if err != nil {
 		return err
 	}
-	node, exists := pt.nodes[normalizedPath]
+
+	scoped := ScopedPath{
+		RootName: rootName,
+		Path:     normalizedPath,
+	}
+
+	targetNode, exists := pt.nodes[scoped]
 	if !exists {
 		return ErrNotFound
 	}
 
-	pt.removeNode(node)
+	pt.removeNodeRecursive(targetNode)
 	return nil
 }
 
-func (pt *PathTree) removeNode(node *node) {
-	for _, childNode := range node.children {
-		pt.removeNode(childNode)
-	}
-
-	if node.parent != nil {
-		delete(node.parent.children, node.path)
-	}
-	delete(pt.nodes, node.path)
-}
-
-func (tree *PathTree) GetParents(fullPath domain.Path) ([]domain.Path, error) {
-	normalizedPath, err := tree.normalizePath(fullPath)
+func (pt *PathTree) GetParents(rootName domain.RootName, relativePath domain.Path) ([]ScopedPath, error) {
+	normalizedPath, err := pt.normalizePath(relativePath)
 	if err != nil {
 		return nil, err
 	}
 
-	node := tree.nodes[normalizedPath]
-	if node == nil {
+	scoped := ScopedPath{
+		RootName: rootName,
+		Path:     normalizedPath,
+	}
+
+	currentNode := pt.nodes[scoped]
+	if currentNode == nil {
 		return nil, ErrNotFound
 	}
 
-	var parents []domain.Path
-	current := node.parent
+	var parents []ScopedPath
+	parentNode := currentNode.parent
 
-	for current != nil {
-		parents = append(parents, current.path)
-		current = current.parent
+	for parentNode != nil {
+		parents = append(parents, parentNode.path)
+		parentNode = parentNode.parent
 	}
 
 	return parents, nil
 }
 
-func (tree *PathTree) getChildren(fullPath domain.Path) ([]domain.Path, error) {
-	normalizedPath, err := tree.normalizePath(fullPath)
+func (pt *PathTree) getChildren(rootName domain.RootName, relativePath domain.Path) ([]ScopedPath, error) {
+	normalizedPath, err := pt.normalizePath(relativePath)
 	if err != nil {
 		return nil, err
 	}
-	node := tree.nodes[normalizedPath]
-	if node == nil {
+
+	scoped := ScopedPath{
+		RootName: rootName,
+		Path:     normalizedPath,
+	}
+
+	currentNode := pt.nodes[scoped]
+	if currentNode == nil {
 		return nil, ErrNotFound
 	}
 
-	var children []domain.Path
-	for childPath := range node.children {
+	children := make([]ScopedPath, 0, len(currentNode.children))
+	for childPath := range currentNode.children {
 		children = append(children, childPath)
 	}
+
 	return children, nil
 }
 
-func (pt *PathTree) ensurePathRecursive(path domain.Path) error {
-	if _, exists := pt.nodes[path]; exists {
+func (pt *PathTree) ensurePathRecursive(current ScopedPath) error {
+	if _, exists := pt.nodes[current]; exists {
 		return nil
 	}
 
-	parent, err := pt.parentPath(path)
+	parentScoped, hasParent, err := pt.parentScopedPath(current)
 	if err != nil {
-		if !errors.Is(err, ErrParentNotFound) {
+		return err
+	}
+
+	if hasParent {
+		if err := pt.ensurePathRecursive(parentScoped); err != nil {
 			return err
 		}
 	}
 
-	if errors.Is(err, ErrParentNotFound) {
-		parentNode := pt.nodes[parent]
-		newNode := &node{
-			path:     path,
-			parent:   parentNode,
-			children: make(map[domain.Path]*node),
-		}
-
-		pt.nodes[path] = newNode
-		if parentNode != nil {
-			parentNode.children[path] = newNode
-		}
-
-		return nil
+	var parentNode *node
+	if hasParent {
+		parentNode = pt.nodes[parentScoped]
 	}
 
-	pt.ensurePathRecursive(parent)
-
-	parentNode := pt.nodes[parent]
 	newNode := &node{
-		path:     path,
+		path:     current,
 		parent:   parentNode,
-		children: make(map[domain.Path]*node),
+		children: make(map[ScopedPath]*node),
 	}
 
-	pt.nodes[path] = newNode
+	pt.nodes[current] = newNode
+
 	if parentNode != nil {
-		parentNode.children[path] = newNode
+		parentNode.children[current] = newNode
 	}
 
 	return nil
+}
 
+func (pt *PathTree) removeNodeRecursive(targetNode *node) {
+	for _, childNode := range targetNode.children {
+		pt.removeNodeRecursive(childNode)
+	}
+
+	if targetNode.parent != nil {
+		delete(targetNode.parent.children, targetNode.path)
+	}
+
+	delete(pt.nodes, targetNode.path)
 }
 
 func (pt *PathTree) normalizePath(path domain.Path) (domain.Path, error) {
@@ -151,21 +169,22 @@ func (pt *PathTree) normalizePath(path domain.Path) (domain.Path, error) {
 	}
 
 	cleaned := path.Clean()
+	if cleaned == "." {
+		return "", nil
+	}
 
 	return cleaned, nil
 }
 
-func (pt *PathTree) parentPath(fullPath domain.Path) (domain.Path, error) {
-	cleaned, err := pt.normalizePath(fullPath)
-	if err != nil {
-		return "", err
+func (pt *PathTree) parentScopedPath(current ScopedPath) (ScopedPath, bool, error) {
+	parentPath := current.Path.Dir()
+
+	if parentPath == "." || parentPath == "" {
+		return ScopedPath{}, false, nil
 	}
 
-	parent := cleaned.Dir()
-
-	if parent == "." {
-		return "", ErrParentNotFound
-	}
-
-	return parent, nil
+	return ScopedPath{
+		RootName: current.RootName,
+		Path:     parentPath,
+	}, true, nil
 }
