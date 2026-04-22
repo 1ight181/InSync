@@ -10,8 +10,8 @@ type IClient interface {
 	GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error)
 	// Причина использования именно ReadCloser вместо io.Reader, так как ReadCloser позволяет закрыть соединение с сервером
 	// Это позволяет закрыть соединение, даже если реализация io.Reader не закрывает соединение по контексту, игнорируя его
-	GetFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) (io.ReadCloser, error)
-	PutFile(ctx context.Context, file io.Reader, rootName domain.RootName, relativePath domain.Path) error
-	DeleteFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) error
-	RenameFile(ctx context.Context, rootName domain.RootName, oldRelativePath domain.Path, newRelativePath domain.Path) error
+	GetFile(ctx context.Context, scopedPath domain.ScopedPath) (io.ReadCloser, error)
+	PutFile(ctx context.Context, file io.Reader, scopedPath domain.ScopedPath) error
+	DeleteFile(ctx context.Context, scopedPath domain.ScopedPath) error
+	RenameFile(ctx context.Context, oldScopedPath domain.ScopedPath, newScopedPath domain.ScopedPath) error
 }

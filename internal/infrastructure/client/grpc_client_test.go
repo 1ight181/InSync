@@ -89,7 +89,10 @@ func (s *ClientSuite) TestClient_GetSnapshot_Success() {
 func (s *ClientSuite) TestClient_GetFile_Success() {
 	s.Require().NoError(s.client.Connect())
 
-	reader, err := s.client.GetFile(context.Background(), domain.RootName("photos"), s.mustNewPath("file.txt"))
+	scopedPath, err := domain.NewScopedPath(domain.RootName("photos"), domain.Path("chunk0chunk1chunk2"))
+	s.Require().NoError(err)
+
+	reader, err := s.client.GetFile(context.Background(), scopedPath)
 	s.Require().NoError(err)
 	defer reader.Close()
 
@@ -102,22 +105,29 @@ func (s *ClientSuite) TestClient_PutFile_Success() {
 	s.Require().NoError(s.client.Connect())
 
 	data := []byte("testClient_ file content from client")
-	err := s.client.PutFile(context.Background(), bytes.NewReader(data), domain.RootName("photos"), s.mustNewPath("upload.txt"))
+	scopedPath, err := domain.NewScopedPath(domain.RootName("photos"), domain.Path("new.txt"))
+	s.Require().NoError(err)
+	err = s.client.PutFile(context.Background(), bytes.NewReader(data), scopedPath)
 	s.Require().NoError(err)
 }
 
 func (s *ClientSuite) TestClient_Delete_Success() {
 	s.Require().NoError(s.client.Connect())
 
-	err := s.client.DeleteFile(context.Background(), domain.RootName("photos"), s.mustNewPath("old.txt"))
+	scopedPath, err := domain.NewScopedPath(domain.RootName("photos"), domain.Path("old.txt"))
+	s.Require().NoError(err)
+	err = s.client.DeleteFile(context.Background(), scopedPath)
 	s.Require().NoError(err)
 }
 
 func (s *ClientSuite) TestClient_Rename_Success() {
 	s.Require().NoError(s.client.Connect())
 
-	err := s.client.RenameFile(context.Background(), domain.RootName("photos"),
-		s.mustNewPath("old.txt"), s.mustNewPath("new.txt"))
+	oldScopedPath, err := domain.NewScopedPath(domain.RootName("photos"), domain.Path("old.txt"))
+	s.Require().NoError(err)
+	newScopedPath, err := domain.NewScopedPath(domain.RootName("photos"), domain.Path("new.txt"))
+	s.Require().NoError(err)
+	err = s.client.RenameFile(context.Background(), oldScopedPath, newScopedPath)
 	s.Require().NoError(err)
 }
 
@@ -126,10 +136,12 @@ func (s *ClientSuite) TestClient_Methods_WhenNotStarted_ReturnErrClientNotStarte
 	_, err := s.client.GetSnapshot(context.Background(), domain.RootName("root"))
 	s.Require().ErrorIs(err, ErrClientNotStarted)
 
-	_, err = s.client.GetFile(context.Background(), domain.RootName("root"), s.mustNewPath("f"))
+	scopedPath, err := domain.NewScopedPath(domain.RootName("root"), s.mustNewPath("f"))
+	s.Require().NoError(err)
+	_, err = s.client.GetFile(context.Background(), scopedPath)
 	s.Require().ErrorIs(err, ErrClientNotStarted)
 
-	err = s.client.PutFile(context.Background(), bytes.NewReader(nil), domain.RootName("root"), s.mustNewPath("f"))
+	err = s.client.PutFile(context.Background(), bytes.NewReader(nil), scopedPath)
 	s.Require().ErrorIs(err, ErrClientNotStarted)
 }
 

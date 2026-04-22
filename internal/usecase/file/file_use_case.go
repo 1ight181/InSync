@@ -30,18 +30,18 @@ func (f *FileUseCase) GetSnapshot(ctx context.Context, rootName domain.RootName)
 	return f.fileManager.GetSnapshot(ctx, rootName)
 }
 
-func (f *FileUseCase) DeleteFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) error {
-	return f.fileManager.DeleteFile(ctx, rootName, relativePath)
+func (f *FileUseCase) DeleteFile(ctx context.Context, scopedPath domain.ScopedPath) error {
+	return f.fileManager.DeleteFile(ctx, scopedPath)
 }
 
-func (f *FileUseCase) PutFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path, file io.Reader) error {
-	return f.fileManager.PutFile(ctx, rootName, relativePath, file)
+func (f *FileUseCase) PutFile(ctx context.Context, scopedPath domain.ScopedPath, file io.Reader) error {
+	return f.fileManager.PutFile(ctx, scopedPath, file)
 }
 
-func (f *FileUseCase) RenameFile(ctx context.Context, rootName domain.RootName, oldPath, newPath domain.Path) error {
-	return f.fileManager.RenameFile(ctx, rootName, oldPath, newPath)
+func (f *FileUseCase) RenameFile(ctx context.Context, scopedOldPath domain.ScopedPath, scopedNewPath domain.ScopedPath) error {
+	return f.fileManager.RenameFile(ctx, scopedOldPath, scopedNewPath)
 }
 
-func (f *FileUseCase) GetFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) (io.ReadCloser, error) {
-	return f.fileManager.GetFile(ctx, rootName, relativePath)
+func (f *FileUseCase) GetFile(ctx context.Context, scopedPath domain.ScopedPath) (io.ReadCloser, error) {
+	return f.fileManager.GetFile(ctx, scopedPath)
 }

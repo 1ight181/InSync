@@ -57,7 +57,3 @@ func (p Path) Join(newPath string) (Path, error) {
 
 	return Path(filepath.Join(p.String(), newPath)), nil
 }
-
-func (p Path) Clean() Path {
-	return Path(filepath.Clean(p.String()))
-}

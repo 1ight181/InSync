@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName domain.RootName, relativePath domain.Path) error {
+func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, scopedPath domain.ScopedPath) error {
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка отправить файл, когда клиент не запущен")
 		return ErrClientNotStarted
@@ -23,8 +23,8 @@ func (gc *GrpcClient) PutFile(ctx context.Context, file io.Reader, rootName doma
 	}
 
 	if err := gc.sendInitMessage(
-		rootName.String(),
-		relativePath.String(),
+		scopedPath.Root.String(),
+		scopedPath.Path.String(),
 		putFileStream,
 	); err != nil {
 		return err

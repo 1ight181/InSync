@@ -14,15 +14,15 @@ func NewRootResolver() *RootResolver {
 	}
 }
 
-func (p *RootResolver) ResolveRoot(rootName domain.RootName, relativePath domain.Path) (domain.Path, error) {
-	rootPath, ok := p.rootMap[rootName]
+func (p *RootResolver) ResolveRoot(scopedPath domain.ScopedPath) (domain.Path, error) {
+	rootPath, ok := p.rootMap[scopedPath.Root]
 	if !ok {
 		return "", RootNotFoundError{
-			RootName: rootName,
+			RootName: scopedPath.Root,
 		}
 	}
 
-	rootPathWithRelative, err := rootPath.Join(relativePath.String())
+	rootPathWithRelative, err := rootPath.Join(scopedPath.Path.String())
 	if err != nil {
 		return "", err
 	}

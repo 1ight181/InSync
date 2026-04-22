@@ -12,7 +12,7 @@ type HashManager struct {
 	hashCache      IHashCache
 	hashCalculator IHashCalculator
 	pathTreeReader IPathTreeReader
-	dirtyPaths     map[domain.Path]struct{}
+	dirtyPaths     map[domain.ScopedPath]struct{}
 
 	logger    *slog.Logger
 	loggerCtx context.Context
@@ -42,29 +42,29 @@ func NewHashManager(options HashManagerOptions) (*HashManager, error) {
 		hashCalculator: options.HashCalculator,
 		pathTreeReader: options.PathTreeReader,
 
-		dirtyPaths: make(map[domain.Path]struct{}),
+		dirtyPaths: make(map[domain.ScopedPath]struct{}),
 		logger:     options.Logger,
 		loggerCtx:  context.Background(),
 	}, nil
 }
 
-func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, fullPath domain.Path) (string, error) {
-	if _, isDirty := h.dirtyPaths[fullPath]; !isDirty {
-		if hash, err := h.hashCache.GetHashCache(fullPath); err == nil {
+func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, rootName domain.RootName) (string, error) {
+	if _, isDirty := h.dirtyPaths[domain.ScopedPath{Root: rootName, Path: resourceContent.FullPath}]; !isDirty {
+		if hash, err := h.hashCache.GetHashCache(resourceContent.FullPath); err == nil {
 			return hash, nil
 		}
 		h.logger.LogAttrs(
 			h.loggerCtx,
 			slog.LevelDebug,
 			"Кэш для хэша не найден",
-			slog.String("fullPath", fullPath.String()),
+			slog.String("fullPath", resourceContent.FullPath.String()),
 		)
 	} else {
 		h.logger.LogAttrs(
 			h.loggerCtx,
 			slog.LevelDebug,
 			"Путь является dirty",
-			slog.String("fullPath", fullPath.String()),
+			slog.String("fullPath", resourceContent.FullPath.String()),
 		)
 	}
 
@@ -77,11 +77,11 @@ func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, fullPath
 		h.loggerCtx,
 		slog.LevelDebug,
 		"Хэш успешно рассчитан",
-		slog.String("fullPath", fullPath.String()),
+		slog.String("fullPath", resourceContent.FullPath.String()),
 		slog.String("hash", hash),
 	)
 
-	if err := h.hashCache.SetHashCache(fullPath, hash); err != nil {
+	if err := h.hashCache.SetHashCache(resourceContent.FullPath, hash); err != nil {
 		return "", err
 	}
 
@@ -89,17 +89,17 @@ func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, fullPath
 		h.loggerCtx,
 		slog.LevelDebug,
 		"Хэш успешно сохранен в кэш",
-		slog.String("fullPath", fullPath.String()),
+		slog.String("fullPath", resourceContent.FullPath.String()),
 		slog.String("hash", hash),
 	)
 
 	return hash, nil
 }
 
-func (h *HashManager) MarkDirty(fullPath domain.Path) error {
-	h.dirtyPaths[fullPath] = struct{}{}
+func (h *HashManager) MarkDirty(scopedPath domain.ScopedPath) error {
+	h.dirtyPaths[scopedPath] = struct{}{}
 
-	parents, err := h.pathTreeReader.GetParents(fullPath)
+	parents, err := h.pathTreeReader.GetParents(scopedPath)
 	if err != nil {
 		return err
 	}

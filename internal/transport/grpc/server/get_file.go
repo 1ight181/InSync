@@ -24,7 +24,12 @@ func (gs *GrpcServer) GetFile(request *insyncpb.GetFileRequest, stream grpc.Serv
 		return err
 	}
 
-	fileReader, err := gs.fileUseCase.GetFile(ctx, validRootName, validRelativePath)
+	scopedPath, err := domain.NewScopedPath(validRootName, validRelativePath)
+	if err != nil {
+		return err
+	}
+
+	fileReader, err := gs.fileUseCase.GetFile(ctx, scopedPath)
 	if err != nil {
 		return err
 	}

@@ -10,15 +10,15 @@ import (
 	"runtime/debug"
 )
 
-func (gc *GrpcClient) GetFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) (io.ReadCloser, error) {
+func (gc *GrpcClient) GetFile(ctx context.Context, scopedPath domain.ScopedPath) (io.ReadCloser, error) {
 	if !gc.isStarted.Load() {
 		gc.logger.Warn("Попытка получить файл, когда клиент не запущен")
 		return nil, ErrClientNotStarted
 	}
 
 	getFileRequest := &insyncpb.GetFileRequest{
-		RootName:     rootName.String(),
-		RelativePath: relativePath.String(),
+		RootName:     scopedPath.Root.String(),
+		RelativePath: scopedPath.Path.String(),
 	}
 
 	getFileResponseStream, err := gc.client.GetFile(ctx, getFileRequest)

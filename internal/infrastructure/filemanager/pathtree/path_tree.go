@@ -2,60 +2,34 @@ package pathtree
 
 import (
 	"insync/internal/domain"
-	"path/filepath"
 )
 
-type ScopedPath struct {
-	RootName domain.RootName
-	Path     domain.Path
-}
-
 type node struct {
-	path     ScopedPath
+	path     domain.ScopedPath
 	parent   *node
-	children map[ScopedPath]*node
+	children map[domain.ScopedPath]*node
 }
 
 type PathTree struct {
-	nodes map[ScopedPath]*node
+	nodes map[domain.ScopedPath]*node
 }
 
 func NewPathTree() *PathTree {
 	return &PathTree{
-		nodes: make(map[ScopedPath]*node),
+		nodes: make(map[domain.ScopedPath]*node),
 	}
 }
 
-func (pt *PathTree) AddPath(rootName domain.RootName, relativePath domain.Path) error {
-	normalizedPath, err := pt.normalizePath(relativePath)
-	if err != nil {
-		return err
-	}
-
-	scoped := ScopedPath{
-		RootName: rootName,
-		Path:     normalizedPath,
-	}
-
-	if _, exists := pt.nodes[scoped]; exists {
+func (pt *PathTree) AddPath(scopedPath domain.ScopedPath) error {
+	if _, exists := pt.nodes[scopedPath]; exists {
 		return nil
 	}
 
-	return pt.ensurePathRecursive(scoped)
+	return pt.ensurePathRecursive(scopedPath)
 }
 
-func (pt *PathTree) RemovePath(rootName domain.RootName, relativePath domain.Path) error {
-	normalizedPath, err := pt.normalizePath(relativePath)
-	if err != nil {
-		return err
-	}
-
-	scoped := ScopedPath{
-		RootName: rootName,
-		Path:     normalizedPath,
-	}
-
-	targetNode, exists := pt.nodes[scoped]
+func (pt *PathTree) RemovePath(scopedPath domain.ScopedPath) error {
+	targetNode, exists := pt.nodes[scopedPath]
 	if !exists {
 		return ErrNotFound
 	}
@@ -64,23 +38,13 @@ func (pt *PathTree) RemovePath(rootName domain.RootName, relativePath domain.Pat
 	return nil
 }
 
-func (pt *PathTree) GetParents(rootName domain.RootName, relativePath domain.Path) ([]ScopedPath, error) {
-	normalizedPath, err := pt.normalizePath(relativePath)
-	if err != nil {
-		return nil, err
-	}
-
-	scoped := ScopedPath{
-		RootName: rootName,
-		Path:     normalizedPath,
-	}
-
-	currentNode := pt.nodes[scoped]
+func (pt *PathTree) GetParents(scopedPath domain.ScopedPath) ([]domain.ScopedPath, error) {
+	currentNode := pt.nodes[scopedPath]
 	if currentNode == nil {
 		return nil, ErrNotFound
 	}
 
-	var parents []ScopedPath
+	var parents []domain.ScopedPath
 	parentNode := currentNode.parent
 
 	for parentNode != nil {
@@ -91,39 +55,26 @@ func (pt *PathTree) GetParents(rootName domain.RootName, relativePath domain.Pat
 	return parents, nil
 }
 
-func (pt *PathTree) getChildren(rootName domain.RootName, relativePath domain.Path) ([]ScopedPath, error) {
-	normalizedPath, err := pt.normalizePath(relativePath)
-	if err != nil {
-		return nil, err
-	}
-
-	scoped := ScopedPath{
-		RootName: rootName,
-		Path:     normalizedPath,
-	}
-
-	currentNode := pt.nodes[scoped]
+func (pt *PathTree) GetChildren(scopedPath domain.ScopedPath) ([]domain.ScopedPath, error) {
+	currentNode := pt.nodes[scopedPath]
 	if currentNode == nil {
 		return nil, ErrNotFound
 	}
 
-	children := make([]ScopedPath, 0, len(currentNode.children))
-	for childPath := range currentNode.children {
-		children = append(children, childPath)
+	children := make([]domain.ScopedPath, 0, len(currentNode.children))
+	for child := range currentNode.children {
+		children = append(children, child)
 	}
 
 	return children, nil
 }
 
-func (pt *PathTree) ensurePathRecursive(current ScopedPath) error {
+func (pt *PathTree) ensurePathRecursive(current domain.ScopedPath) error {
 	if _, exists := pt.nodes[current]; exists {
 		return nil
 	}
 
-	parentScoped, hasParent, err := pt.parentScopedPath(current)
-	if err != nil {
-		return err
-	}
+	parentScoped, hasParent := pt.parentScopedPath(current)
 
 	if hasParent {
 		if err := pt.ensurePathRecursive(parentScoped); err != nil {
@@ -139,7 +90,7 @@ func (pt *PathTree) ensurePathRecursive(current ScopedPath) error {
 	newNode := &node{
 		path:     current,
 		parent:   parentNode,
-		children: make(map[ScopedPath]*node),
+		children: make(map[domain.ScopedPath]*node),
 	}
 
 	pt.nodes[current] = newNode
@@ -152,8 +103,8 @@ func (pt *PathTree) ensurePathRecursive(current ScopedPath) error {
 }
 
 func (pt *PathTree) removeNodeRecursive(targetNode *node) {
-	for _, childNode := range targetNode.children {
-		pt.removeNodeRecursive(childNode)
+	for _, child := range targetNode.children {
+		pt.removeNodeRecursive(child)
 	}
 
 	if targetNode.parent != nil {
@@ -163,28 +114,16 @@ func (pt *PathTree) removeNodeRecursive(targetNode *node) {
 	delete(pt.nodes, targetNode.path)
 }
 
-func (pt *PathTree) normalizePath(path domain.Path) (domain.Path, error) {
-	if filepath.IsAbs(path.String()) {
-		return "", ErrAbsPath
-	}
-
-	cleaned := path.Clean()
-	if cleaned == "." {
-		return "", nil
-	}
-
-	return cleaned, nil
-}
-
-func (pt *PathTree) parentScopedPath(current ScopedPath) (ScopedPath, bool, error) {
+func (pt *PathTree) parentScopedPath(current domain.ScopedPath) (domain.ScopedPath, bool) {
 	parentPath := current.Path.Dir()
 
 	if parentPath == "." || parentPath == "" {
-		return ScopedPath{}, false, nil
+		return domain.ScopedPath{}, false
 	}
 
-	return ScopedPath{
-		RootName: current.RootName,
-		Path:     parentPath,
-	}, true, nil
+	scopedPath, err := domain.NewScopedPath(current.Root, parentPath)
+	if err != nil {
+		return domain.ScopedPath{}, false
+	}
+	return scopedPath, true
 }

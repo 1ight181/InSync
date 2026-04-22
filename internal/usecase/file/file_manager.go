@@ -8,8 +8,8 @@ import (
 
 type IFileManager interface {
 	GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error)
-	DeleteFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) error
-	PutFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path, fileData io.Reader) error
-	RenameFile(ctx context.Context, rootName domain.RootName, oldRelativePath domain.Path, newRelativePath domain.Path) error
-	GetFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) (io.ReadCloser, error)
+	DeleteFile(ctx context.Context, scopedPath domain.ScopedPath) error
+	PutFile(ctx context.Context, scopedPath domain.ScopedPath, fileData io.Reader) error
+	RenameFile(ctx context.Context, oldScopedPath domain.ScopedPath, newScopedPath domain.ScopedPath) error
+	GetFile(ctx context.Context, scopedPath domain.ScopedPath) (io.ReadCloser, error)
 }

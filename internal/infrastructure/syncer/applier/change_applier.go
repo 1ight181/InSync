@@ -38,18 +38,34 @@ func NewChangeApplier(opts ChangeApplierOptions) (*ChangeApplier, error) {
 func (a *ChangeApplier) ApplyLocal(ctx context.Context, rootName domain.RootName, change domain.LocalChange) error {
 	switch change.ChangeType {
 	case domain.Create, domain.Modify:
-		content, err := a.clientFactory.CurrentClient().GetFile(ctx, rootName, change.NewRelativePath)
+		scopedPath, err := domain.NewScopedPath(rootName, change.NewRelativePath)
+		if err != nil {
+			return err
+		}
+		content, err := a.clientFactory.CurrentClient().GetFile(ctx, scopedPath)
 		if err != nil {
 			return err
 		}
 
-		return a.fileManager.PutFile(ctx, rootName, change.NewRelativePath, content)
+		return a.fileManager.PutFile(ctx, scopedPath, content)
 
 	case domain.Delete:
-		return a.fileManager.DeleteFile(ctx, rootName, change.OldRelativePath)
+		scopedPath, err := domain.NewScopedPath(rootName, change.OldRelativePath)
+		if err != nil {
+			return err
+		}
+		return a.fileManager.DeleteFile(ctx, scopedPath)
 
 	case domain.Move, domain.Rename:
-		return a.fileManager.RenameFile(ctx, rootName, change.OldRelativePath, change.NewRelativePath)
+		oldScopedPath, err := domain.NewScopedPath(rootName, change.OldRelativePath)
+		if err != nil {
+			return err
+		}
+		newScopedPath, err := domain.NewScopedPath(rootName, change.NewRelativePath)
+		if err != nil {
+			return err
+		}
+		return a.fileManager.RenameFile(ctx, oldScopedPath, newScopedPath)
 	default:
 		return ErrUnknownChangeType
 	}
@@ -60,15 +76,31 @@ func (a *ChangeApplier) ApplyRemote(ctx context.Context, rootName domain.RootNam
 	client := a.clientFactory.CurrentClient()
 	switch change.ChangeType {
 	case domain.Create, domain.Modify:
-		content, err := a.fileManager.GetFile(ctx, rootName, change.NewRelativePath)
+		scopedPath, err := domain.NewScopedPath(rootName, change.NewRelativePath)
 		if err != nil {
 			return err
 		}
-		return client.PutFile(ctx, content, rootName, change.NewRelativePath)
+		content, err := a.fileManager.GetFile(ctx, scopedPath)
+		if err != nil {
+			return err
+		}
+		return client.PutFile(ctx, content, scopedPath)
 	case domain.Delete:
-		return client.DeleteFile(ctx, rootName, change.OldRelativePath)
+		scopedPath, err := domain.NewScopedPath(rootName, change.OldRelativePath)
+		if err != nil {
+			return err
+		}
+		return client.DeleteFile(ctx, scopedPath)
 	case domain.Move, domain.Rename:
-		return client.RenameFile(ctx, rootName, change.OldRelativePath, change.NewRelativePath)
+		oldScopedPath, err := domain.NewScopedPath(rootName, change.OldRelativePath)
+		if err != nil {
+			return err
+		}
+		newScopedPath, err := domain.NewScopedPath(rootName, change.NewRelativePath)
+		if err != nil {
+			return err
+		}
+		return client.RenameFile(ctx, oldScopedPath, newScopedPath)
 	default:
 		return ErrUnknownChangeType
 	}

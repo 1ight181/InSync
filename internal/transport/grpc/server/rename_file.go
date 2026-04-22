@@ -27,7 +27,17 @@ func (gs *GrpcServer) RenameFile(ctx context.Context, request *insyncpb.RenameFi
 		return &emptypb.Empty{}, err
 	}
 
-	err = gs.fileUseCase.RenameFile(ctx, validRootName, validOldRelativePath, validNewRelativePath)
+	oldScopedPath, err := domain.NewScopedPath(validRootName, validOldRelativePath)
+	if err != nil {
+		return &emptypb.Empty{}, err
+	}
+
+	newScopedPath, err := domain.NewScopedPath(validRootName, validNewRelativePath)
+	if err != nil {
+		return &emptypb.Empty{}, err
+	}
+
+	err = gs.fileUseCase.RenameFile(ctx, oldScopedPath, newScopedPath)
 	if err != nil {
 		return &emptypb.Empty{}, err
 	}

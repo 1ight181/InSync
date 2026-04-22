@@ -78,12 +78,16 @@ func NewFileManager(opts FileManagerOptions) (*FileManager, error) {
 }
 
 func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
-	resolvedRootPath, err := f.rootResolver.ResolveRoot(rootName, ".")
+	scopedPath, err := domain.NewScopedPath(rootName, ".")
+	if err != nil {
+		return domain.Snapshot{}, err
+	}
+	resolvedRootPath, err := f.rootResolver.ResolveRoot(scopedPath)
 	if err != nil {
 		return domain.Snapshot{}, err
 	}
 
-	allEntries, err := f.collectAllFileEntries(ctx, resolvedRootPath)
+	allEntries, err := f.collectAllFileEntries(ctx, resolvedRootPath, rootName)
 	if err != nil {
 		return domain.Snapshot{}, err
 	}
@@ -93,17 +97,17 @@ func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName)
 	return snapshot, nil
 }
 
-func (f *FileManager) RenameFile(ctx context.Context, rootName domain.RootName, oldPath domain.Path, newPath domain.Path) error {
+func (f *FileManager) RenameFile(ctx context.Context, oldScopedPath domain.ScopedPath, newScopedPath domain.ScopedPath) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
 
-	oldResolvedPath, err := f.rootResolver.ResolveRoot(rootName, oldPath)
+	oldResolvedPath, err := f.rootResolver.ResolveRoot(oldScopedPath)
 	if err != nil {
 		return err
 	}
 
-	newResolvedPath, err := f.rootResolver.ResolveRoot(rootName, newPath)
+	newResolvedPath, err := f.rootResolver.ResolveRoot(newScopedPath)
 	if err != nil {
 		return err
 	}
@@ -112,23 +116,23 @@ func (f *FileManager) RenameFile(ctx context.Context, rootName domain.RootName, 
 		return err
 	}
 
-	if err := f.pathTreeWriter.RemovePath(oldResolvedPath); err != nil {
+	if err := f.pathTreeWriter.RemovePath(oldScopedPath); err != nil {
 		return err
 	}
 
-	if err := f.pathTreeWriter.AddPath(newResolvedPath); err != nil {
+	if err := f.pathTreeWriter.AddPath(newScopedPath); err != nil {
 		return err
 	}
 
-	return f.hashManager.MarkDirty(newResolvedPath)
+	return f.hashManager.MarkDirty(newScopedPath)
 }
 
-func (f *FileManager) DeleteFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) error {
+func (f *FileManager) DeleteFile(ctx context.Context, scopedPath domain.ScopedPath) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
 
-	resolvedPath, err := f.rootResolver.ResolveRoot(rootName, relativePath)
+	resolvedPath, err := f.rootResolver.ResolveRoot(scopedPath)
 	if err != nil {
 		return err
 	}
@@ -137,32 +141,32 @@ func (f *FileManager) DeleteFile(ctx context.Context, rootName domain.RootName, 
 		return err
 	}
 
-	if err := f.pathTreeWriter.RemovePath(resolvedPath); err != nil {
+	if err := f.pathTreeWriter.RemovePath(scopedPath); err != nil {
 		return err
 	}
 
-	return f.hashManager.MarkDirty(resolvedPath)
+	return f.hashManager.MarkDirty(scopedPath)
 }
 
-func (f *FileManager) GetFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) (io.ReadCloser, error) {
+func (f *FileManager) GetFile(ctx context.Context, scopedPath domain.ScopedPath) (io.ReadCloser, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
 
-	resolvedFullPath, err := f.rootResolver.ResolveRoot(rootName, relativePath)
+	resolvedFullPath, err := f.rootResolver.ResolveRoot(scopedPath)
 	if err != nil {
 		return nil, err
 	}
 
-	return f.openFileContentWithHeader(resolvedFullPath, relativePath)
+	return f.openFileContentWithHeader(resolvedFullPath, scopedPath.Path)
 }
 
-func (f *FileManager) PutFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path, content io.Reader) error {
+func (f *FileManager) PutFile(ctx context.Context, scopedPath domain.ScopedPath, content io.Reader) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
 
-	resolvedPath, err := f.rootResolver.ResolveRoot(rootName, relativePath)
+	resolvedPath, err := f.rootResolver.ResolveRoot(scopedPath)
 	if err != nil {
 		return err
 	}
@@ -176,11 +180,11 @@ func (f *FileManager) PutFile(ctx context.Context, rootName domain.RootName, rel
 		return err
 	}
 
-	if err := f.pathTreeWriter.AddPath(resolvedPath); err != nil {
+	if err := f.pathTreeWriter.AddPath(scopedPath); err != nil {
 		return err
 	}
 
-	return f.hashManager.MarkDirty(resolvedPath)
+	return f.hashManager.MarkDirty(scopedPath)
 }
 
 func (f *FileManager) openDirContent(fullPath, relativePath domain.Path) (io.ReadCloser, error) {
@@ -315,20 +319,21 @@ func (f *FileManager) createMetadata(entryInfo fs.FileInfo) domain.FileMetadata 
 func (f *FileManager) collectAllFileEntries(
 	ctx context.Context,
 	rootAbsolutePath domain.Path,
+	rootName domain.RootName,
 ) ([]domain.FileEntry, error) {
 
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
 
-	children, childrenSubtreeSize, err := f.collectFileEntriesRecursive(ctx, rootAbsolutePath, "")
+	children, childrenSubtreeSize, err := f.collectFileEntriesRecursive(ctx, rootAbsolutePath, "", rootName)
 	if err != nil {
 		return nil, err
 	}
 
 	rootEntrySubtreeSize := uint64(1 + childrenSubtreeSize) // размер корневой директории
 
-	rootEntry, err := f.createFileEntryForDirectory(ctx, rootAbsolutePath, "", rootEntrySubtreeSize)
+	rootEntry, err := f.createFileEntryForDirectory(ctx, rootAbsolutePath, "", rootEntrySubtreeSize, rootName)
 	if err != nil {
 		return nil, err
 	}
@@ -344,6 +349,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 	ctx context.Context,
 	currentAbsolutePath domain.Path,
 	currentPath domain.Path,
+	rootName domain.RootName,
 ) ([]domain.FileEntry, uint64, error) {
 	directoryEntries, err := f.fileSystem.ReadDir(currentAbsolutePath)
 	if err != nil {
@@ -403,7 +409,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 			OpenContent:  resourceContentFunc,
 		}
 
-		hashValue, err := f.hashManager.ResolveHash(resourceContent, nextAbsolutePath)
+		hashValue, err := f.hashManager.ResolveHash(resourceContent, rootName)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -420,7 +426,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 		}
 
 		if directoryEntry.IsDir() {
-			nested, nestedSubtreeSize, err := f.collectFileEntriesRecursive(ctx, nextAbsolutePath, nextPath)
+			nested, nestedSubtreeSize, err := f.collectFileEntriesRecursive(ctx, nextAbsolutePath, nextPath, rootName)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -447,6 +453,7 @@ func (f *FileManager) createFileEntryForDirectory(
 	absolutePath domain.Path,
 	relativePath domain.Path,
 	subtreeSize uint64,
+	rootName domain.RootName,
 ) (domain.FileEntry, error) {
 	if ctx.Err() != nil {
 		return domain.FileEntry{}, ctx.Err()
@@ -456,7 +463,7 @@ func (f *FileManager) createFileEntryForDirectory(
 		OpenContent: f.openDirContent,
 	}
 
-	hashValue, err := f.hashManager.ResolveHash(resourceContent, absolutePath)
+	hashValue, err := f.hashManager.ResolveHash(resourceContent, rootName)
 	if err != nil {
 		return domain.FileEntry{}, err
 	}

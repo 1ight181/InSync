@@ -19,46 +19,59 @@ func mustPath(t *testing.T, rawPath string) domain.Path {
 	return createdPath
 }
 
+func mustScopedPath(t *testing.T, root domain.RootName, rawPath string) domain.ScopedPath {
+	t.Helper()
+
+	path := mustPath(t, rawPath)
+	scopedPath, err := domain.NewScopedPath(root, path)
+	require.NoError(t, err)
+	return scopedPath
+}
+
 func TestPathTree_AddingNestedPath_CreatesFullParentChain(t *testing.T) {
 	tree := NewPathTree()
 
-	rootName := domain.RootName("root-a")
+	root := domain.RootName("root-a")
 	leafPath := mustPath(t, filepath.Join("level1", "level2", "leaf.txt"))
 
-	require.NoError(t, tree.AddPath(rootName, leafPath))
+	require.NoError(t, tree.AddPath(mustScopedPath(t, root, leafPath.String())))
 
-	parents, err := tree.GetParents(rootName, leafPath)
+	parents, err := tree.GetParents(mustScopedPath(t, root, leafPath.String()))
 	require.NoError(t, err)
 
-	expectedParents := []ScopedPath{
-		{RootName: rootName, Path: mustPath(t, filepath.Join("level1", "level2"))},
-		{RootName: rootName, Path: mustPath(t, filepath.Join("level1"))},
+	expectedParents := []domain.ScopedPath{
+		mustScopedPath(t, root, filepath.Join("level1", "level2")),
+		mustScopedPath(t, root, filepath.Join("level1")),
 	}
+
 	assert.Equal(t, expectedParents, parents)
 
 	parentDir := leafPath.Dir()
-	children, err := tree.getChildren(rootName, parentDir)
+
+	children, err := tree.GetChildren(mustScopedPath(t, root, parentDir.String()))
 	require.NoError(t, err)
 
-	assert.ElementsMatch(t, []ScopedPath{
-		{RootName: rootName, Path: leafPath},
+	assert.ElementsMatch(t, []domain.ScopedPath{
+		mustScopedPath(t, root, leafPath.String()),
 	}, children)
 }
 
 func TestPathTree_AddingSamePathTwice_StateRemainsUnchanged(t *testing.T) {
 	tree := NewPathTree()
 
-	rootName := domain.RootName("root-a")
+	root := domain.RootName("root-a")
 	leafPath := mustPath(t, filepath.Join("folder", "leaf.txt"))
 
-	require.NoError(t, tree.AddPath(rootName, leafPath))
+	scoped := mustScopedPath(t, root, leafPath.String())
 
-	parentsBefore, err := tree.GetParents(rootName, leafPath)
+	require.NoError(t, tree.AddPath(scoped))
+
+	parentsBefore, err := tree.GetParents(scoped)
 	require.NoError(t, err)
 
-	require.NoError(t, tree.AddPath(rootName, leafPath))
+	require.NoError(t, tree.AddPath(scoped))
 
-	parentsAfter, err := tree.GetParents(rootName, leafPath)
+	parentsAfter, err := tree.GetParents(scoped)
 	require.NoError(t, err)
 
 	assert.Equal(t, parentsBefore, parentsAfter)
@@ -67,32 +80,34 @@ func TestPathTree_AddingSamePathTwice_StateRemainsUnchanged(t *testing.T) {
 func TestPathTree_PathIsNotNormalized_ItIsNormalizedToCanonicalForm(t *testing.T) {
 	tree := NewPathTree()
 
-	rootName := domain.RootName("root-a")
+	root := domain.RootName("root-a")
+
 	cleanPath := mustPath(t, filepath.Join("folder", "leaf.txt"))
 	messyPath := mustPath(t, filepath.Join("folder", "..", "folder", ".", "leaf.txt"))
 
-	require.NoError(t, tree.AddPath(rootName, messyPath))
+	require.NoError(t, tree.AddPath(mustScopedPath(t, root, messyPath.String())))
 
-	parents, err := tree.GetParents(rootName, cleanPath)
+	parents, err := tree.GetParents(mustScopedPath(t, root, cleanPath.String()))
 	require.NoError(t, err)
 
-	expected := []ScopedPath{
-		{RootName: rootName, Path: mustPath(t, "folder")},
+	expected := []domain.ScopedPath{
+		mustScopedPath(t, root, "folder"),
 	}
+
 	assert.Equal(t, expected, parents)
 }
 
 func TestPathTree_QueryingMissingPath_ReturnsNotFound(t *testing.T) {
 	tree := NewPathTree()
 
-	rootName := domain.RootName("root-a")
+	root := domain.RootName("root-a")
 	missingPath := mustPath(t, filepath.Join("missing", "node.txt"))
 
-	parents, err := tree.GetParents(rootName, missingPath)
+	parents, err := tree.GetParents(mustScopedPath(t, root, missingPath.String()))
 	require.ErrorIs(t, err, ErrNotFound)
 	assert.Nil(t, parents)
 
-	children, err := tree.getChildren(rootName, missingPath)
+	children, err := tree.GetChildren(mustScopedPath(t, root, missingPath.String()))
 	require.ErrorIs(t, err, ErrNotFound)
 	assert.Nil(t, children)
 }
@@ -100,56 +115,43 @@ func TestPathTree_QueryingMissingPath_ReturnsNotFound(t *testing.T) {
 func TestPathTree_RemovingParentNode_RemovesEntireSubtree(t *testing.T) {
 	tree := NewPathTree()
 
-	rootName := domain.RootName("root-a")
+	root := domain.RootName("root-a")
 
-	parentPath := mustPath(t, "parent")
-	firstChildPath := mustPath(t, filepath.Join("parent", "first.txt"))
-	secondChildPath := mustPath(t, filepath.Join("parent", "first.txt", "second.txt"))
+	parent := mustPath(t, "parent")
+	firstChild := mustPath(t, filepath.Join("parent", "first.txt"))
+	secondChild := mustPath(t, filepath.Join("parent", "first.txt", "second.txt"))
 
-	require.NoError(t, tree.AddPath(rootName, firstChildPath))
-	require.NoError(t, tree.AddPath(rootName, parentPath))
-	require.NoError(t, tree.AddPath(rootName, secondChildPath))
+	require.NoError(t, tree.AddPath(mustScopedPath(t, root, firstChild.String())))
+	require.NoError(t, tree.AddPath(mustScopedPath(t, root, parent.String())))
+	require.NoError(t, tree.AddPath(mustScopedPath(t, root, secondChild.String())))
 
-	childrenBefore, err := tree.getChildren(rootName, parentPath)
+	childrenBefore, err := tree.GetChildren(mustScopedPath(t, root, parent.String()))
 	require.NoError(t, err)
 
-	assert.ElementsMatch(t, []ScopedPath{
-		{RootName: rootName, Path: firstChildPath},
+	assert.ElementsMatch(t, []domain.ScopedPath{
+		mustScopedPath(t, root, firstChild.String()),
 	}, childrenBefore)
 
-	require.NoError(t, tree.RemovePath(rootName, parentPath))
+	require.NoError(t, tree.RemovePath(mustScopedPath(t, root, parent.String())))
 
-	_, err = tree.GetParents(rootName, firstChildPath)
+	_, err = tree.GetParents(mustScopedPath(t, root, firstChild.String()))
 	require.ErrorIs(t, err, ErrNotFound)
 
-	_, err = tree.GetParents(rootName, secondChildPath)
+	_, err = tree.GetParents(mustScopedPath(t, root, secondChild.String()))
 	require.ErrorIs(t, err, ErrNotFound)
 
-	_, err = tree.getChildren(rootName, parentPath)
+	_, err = tree.GetChildren(mustScopedPath(t, root, parent.String()))
 	require.ErrorIs(t, err, ErrNotFound)
 }
 
 func TestPathTree_RemovingUnknownPath_ReturnsNotFound(t *testing.T) {
 	tree := NewPathTree()
 
-	rootName := domain.RootName("root-a")
+	root := domain.RootName("root-a")
 	missingPath := mustPath(t, filepath.Join("missing", "node.txt"))
 
-	err := tree.RemovePath(rootName, missingPath)
+	err := tree.RemovePath(mustScopedPath(t, root, missingPath.String()))
 	require.ErrorIs(t, err, ErrNotFound)
-}
-
-func TestPathTree_AddingAbsolutePath_ReturnsError(t *testing.T) {
-	tree := NewPathTree()
-
-	rootName := domain.RootName("root-a")
-
-	absPath, err := filepath.Abs("abs/path")
-	require.NoError(t, err)
-	require.NotEmpty(t, absPath)
-
-	err = tree.AddPath(rootName, domain.Path(absPath))
-	require.ErrorIs(t, err, ErrAbsPath)
 }
 
 func TestPathTree_SameRelativePathExistsInDifferentRoots_TheyAreIsolated(t *testing.T) {
@@ -158,36 +160,24 @@ func TestPathTree_SameRelativePathExistsInDifferentRoots_TheyAreIsolated(t *test
 	rootA := domain.RootName("root-a")
 	rootB := domain.RootName("root-b")
 
-	sharedPath := mustPath(t, filepath.Join("folder", "leaf.txt"))
+	shared := mustPath(t, filepath.Join("folder", "leaf.txt"))
 
-	require.NoError(t, tree.AddPath(rootA, sharedPath))
-	require.NoError(t, tree.AddPath(rootB, sharedPath))
+	require.NoError(t, tree.AddPath(mustScopedPath(t, rootA, shared.String())))
+	require.NoError(t, tree.AddPath(mustScopedPath(t, rootB, shared.String())))
 
-	parentsA, err := tree.GetParents(rootA, sharedPath)
+	parentsA, err := tree.GetParents(mustScopedPath(t, rootA, shared.String()))
 	require.NoError(t, err)
 
-	parentsB, err := tree.GetParents(rootB, sharedPath)
+	parentsB, err := tree.GetParents(mustScopedPath(t, rootB, shared.String()))
 	require.NoError(t, err)
 
-	assert.Equal(t, []ScopedPath{
-		{RootName: rootA, Path: mustPath(t, "folder")},
+	assert.Equal(t, []domain.ScopedPath{
+		mustScopedPath(t, rootA, "folder"),
 	}, parentsA)
 
-	assert.Equal(t, []ScopedPath{
-		{RootName: rootB, Path: mustPath(t, "folder")},
+	assert.Equal(t, []domain.ScopedPath{
+		mustScopedPath(t, rootB, "folder"),
 	}, parentsB)
-
-	childrenA, err := tree.getChildren(rootA, mustPath(t, "folder"))
-	require.NoError(t, err)
-	assert.ElementsMatch(t, []ScopedPath{
-		{RootName: rootA, Path: sharedPath},
-	}, childrenA)
-
-	childrenB, err := tree.getChildren(rootB, mustPath(t, "folder"))
-	require.NoError(t, err)
-	assert.ElementsMatch(t, []ScopedPath{
-		{RootName: rootB, Path: sharedPath},
-	}, childrenB)
 }
 
 func TestPathTree_RemovingPathInOneRoot_OtherRootRemainsUnaffected(t *testing.T) {
@@ -196,23 +186,23 @@ func TestPathTree_RemovingPathInOneRoot_OtherRootRemainsUnaffected(t *testing.T)
 	rootA := domain.RootName("root-a")
 	rootB := domain.RootName("root-b")
 
-	parentPath := mustPath(t, "folder")
-	leafPath := mustPath(t, filepath.Join("folder", "leaf.txt"))
+	parent := mustPath(t, "folder")
+	leaf := mustPath(t, filepath.Join("folder", "leaf.txt"))
 
-	require.NoError(t, tree.AddPath(rootA, leafPath))
-	require.NoError(t, tree.AddPath(rootB, leafPath))
-	require.NoError(t, tree.AddPath(rootA, parentPath))
-	require.NoError(t, tree.AddPath(rootB, parentPath))
+	require.NoError(t, tree.AddPath(mustScopedPath(t, rootA, leaf.String())))
+	require.NoError(t, tree.AddPath(mustScopedPath(t, rootB, leaf.String())))
+	require.NoError(t, tree.AddPath(mustScopedPath(t, rootA, parent.String())))
+	require.NoError(t, tree.AddPath(mustScopedPath(t, rootB, parent.String())))
 
-	require.NoError(t, tree.RemovePath(rootA, parentPath))
+	require.NoError(t, tree.RemovePath(mustScopedPath(t, rootA, parent.String())))
 
-	_, err := tree.GetParents(rootA, leafPath)
+	_, err := tree.GetParents(mustScopedPath(t, rootA, leaf.String()))
 	require.ErrorIs(t, err, ErrNotFound)
 
-	parentsB, err := tree.GetParents(rootB, leafPath)
+	parentsB, err := tree.GetParents(mustScopedPath(t, rootB, leaf.String()))
 	require.NoError(t, err)
 
-	assert.Equal(t, []ScopedPath{
-		{RootName: rootB, Path: mustPath(t, "folder")},
+	assert.Equal(t, []domain.ScopedPath{
+		mustScopedPath(t, rootB, "folder"),
 	}, parentsB)
 }

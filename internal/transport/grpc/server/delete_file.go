@@ -21,7 +21,12 @@ func (gs *GrpcServer) DeleteFile(ctx context.Context, request *insyncpb.DeleteFi
 		return &emptypb.Empty{}, err
 	}
 
-	err = gs.fileUseCase.DeleteFile(ctx, validRootName, validRelativePath)
+	scopedPath, err := domain.NewScopedPath(validRootName, validRelativePath)
+	if err != nil {
+		return &emptypb.Empty{}, err
+	}
+
+	err = gs.fileUseCase.DeleteFile(ctx, scopedPath)
 	if err != nil {
 		return &emptypb.Empty{}, err
 	}

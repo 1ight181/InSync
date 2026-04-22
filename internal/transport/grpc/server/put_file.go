@@ -34,9 +34,14 @@ func (gs *GrpcServer) PutFile(stream grpc.ClientStreamingServer[insyncpb.PutFile
 		return err
 	}
 
+	scopedPath, err := domain.NewScopedPath(validRootName, validRelativePath)
+	if err != nil {
+		return err
+	}
+
 	pipeReader, pipeWriter := io.Pipe()
 
-	err = gs.fileUseCase.PutFile(ctx, validRootName, validRelativePath, pipeReader)
+	err = gs.fileUseCase.PutFile(ctx, scopedPath, pipeReader)
 	if err != nil {
 		return err
 	}

@@ -27,23 +27,23 @@ func (m *MockFileUseCase) GetSnapshot(ctx context.Context, rootName domain.RootN
 	return args.Get(0).(domain.Snapshot), args.Error(1)
 }
 
-func (m *MockFileUseCase) DeleteFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) error {
-	args := m.Called(ctx, rootName, relativePath)
+func (m *MockFileUseCase) DeleteFile(ctx context.Context, scopedPath domain.ScopedPath) error {
+	args := m.Called(ctx, scopedPath)
 	return args.Error(0)
 }
 
-func (m *MockFileUseCase) PutFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path, file io.Reader) error {
-	args := m.Called(ctx, rootName, relativePath, file)
+func (m *MockFileUseCase) PutFile(ctx context.Context, scopedPath domain.ScopedPath, file io.Reader) error {
+	args := m.Called(ctx, scopedPath, file)
 	return args.Error(0)
 }
 
-func (m *MockFileUseCase) RenameFile(ctx context.Context, rootName domain.RootName, oldRelativePath, newRelativePath domain.Path) error {
-	args := m.Called(ctx, rootName, oldRelativePath, newRelativePath)
+func (m *MockFileUseCase) RenameFile(ctx context.Context, oldScopedPath domain.ScopedPath, newScopedPath domain.ScopedPath) error {
+	args := m.Called(ctx, oldScopedPath, newScopedPath)
 	return args.Error(0)
 }
 
-func (m *MockFileUseCase) GetFile(ctx context.Context, rootName domain.RootName, relativePath domain.Path) (io.ReadCloser, error) {
-	args := m.Called(ctx, rootName, relativePath)
+func (m *MockFileUseCase) GetFile(ctx context.Context, scopedPath domain.ScopedPath) (io.ReadCloser, error) {
+	args := m.Called(ctx, scopedPath)
 	return args.Get(0).(io.ReadCloser), args.Error(1)
 }
 

@@ -6,6 +6,6 @@ import (
 )
 
 type IHashManager interface {
-	ResolveHash(resourceContent cont.ResourceContent, fullPath domain.Path) (string, error)
-	MarkDirty(fullPath domain.Path) error
+	ResolveHash(resourceContent cont.ResourceContent, rootName domain.RootName) (string, error)
+	MarkDirty(scopedPath domain.ScopedPath) error
 }
