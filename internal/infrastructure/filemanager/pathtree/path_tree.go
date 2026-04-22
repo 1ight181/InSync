@@ -1,7 +1,9 @@
 package pathtree
 
 import (
+	"errors"
 	"insync/internal/domain"
+	"path/filepath"
 )
 
 type node struct {
@@ -63,6 +65,7 @@ func (tree *PathTree) GetParents(fullPath domain.Path) ([]domain.Path, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	node := tree.nodes[normalizedPath]
 	if node == nil {
 		return nil, ErrNotFound
@@ -79,7 +82,7 @@ func (tree *PathTree) GetParents(fullPath domain.Path) ([]domain.Path, error) {
 	return parents, nil
 }
 
-func (tree *PathTree) GetChildren(fullPath domain.Path) ([]domain.Path, error) {
+func (tree *PathTree) getChildren(fullPath domain.Path) ([]domain.Path, error) {
 	normalizedPath, err := tree.normalizePath(fullPath)
 	if err != nil {
 		return nil, err
@@ -103,12 +106,28 @@ func (pt *PathTree) ensurePathRecursive(path domain.Path) error {
 
 	parent, err := pt.parentPath(path)
 	if err != nil {
-		return err
+		if !errors.Is(err, ErrParentNotFound) {
+			return err
+		}
 	}
 
-	if parent != "" {
-		pt.ensurePathRecursive(parent)
+	if errors.Is(err, ErrParentNotFound) {
+		parentNode := pt.nodes[parent]
+		newNode := &node{
+			path:     path,
+			parent:   parentNode,
+			children: make(map[domain.Path]*node),
+		}
+
+		pt.nodes[path] = newNode
+		if parentNode != nil {
+			parentNode.children[path] = newNode
+		}
+
+		return nil
 	}
+
+	pt.ensurePathRecursive(parent)
 
 	parentNode := pt.nodes[parent]
 	newNode := &node{
@@ -116,29 +135,24 @@ func (pt *PathTree) ensurePathRecursive(path domain.Path) error {
 		parent:   parentNode,
 		children: make(map[domain.Path]*node),
 	}
+
 	pt.nodes[path] = newNode
 	if parentNode != nil {
 		parentNode.children[path] = newNode
 	}
 
 	return nil
+
 }
 
 func (pt *PathTree) normalizePath(path domain.Path) (domain.Path, error) {
-	if path == "" {
-		return "", nil
+	if filepath.IsAbs(path.String()) {
+		return "", ErrAbsPath
 	}
 
-	absPath, err := path.Abs()
-	if err != nil {
-		return "", err
-	}
+	cleaned := path.Clean()
 
-	if absPath == "." {
-		return "", nil
-	}
-
-	return absPath, nil
+	return cleaned, nil
 }
 
 func (pt *PathTree) parentPath(fullPath domain.Path) (domain.Path, error) {
@@ -146,14 +160,11 @@ func (pt *PathTree) parentPath(fullPath domain.Path) (domain.Path, error) {
 	if err != nil {
 		return "", err
 	}
-	if cleaned == "" {
-		return "", nil
-	}
 
 	parent := cleaned.Dir()
 
-	if parent == "." || parent == cleaned || cleaned == "/" {
-		return "", nil
+	if parent == "." {
+		return "", ErrParentNotFound
 	}
 
 	return parent, nil

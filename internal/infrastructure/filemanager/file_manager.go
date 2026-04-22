@@ -78,7 +78,7 @@ func NewFileManager(opts FileManagerOptions) (*FileManager, error) {
 }
 
 func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
-	resolvedRootPath, err := f.rootResolver.ResolveRoot(rootName, "")
+	resolvedRootPath, err := f.rootResolver.ResolveRoot(rootName, ".")
 	if err != nil {
 		return domain.Snapshot{}, err
 	}
