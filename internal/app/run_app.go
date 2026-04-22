@@ -25,6 +25,7 @@ import (
 	"insync/internal/infrastructure/root"
 	syncer "insync/internal/infrastructure/syncer"
 	changeappl "insync/internal/infrastructure/syncer/applier"
+	persister "insync/internal/infrastructure/syncer/persister"
 	cli "insync/internal/presentation/cli"
 	repo "insync/internal/repository/sqlite"
 	baserepo "insync/internal/repository/sqlite/base"
@@ -446,9 +447,20 @@ func RunApp() {
 
 	conflictResolver := syncer.NewConflictResolver()
 
+	postSyncBaseSnapshotPersisterOpts := persister.PostSyncBaseSnapshotPersisterOptions{
+		BaseSnapshotRepository: baseSnapshotRepository,
+		DeviceIdProvider:       deviceIdProvider,
+		SnapshotProvider:       baseSnapshotProvider,
+	}
+	postSyncBaseSnapshotPersister, err := persister.NewPostSyncBaseSnapshotPersister(postSyncBaseSnapshotPersisterOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать PostSyncBaseSnapshotPersister: %v", err))
+	}
+
 	syncerOpts := syncer.SyncerOptions{
-		ChangeApplier:    changeApplier,
-		ConflictResolver: conflictResolver,
+		ChangeApplier:                 changeApplier,
+		ConflictResolver:              conflictResolver,
+		PostSyncBaseSnapshotPersister: postSyncBaseSnapshotPersister,
 	}
 	syncer, err := syncer.NewSyncer(syncerOpts)
 	if err != nil {

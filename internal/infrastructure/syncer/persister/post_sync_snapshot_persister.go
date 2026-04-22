@@ -45,7 +45,10 @@ func (b *PostSyncBaseSnapshotPersister) UpdateBaseSnapshot(ctx context.Context, 
 		return err
 	}
 
-	localDeviceId := b.deviceIdProvider.GetCurrentLocalDeviceId()
+	localDeviceId, err := b.deviceIdProvider.GetCurrentLocalDeviceId()
+	if err != nil {
+		return err
+	}
 
-	return b.baseSnapshotRepository.CreateBaseSnapshot(ctx, newBaseSnapshot, remoteDeviceId, localDeviceId)
+	return b.baseSnapshotRepository.CreateBaseSnapshot(ctx, newBaseSnapshot, remoteDeviceId, localDeviceId, rootName)
 }
