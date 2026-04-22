@@ -49,7 +49,11 @@ func NewHashManager(options HashManagerOptions) (*HashManager, error) {
 }
 
 func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, rootName domain.RootName) (string, error) {
-	if _, isDirty := h.dirtyPaths[domain.ScopedPath{Root: rootName, Path: resourceContent.FullPath}]; !isDirty {
+	scopedPath, err := domain.NewScopedPath(rootName, resourceContent.FullPath)
+	if err != nil {
+		return "", err
+	}
+	if _, isDirty := h.dirtyPaths[scopedPath]; !isDirty {
 		if hash, err := h.hashCache.GetHashCache(resourceContent.FullPath); err == nil {
 			return hash, nil
 		}
