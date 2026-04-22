@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	prompt "github.com/c-bata/go-prompt"
+	"github.com/google/shlex"
 	"github.com/spf13/cobra"
 	cobraprompt "github.com/stromland/cobra-prompt"
 
@@ -18,12 +19,11 @@ import (
 )
 
 const (
-	rootCmdName        = "root"
 	nodesCmdName       = "nodes"
 	currentNodeCmdName = "current-node"
 	addRootCmdName     = "add-root"
 	removeRootCmdName  = "remove-root"
-	getRootsCmdName    = "get-roots"
+	getRootsCmdName    = "roots"
 	connectCmdName     = "connect"
 	dryRunCmdName      = "dry-run"
 	syncCmdName        = "sync"
@@ -147,17 +147,35 @@ func (c *Cli) Start() {
 			prompt.OptionSelectedSuggestionTextColor(prompt.Green),
 			prompt.OptionSuggestionTextColor(prompt.DarkGreen),
 		},
-
 		DynamicSuggestionsFunc: c.suggestionFunc,
+		OnErrorFunc: func(err error) {
+			if strings.Contains(err.Error(), "unknown command") {
+				fmt.Print("Неизвестная команда!\n")
+			} else {
+				fmt.Printf("%s\n", err)
+			}
+		},
+
+		InArgsParser: c.argsParser,
 	}
 
 	cobraPrompt.Run()
 }
 
+func (c *Cli) argsParser(commandLine string) []string {
+	parsedArguments, parseErr := shlex.Split(commandLine)
+	if parseErr != nil {
+		fmt.Printf("Не удалось разобрать аргументы: %v\n", parseErr)
+		return strings.Fields(commandLine)
+	}
+	return parsedArguments
+}
+
 func (c *Cli) createRootCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   rootCmdName,
-		Short: "InSync - инструмент для синхронизации файлов между различными хранилищами",
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		Short:         "InSync - инструмент для синхронизации файлов между различными хранилищами",
 	}
 }
 
@@ -180,14 +198,16 @@ func (c *Cli) createCurrentNodeCmd() *cobra.Command {
 }
 
 func (c *Cli) createAddRootCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   fmt.Sprintf("%s root-name root-path", addRootCmdName),
 		Short: "Добавить корневой каталог",
 		Long: `Добавить корневой каталог. 
 		root-name - имя корневого каталога
 		root-path - путь к корневому каталогу`,
 		RunE: c.addRootCmd,
+		Args: cobra.ExactArgs(2),
 	}
+	return cmd
 }
 
 func (c *Cli) createRemoveRootCmd() *cobra.Command {
@@ -197,6 +217,7 @@ func (c *Cli) createRemoveRootCmd() *cobra.Command {
 		Long: `Удалить корневой каталог. 
 		root-name - имя корневого каталога`,
 		RunE: c.removeRootCmd,
+		Args: cobra.ExactArgs(1),
 	}
 }
 
@@ -266,16 +287,16 @@ func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) {
 
 	nodeNamesChan, err := c.nodeUseCase.ShowNodeNames(interruptCtx)
 	if err != nil {
-		c.logger.Error("Не удалось получить узлы", "error", err)
+		fmt.Print("Не удалось получить узлы")
 		return
 	}
 
-	c.logger.Info("Доступные узлы (динамический список, нажмите Ctrl+C для завершения):")
+	fmt.Printf("Доступные узлы (динамический список, нажмите Ctrl+C для завершения):")
 
 	i := 1
 	select {
 	case nodeName := <-nodeNamesChan:
-		c.logger.Info(fmt.Sprintf("%d. %s", i, nodeName))
+		fmt.Printf("%d. %s", i, nodeName)
 		i++
 		c.nodeNameCache = append(c.nodeNameCache, nodeName)
 	case <-interruptCtx.Done():
@@ -287,7 +308,7 @@ func (c *Cli) currentNodeCmd(cmd *cobra.Command, args []string) {
 	c.logger.Debug("Выполнение команды current-node")
 
 	currentNode := c.connectUseCase.CurrentNodeName()
-	c.logger.Info(fmt.Sprintf("Текущий подключенный узел: %s", currentNode))
+	fmt.Printf("Текущий подключенный узел: %s", currentNode)
 }
 
 func (c *Cli) addRootCmd(cmd *cobra.Command, args []string) error {
@@ -295,19 +316,19 @@ func (c *Cli) addRootCmd(cmd *cobra.Command, args []string) error {
 
 	rootName, err := domain.NewRootName(args[0])
 	if err != nil {
-		c.logger.Error("Не удалось создать корневой каталог")
+		fmt.Printf("Не удалось создать корневой каталог")
 		return err
 	}
 
 	rootRelativePath, err := domain.NewPath(args[1])
 	if err != nil {
-		c.logger.Error("Не удалось создать корневой каталог")
+		fmt.Printf("Не удалось создать корневой каталог")
 		return err
 	}
 
 	c.rootUseCase.AddRoot(rootName, rootRelativePath)
 
-	c.logger.Info(fmt.Sprintf("Корневой каталог %s добавлен", rootName))
+	fmt.Printf("Корневой каталог %s добавлен", rootName)
 	return nil
 }
 
@@ -316,13 +337,13 @@ func (c *Cli) removeRootCmd(cmd *cobra.Command, args []string) error {
 
 	rootName, err := domain.NewRootName(args[0])
 	if err != nil {
-		c.logger.Error("Не удалось создать удалить корневой каталог")
+		fmt.Printf("Не удалось создать удалить корневой каталог")
 		return err
 	}
 
 	c.rootUseCase.RemoveRoot(rootName)
 
-	c.logger.Info(fmt.Sprintf("Корневой каталог %s удален", rootName))
+	fmt.Printf("Корневой каталог %s удален", rootName)
 
 	return nil
 }
@@ -332,10 +353,10 @@ func (c *Cli) getRootsCmd(cmd *cobra.Command, args []string) {
 
 	roots := c.rootUseCase.GetRoots()
 
-	c.logger.Info("Список корневых каталогов:")
+	fmt.Printf("Список корневых каталогов:")
 
 	for i, root := range roots {
-		c.logger.Info(fmt.Sprintf("%d. %s", i+1, root))
+		fmt.Printf("%d. %s", i+1, root)
 	}
 }
 
@@ -344,16 +365,16 @@ func (c *Cli) connectCmd(cmd *cobra.Command, args []string) error {
 
 	nodeName, err := domain.NewNodeName(args[0])
 	if err != nil {
-		c.logger.Error("Не удалось подключиться к узлу")
+		fmt.Printf("Не удалось подключиться к узлу")
 		return err
 	}
-	c.logger.Info(fmt.Sprintf("Подключение к узлу %s", nodeName))
+	fmt.Printf("Подключение к узлу %s", nodeName)
 
 	if err := c.connectUseCase.ConnectToNode(nodeName); err != nil {
 		return err
 	}
 
-	c.logger.Info(fmt.Sprintf("Подключение к узлу %s прошло успешно", nodeName))
+	fmt.Printf("Подключение к узлу %s прошло успешно", nodeName)
 
 	return nil
 }
@@ -363,7 +384,7 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 
 	rootName, err := domain.NewRootName(args[0])
 	if err != nil {
-		c.logger.Error("Не удалось выполнить sync")
+		fmt.Printf("Не удалось выполнить sync")
 		return err
 	}
 
@@ -382,10 +403,10 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 
 			changeEventErr := changeEvent.Err
 			if changeEventErr != nil {
-				c.logger.Error(fmt.Sprintf("Не удалось применить изменение: %s", changeEventErr))
+				fmt.Printf("Не удалось применить изменение: %s", changeEventErr)
 				continue
 			}
-			c.logger.Info(fmt.Sprintf("Применено изменение: %s\n", c.changeToHumanReadable(changeEvent.Change)))
+			fmt.Printf("Применено изменение: %s\n", c.changeToHumanReadable(changeEvent.Change))
 		}
 	}()
 
@@ -415,11 +436,11 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	if interruptCtx.Err() != nil {
-		c.logger.Error("Синхронизация прервана пользователем")
+		fmt.Printf("Синхронизация прервана пользователем")
 		return nil
 	}
 
-	c.logger.Info("Синхронизация завершена")
+	fmt.Printf("Синхронизация завершена")
 
 	return nil
 }
@@ -454,7 +475,7 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 	c.logger.Debug("Выполнение команды dry-run")
 	rootName, err := domain.NewRootName(args[0])
 	if err != nil {
-		c.logger.Error("Не удалось выполнить dry-run")
+		fmt.Printf("Не удалось выполнить dry-run")
 		return err
 	}
 
@@ -464,37 +485,37 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 
 	plan, err := c.scanUseCase.PlanSyncChanges(interruptCtx, rootName)
 	if err != nil {
-		c.logger.Error("Не удалось получить изменения для синхронизации")
+		fmt.Print("Не удалось получить изменения для синхронизации")
 		return err
 	}
 
 	if plan.IsEmpty() {
-		c.logger.Info("Нет изменений для синхронизации")
+		fmt.Print("Нет изменений для синхронизации")
 	}
 
 	changesHeader := c.getChangesHeader()
 
 	if plan.IsAnyLocalChange() {
-		c.logger.Info(fmt.Sprintf("Всего локальных изменений: %d\n%s", plan.LocalLength(), changesHeader))
+		fmt.Printf("Всего локальных изменений: %d\n%s", plan.LocalLength(), changesHeader)
 		localChanges := plan.LocalChanges
 		for i, change := range localChanges {
-			c.logger.Info(fmt.Sprintf("%d. %s", i+1, c.changeToHumanReadable(change.ToSyncChange())))
+			fmt.Printf("%d. %s", i+1, c.changeToHumanReadable(change.ToSyncChange()))
 		}
 	}
 
 	if plan.IsAnyRemoteChange() {
-		c.logger.Info(fmt.Sprintf("Всего удалённых изменений: %d\n%s", plan.RemoteLength(), changesHeader))
+		fmt.Printf("Всего удалённых изменений: %d\n%s", plan.RemoteLength(), changesHeader)
 		remoteChanges := plan.RemoteChanges
 		for i, change := range remoteChanges {
-			c.logger.Info(fmt.Sprintf("%d. %s", i+1, c.changeToHumanReadable(change.ToSyncChange())))
+			fmt.Printf("%d. %s", i+1, c.changeToHumanReadable(change.ToSyncChange()))
 		}
 	}
 
 	if plan.IsAnyConflict() {
-		c.logger.Info(fmt.Sprintf("Всего конфликтов: %d\n%s", plan.ConflictLength(), changesHeader))
+		fmt.Printf("Всего конфликтов: %d\n%s", plan.ConflictLength(), changesHeader)
 		conflicts := plan.Conflicts
 		for i, conflict := range conflicts {
-			c.logger.Info(fmt.Sprintf("%d. %s", i+1, c.conflictToHumanReadable(conflict)))
+			fmt.Printf("%d. %s", i+1, c.conflictToHumanReadable(conflict))
 		}
 	}
 
