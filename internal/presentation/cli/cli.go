@@ -309,19 +309,19 @@ func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("Доступные узлы (динамический список, нажмите Ctrl+C для завершения):")
 
-	i := 1
-	select {
-	case nodeName := <-nodeNamesChan:
-		fmt.Printf("%d. %s\n", i, nodeName)
-		i++
-		c.nodeNameCache = append(c.nodeNameCache, nodeName)
-		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Доступный узел", slog.String("name", nodeName.String()))
-	case <-interruptCtx.Done():
-		c.logger.Debug("Вызывано прерывание во время выполнения команды nodes")
-		return nil
+	for i := 1; ; i++ {
+		select {
+		case nodeName, ok := <-nodeNamesChan:
+			if ok {
+				fmt.Printf("%d. %s\n", i, nodeName)
+				c.nodeNameCache = append(c.nodeNameCache, nodeName)
+				c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Доступный узел", slog.String("name", nodeName.String()))
+			}
+		case <-interruptCtx.Done():
+			c.logger.Debug("Вызывано прерывание во время выполнения команды nodes")
+			return nil
+		}
 	}
-
-	return nil
 }
 
 func (c *Cli) currentNodeCmd(cmd *cobra.Command, args []string) error {
