@@ -241,6 +241,9 @@ func (s *ChangesPlannerWithTreeSkip) handleCreation(
 func (s *ChangesPlannerWithTreeSkip) handleModification(
 	local, remote *domain.FileEntry,
 ) (*domain.LocalChange, *domain.RemoteChange, *domain.Conflict) {
+	if local.FileInfo.Metadata.IsDirectory && remote.FileInfo.Metadata.IsDirectory {
+		return nil, nil, nil
+	}
 	if local.FileInfo.Metadata.ModifiedUnix > remote.FileInfo.Metadata.ModifiedUnix {
 		return nil, &domain.RemoteChange{
 			OldRelativePath: local.RelativePath,
