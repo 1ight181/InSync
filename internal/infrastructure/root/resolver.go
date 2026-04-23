@@ -53,6 +53,10 @@ func (p *RootResolver) RemoveRoot(rootName domain.RootName) error {
 	return p.rootRepo.RemoveRoot(rootName)
 }
 
-func (p *RootResolver) GetRoots() map[domain.RootName]domain.Path {
-	return p.rootMap
+func (p *RootResolver) GetRoots() (map[domain.RootName]domain.Path, error) {
+	if len(p.rootMap) == 0 {
+		return nil, domain.ErrNoRoots
+	}
+
+	return p.rootMap, nil
 }

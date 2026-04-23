@@ -329,6 +329,9 @@ func (c *Cli) currentNodeCmd(cmd *cobra.Command, args []string) {
 			fmt.Println("Нет подключенного узла")
 			return
 		}
+
+		fmt.Println("Не удалось получить текущий узел")
+		return
 	}
 	fmt.Printf("Текущий подключенный узел: %s\n", currentNode)
 }
@@ -375,7 +378,15 @@ func (c *Cli) removeRootCmd(cmd *cobra.Command, args []string) error {
 func (c *Cli) rootsCmd(cmd *cobra.Command, args []string) {
 	c.logger.Debug("Выполнение команды roots")
 
-	roots := c.rootUseCase.GetRoots()
+	roots, err := c.rootUseCase.GetRoots()
+	if err != nil {
+		if errors.Is(err, domain.ErrNoRoots) {
+			fmt.Println("Нет корневых каталогов")
+			return
+		}
+		fmt.Println("Не удалось получить корневые каталоги")
+		return
+	}
 
 	fmt.Println("Список корневых каталогов:")
 	var i int
@@ -641,8 +652,13 @@ func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
 }
 
 func (c *Cli) rootNameSuggestionFunc(prefix string) []prompt.Suggest {
-	rootNames := c.rootUseCase.GetRoots()
 	suggestions := make([]prompt.Suggest, 0)
+
+	rootNames, err := c.rootUseCase.GetRoots()
+	if err != nil {
+		return suggestions
+	}
+
 	for _, rootName := range rootNames {
 		if strings.HasPrefix(rootName.String(), prefix) {
 			suggestions = append(suggestions, prompt.Suggest{

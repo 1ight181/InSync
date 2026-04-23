@@ -18,3 +18,7 @@ func NewRootName(name string) (RootName, error) {
 func (r RootName) String() string {
 	return string(r)
 }
+
+var (
+	ErrNoRoots = errors.New("Руты не найдены")
+)

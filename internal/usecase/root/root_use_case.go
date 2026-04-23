@@ -32,6 +32,6 @@ func (r *RootUseCase) RemoveRoot(rootName domain.RootName) error {
 	return r.rootRegistrar.RemoveRoot(rootName)
 }
 
-func (r *RootUseCase) GetRoots() map[domain.RootName]domain.Path {
+func (r *RootUseCase) GetRoots() (map[domain.RootName]domain.Path, error) {
 	return r.rootRegistrar.GetRoots()
 }
