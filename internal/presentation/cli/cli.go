@@ -29,6 +29,7 @@ const (
 	connectCmdName     = "connect"
 	dryRunCmdName      = "dry-run"
 	syncCmdName        = "sync"
+	exitCmdName        = "exit"
 )
 
 const (
@@ -73,6 +74,7 @@ type Cli struct {
 
 	shouldUseCache *bool
 	nodeNameCache  []domain.NodeName
+	exitCtxCancel  context.CancelFunc
 }
 
 type CliOptions struct {
@@ -112,7 +114,7 @@ func NewCli(opts CliOptions) (*Cli, error) {
 	}, nil
 }
 
-func (c *Cli) Start() {
+func (c *Cli) Start(ctx context.Context) {
 	rootCmd := c.createRootCmd()
 
 	nodesCmd := c.createNodesCmd()
@@ -126,6 +128,8 @@ func (c *Cli) Start() {
 	dryRunCmd := c.createDryRunCmd()
 	syncCmd := c.createSyncCmd()
 
+	exitCmd := c.createExitCmd()
+
 	rootCmd.AddCommand(nodesCmd)
 	rootCmd.AddCommand(currentNodeCmd)
 
@@ -137,6 +141,8 @@ func (c *Cli) Start() {
 
 	rootCmd.AddCommand(syncCmd)
 	rootCmd.AddCommand(dryRunCmd)
+
+	rootCmd.AddCommand(exitCmd)
 
 	cobraPrompt := cobraprompt.CobraPrompt{
 		RootCmd:                 rootCmd,
@@ -160,7 +166,9 @@ func (c *Cli) Start() {
 		InArgsParser: c.parseWindowsCommandLine,
 	}
 
-	cobraPrompt.Run()
+	exitCtx, exitCtxCancel := context.WithCancel(ctx)
+	c.exitCtxCancel = exitCtxCancel
+	cobraPrompt.RunContext(exitCtx)
 }
 
 func (c *Cli) parseWindowsCommandLine(commandLine string) []string {
@@ -193,6 +201,19 @@ func (c *Cli) createRootCmd() *cobra.Command {
 		SilenceErrors: true,
 		Short:         "InSync - инструмент для синхронизации файлов между различными хранилищами",
 	}
+}
+
+func (c *Cli) createExitCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   exitCmdName,
+		Short: "Выход из приложения",
+		Args:  cobra.NoArgs,
+		Run:   c.exitCmd,
+	}
+}
+
+func (c *Cli) exitCmd(cmd *cobra.Command, args []string) {
+	c.exitCtxCancel()
 }
 
 func (c *Cli) createNodesCmd() *cobra.Command {

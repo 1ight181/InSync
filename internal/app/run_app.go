@@ -40,6 +40,8 @@ import (
 	scanusecase "insync/internal/usecase/scan"
 	syncusecase "insync/internal/usecase/sync"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"google.golang.org/grpc/resolver"
@@ -59,7 +61,30 @@ const (
 	dbModuleName                         = "db"
 )
 
+type cleanupStack []func()
+
+func (stack *cleanupStack) Add(cleanup func()) {
+	*stack = append(*stack, cleanup)
+}
+
+func (stack cleanupStack) Run() <-chan struct{} {
+	doneChan := make(chan struct{})
+	go func() {
+		for cleanupIndex := len(stack) - 1; cleanupIndex >= 0; cleanupIndex-- {
+			stack[cleanupIndex]()
+		}
+		close(doneChan)
+	}()
+
+	return doneChan
+}
+
 func RunApp() {
+	appContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stopSignals()
+
+	var cleanups cleanupStack
+
 	config, err := createConfig()
 	if err != nil {
 		panic(fmt.Sprintf("Не удалось загрузить и проверить конфиг: %v", err))
@@ -96,7 +121,7 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать gorm: %v", err))
 	}
 
-	defer func() {
+	cleanups.Add(func() {
 		sqlDb, err := db.DB()
 		if err != nil {
 			logger.Warn("Не удалось получить sqlDb для закрытия sqlite")
@@ -104,7 +129,8 @@ func RunApp() {
 		if err := sqlDb.Close(); err != nil {
 			logger.Warn("Не удалось коректно закрыть sqlite")
 		}
-	}()
+
+	})
 
 	rootRepo := rootrepo.NewRootRepository(db)
 
@@ -202,7 +228,7 @@ func RunApp() {
 		panic("Не удалось запустить gRPC сервер")
 	}
 
-	defer func() {
+	cleanups.Add(func() {
 		timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), grpcServerGracefulStopTimeoutSeconds*time.Second)
 		defer timeoutCancel()
 
@@ -210,7 +236,7 @@ func RunApp() {
 		if err != nil {
 			logger.Warn("Не удалось коректно остановить grpcServer")
 		}
-	}()
+	})
 
 	mDnsBrowserConfig := config.MDnsBrowserConfig
 	mDnsBrowserLogger := logger.With(moduleAtrributeName, mDnsBrowserModuleName)
@@ -520,5 +546,18 @@ func RunApp() {
 	if err != nil {
 		panic(fmt.Sprintf("Не удалось создать Cli: %v", err))
 	}
-	cliInstance.Start()
+
+	cliInstance.Start(appContext)
+	<-appContext.Done()
+
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	done := cleanups.Run()
+
+	select {
+	case <-timeoutCtx.Done():
+	case <-done:
+	}
+
 }
