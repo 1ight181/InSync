@@ -28,6 +28,9 @@ type ConnectionManagerOptions struct {
 	MDnsUrlResolver IMDnsUrlResolver
 	BaseGrpcConf    *clt.GrpcConf
 
+	ClientConnector IClientConnector
+	ClientHolder    IClientHolder
+
 	GrpcClientLogger *slog.Logger
 
 	Logger *slog.Logger
@@ -40,6 +43,7 @@ var (
 func NewConnectionManager(opts ConnectionManagerOptions) (*ConnectionManager, error) {
 	if opts.BaseGrpcConf == nil ||
 		opts.MDnsUrlResolver == nil ||
+		opts.ClientHolder == nil ||
 		opts.GrpcClientLogger == nil ||
 		opts.Logger == nil {
 		return nil, ErrInvalidOpts
@@ -48,17 +52,23 @@ func NewConnectionManager(opts ConnectionManagerOptions) (*ConnectionManager, er
 		mdnsUrlResolver: opts.MDnsUrlResolver,
 		baseGrpcConf:    opts.BaseGrpcConf,
 
+		clientHolder: opts.ClientHolder,
+
 		grpcClientLogger: opts.GrpcClientLogger,
 		logger:           opts.Logger,
 	}, nil
 }
 
-func (c *ConnectionManager) CurrentClient() interfaces.IClient {
+func (c *ConnectionManager) CurrentClient() (interfaces.IClient, error) {
 	return c.clientHolder.CurrentClient()
 }
 
-func (c *ConnectionManager) CurrentNodeName() domain.NodeName {
-	return c.currentNodeName
+func (c *ConnectionManager) CurrentNodeName() (domain.NodeName, error) {
+	if c.currentNodeName == "" {
+		return "", domain.ErrNotConnected
+	}
+
+	return c.currentNodeName, nil
 }
 
 func (c *ConnectionManager) ConnectToNode(nodeName domain.NodeName) error {

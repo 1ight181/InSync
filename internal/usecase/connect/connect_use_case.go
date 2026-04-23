@@ -26,7 +26,7 @@ func NewConnectUseCase(opts ConnectUseCaseOptions) (*ConnectUseCase, error) {
 	}, nil
 }
 
-func (c *ConnectUseCase) CurrentNodeName() domain.NodeName {
+func (c *ConnectUseCase) CurrentNodeName() (domain.NodeName, error) {
 	return c.connectionManager.CurrentNodeName()
 }
 

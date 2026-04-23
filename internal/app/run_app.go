@@ -16,6 +16,7 @@ import (
 	hashcache "insync/internal/infrastructure/filemanager/hash/cache"
 	"insync/internal/infrastructure/filemanager/pathtree"
 	"insync/internal/infrastructure/filesys"
+	"insync/internal/infrastructure/holder"
 	mdnsurl "insync/internal/infrastructure/mdnsurl"
 	planner "insync/internal/infrastructure/planner"
 	planres "insync/internal/infrastructure/planresolver"
@@ -306,9 +307,12 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать MDnsUrlResolver: %v", err))
 	}
 
+	clientHolder := holder.NewClientHolder()
+
 	connectionManagerOpts := conn.ConnectionManagerOptions{
 		MDnsUrlResolver:  mdnsUrlResolver,
 		BaseGrpcConf:     &grpcClientConf,
+		ClientHolder:     clientHolder,
 		GrpcClientLogger: clientLogger,
 		Logger:           connectionManagerLogger,
 	}
@@ -318,7 +322,6 @@ func RunApp() {
 	}
 
 	connectUseCaseOpts := connusecase.ConnectUseCaseOptions{
-
 		ConnectionManager: connectionManager,
 	}
 

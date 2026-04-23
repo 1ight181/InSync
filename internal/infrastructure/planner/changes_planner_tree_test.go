@@ -301,13 +301,6 @@ func TestPlanner_ThreeNewFilesAndDirOnLocalOneFileOnRemote_CreateChangeOnRemote(
 	require.ElementsMatch(t, expectedLocalChanges, plan.LocalChanges)
 	require.ElementsMatch(t, expectedRemoteChanges, plan.RemoteChanges)
 }
-
-// Занимательный результат: для папки отдает конфликт, что хэш разный, mtime одинаковый
-// В реальной системе mtime не одинаковый, однако это верно только при
-// добавлении/ренейму/делиту файлов внутри, но не изменению контента
-// В целом это правильное поведение
-// Но можно оптимизировать, проверяя размер папки
-
 func TestPlanner_DeleteFileOnLocal_DeleteChangeOnRemote(t *testing.T) {
 	planner := NewChangesPlannerWithTreeSkip()
 	ctx := context.Background()

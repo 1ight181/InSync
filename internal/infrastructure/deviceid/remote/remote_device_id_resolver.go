@@ -35,7 +35,10 @@ func NewRemoteDeviceIdResolver(opts RemoteDeviceIdResolverOptions) (*RemoteDevic
 }
 
 func (r *RemoteDeviceIdResolver) Resolve() (domain.DeviceId, error) {
-	nodeName := r.nodeNameProvider.CurrentNodeName()
+	nodeName, err := r.nodeNameProvider.CurrentNodeName()
+	if err != nil {
+		return "", err
+	}
 
 	mDnsServerInstanceNamePostfixWithDot := fmt.Sprintf(".%s", r.mDnsServerInstanceNamePostfix)
 

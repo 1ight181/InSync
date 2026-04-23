@@ -26,7 +26,10 @@ func NewRemoteSnapshotProvider(options RemoteSnapshotProviderOptions) (*RemoteSn
 }
 
 func (p *RemoteSnapshotProvider) GetRemoteSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
-	client := p.clientFactory.CurrentClient()
+	client, err := p.clientFactory.CurrentClient()
+	if err != nil {
+		return domain.Snapshot{}, err
+	}
 	snapshot, err := client.GetSnapshot(ctx, rootName)
 	if err != nil {
 		return domain.Snapshot{}, err

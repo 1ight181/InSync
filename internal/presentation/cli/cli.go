@@ -323,7 +323,13 @@ func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) {
 func (c *Cli) currentNodeCmd(cmd *cobra.Command, args []string) {
 	c.logger.Debug("Выполнение команды current-node")
 
-	currentNode := c.connectUseCase.CurrentNodeName()
+	currentNode, err := c.connectUseCase.CurrentNodeName()
+	if err != nil {
+		if errors.Is(err, domain.ErrNotConnected) {
+			fmt.Println("Нет подключенного узла")
+			return
+		}
+	}
 	fmt.Printf("Текущий подключенный узел: %s\n", currentNode)
 }
 

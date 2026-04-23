@@ -42,7 +42,13 @@ func (a *ChangeApplier) ApplyLocal(ctx context.Context, rootName domain.RootName
 		if err != nil {
 			return err
 		}
-		content, err := a.clientFactory.CurrentClient().GetFile(ctx, scopedPath)
+
+		client, err := a.clientFactory.CurrentClient()
+		if err != nil {
+			return err
+		}
+
+		content, err := client.GetFile(ctx, scopedPath)
 		if err != nil {
 			return err
 		}
@@ -73,7 +79,11 @@ func (a *ChangeApplier) ApplyLocal(ctx context.Context, rootName domain.RootName
 }
 
 func (a *ChangeApplier) ApplyRemote(ctx context.Context, rootName domain.RootName, change domain.RemoteChange) error {
-	client := a.clientFactory.CurrentClient()
+	client, err := a.clientFactory.CurrentClient()
+	if err != nil {
+		return err
+	}
+
 	switch change.ChangeType {
 	case domain.Create, domain.Modify:
 		scopedPath, err := domain.NewScopedPath(rootName, change.NewRelativePath)

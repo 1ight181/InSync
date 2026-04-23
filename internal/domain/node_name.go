@@ -16,3 +16,7 @@ func NewNodeName(name string) (NodeName, error) {
 func (nodeName NodeName) String() string {
 	return string(nodeName)
 }
+
+var (
+	ErrNotConnected = errors.New("Узел не подключен")
+)
