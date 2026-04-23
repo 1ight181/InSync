@@ -26,7 +26,10 @@ func NewLocalDeviceIdCreator(opts LocalDeviceIdCreatorOptions) (*LocalDeviceIdCr
 	if opts.FileSys == nil || opts.DeviceIdFilePath == "" {
 		return nil, ErrInvalidOpts
 	}
-	return &LocalDeviceIdCreator{filsSys: opts.FileSys}, nil
+	return &LocalDeviceIdCreator{
+		filsSys:          opts.FileSys,
+		deviceIdFilePath: opts.DeviceIdFilePath,
+	}, nil
 }
 
 func (c *LocalDeviceIdCreator) CreateLocalDeviceId() (domain.DeviceId, error) {

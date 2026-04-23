@@ -75,20 +75,6 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать логгер: %v", err))
 	}
 
-	mDnsServerLogger := logger.With(moduleAtrributeName, mDnsServerModuleName)
-	mDnsServerConfig := config.MDnsServerConfig
-
-	if err := startMDnsServer(
-		mDnsServerConfig.InstanceName,
-		mDnsServerConfig.ServiceType,
-		mDnsServerConfig.Domain,
-		mDnsServerConfig.Port,
-		mDnsServerConfig.GetInterfaces(),
-		mDnsServerLogger,
-	); err != nil {
-		panic(fmt.Sprintf("Не удалось запустить mDNS сервер: %v", err))
-	}
-
 	dbConfig := config.DbConfig
 	dbDir := dbConfig.Dir
 	if err := os.MkdirAll(dbDir, 0755); err != nil {
@@ -163,12 +149,6 @@ func RunApp() {
 	}
 
 	fileManagerLogger := logger.With(moduleAtrributeName, fileManagerModuleName)
-
-	deviceIdResolverConfig := config.DeviceIdResolverConfig
-	deviceIdDir := deviceIdResolverConfig.DeviceIdDir
-	if err := os.MkdirAll(deviceIdDir, 0755); err != nil {
-		panic(fmt.Sprintf("Не удалось создать директорию для хранения device id: %v", err))
-	}
 
 	fileManagerOpts := filemanager.FileManagerOptions{
 		RootResolver:   rootResolver,
@@ -351,9 +331,22 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать BaseSnapshotRepository: %v", err))
 	}
 
+	deviceIdResolverConfig := config.DeviceIdResolverConfig
+	deviceIdDir := deviceIdResolverConfig.DeviceIdDir
+	if err := os.MkdirAll(deviceIdDir, 0755); err != nil {
+		panic(fmt.Sprintf("Не удалось создать директорию для хранения device id: %v", err))
+	}
+
+	deviceIdFilePathRaw := deviceIdResolverConfig.GetDeviceIdFilePath()
+	deviceIdFilePath, err := domain.NewPath(deviceIdFilePathRaw)
+
+	if err := os.MkdirAll(deviceIdResolverConfig.DeviceIdDir, 0755); err != nil {
+		panic(fmt.Sprintf("Не удалось создать директорию для : %v", err))
+	}
+
 	deviceidLocalCreatorOpts := deviceidcreator.LocalDeviceIdCreatorOptions{
 		FileSys:          fileSystem,
-		DeviceIdFilePath: domain.Path(deviceIdResolverConfig.GetDeviceIdFilePath()),
+		DeviceIdFilePath: deviceIdFilePath,
 	}
 
 	deviceidlocalCreator, err := deviceidcreator.NewLocalDeviceIdCreator(deviceidLocalCreatorOpts)
@@ -367,6 +360,27 @@ func RunApp() {
 	localIdDeviceResolver, err := deviceidlocal.NewLocalDeviceIdResolver(localDeviceIdResolverOpts)
 	if err != nil {
 		panic(fmt.Sprintf("Не удалось создать LocalDeviceIdResolver: %v", err))
+	}
+
+	localDeviceId, err := localIdDeviceResolver.Resolve()
+	if err != nil {
+		panic("Не удалось получить localDeviceId для инициализации mDNS Server")
+	}
+
+	mDnsServerInstanceName := localDeviceId.String()
+
+	mDnsServerLogger := logger.With(moduleAtrributeName, mDnsServerModuleName)
+	mDnsServerConfig := config.MDnsServerConfig
+
+	if err := startMDnsServer(
+		mDnsServerInstanceName,
+		mDnsServerConfig.ServiceType,
+		mDnsServerConfig.Domain,
+		mDnsServerConfig.Port,
+		mDnsServerConfig.GetInterfaces(),
+		mDnsServerLogger,
+	); err != nil {
+		panic(fmt.Sprintf("Не удалось запустить mDNS сервер: %v", err))
 	}
 
 	remoteDeviceIdResolverConfig := config.RemoteDeviceIdResolverConfig

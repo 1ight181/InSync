@@ -69,9 +69,6 @@ func (cc *ClientConfig) Validate() error {
 		if cc.ServerAddress == "" {
 			return ErrAddressToConnectIsEmpty
 		}
-		if cc.ServerAddress == "" {
-			return ErrAddressToConnectIsEmpty
-		}
 	}
 
 	return nil
