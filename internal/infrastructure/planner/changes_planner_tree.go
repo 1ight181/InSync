@@ -160,7 +160,7 @@ func (s *ChangesPlannerWithTreeSkip) handleDeletion(
 	if localEntry == nil && remoteEntry != nil {
 		if remoteEntry.FileInfo.Metadata.IsDirectory {
 			return nil, &domain.RemoteChange{
-				NewRelativePath: remoteEntry.RelativePath,
+				OldRelativePath: remoteEntry.RelativePath,
 				ChangeType:      domain.Delete,
 			}, nil, nil, nil
 		}
