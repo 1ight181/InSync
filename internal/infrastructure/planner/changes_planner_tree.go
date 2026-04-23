@@ -136,12 +136,12 @@ func (s *ChangesPlannerWithTreeSkip) processEntry(
 		return localChange, remoteChange, conflict, nil, nil
 
 	case s.isNewFile(baseEntry, localEntry, remoteEntry):
-		potentialLocalChange, potentialRemoteChange, conflict := s.handleCreation(localEntry, remoteEntry)
-		return nil, nil, conflict, potentialLocalChange, potentialRemoteChange
+		localChange, remoteChange, potentialLocalChange, potentialRemoteChange, conflict := s.handleCreation(localEntry, remoteEntry)
+		return localChange, remoteChange, conflict, potentialLocalChange, potentialRemoteChange
 
 	case s.isDeleted(baseEntry, localEntry, remoteEntry):
-		conflict, potentialLocalChange, potentialRemoteChange := s.handleDeletion(baseEntry, localEntry, remoteEntry)
-		return nil, nil, conflict, potentialLocalChange, potentialRemoteChange
+		localChange, remoteChange, conflict, potentialLocalChange, potentialRemoteChange := s.handleDeletion(baseEntry, localEntry, remoteEntry)
+		return localChange, remoteChange, conflict, potentialLocalChange, potentialRemoteChange
 	}
 
 	return nil, nil, nil, nil, nil
@@ -150,15 +150,24 @@ func (s *ChangesPlannerWithTreeSkip) processEntry(
 func (s *ChangesPlannerWithTreeSkip) handleDeletion(
 	baseEntry, localEntry, remoteEntry *domain.FileEntry,
 ) (
+	*domain.LocalChange,
+	*domain.RemoteChange,
 	*domain.Conflict,
 	*potentialChange,
 	*potentialChange,
 ) {
 
 	if localEntry == nil && remoteEntry != nil {
+		if remoteEntry.FileInfo.Metadata.IsDirectory {
+			return nil, &domain.RemoteChange{
+				NewRelativePath: remoteEntry.RelativePath,
+				ChangeType:      domain.Delete,
+			}, nil, nil, nil
+		}
+
 		// Конфликт удаления - удалено на local, но изменено на remote
 		if remoteEntry.FileInfo.Hash != baseEntry.FileInfo.Hash {
-			return &domain.Conflict{
+			return nil, nil, &domain.Conflict{
 				RemoteRelativePath: remoteEntry.RelativePath,
 				BaseRelativePath:   baseEntry.RelativePath,
 				RemoteModifiedUnix: remoteEntry.FileInfo.Metadata.ModifiedUnix,
@@ -168,7 +177,7 @@ func (s *ChangesPlannerWithTreeSkip) handleDeletion(
 		}
 
 		// Удалено локально - нужно удалить на remote
-		return nil, nil, &potentialChange{
+		return nil, nil, nil, nil, &potentialChange{
 			Changetype: domain.Delete,
 			Hash:       baseEntry.FileInfo.Hash,
 			Modify:     baseEntry.FileInfo.Metadata.ModifiedUnix,
@@ -177,9 +186,15 @@ func (s *ChangesPlannerWithTreeSkip) handleDeletion(
 	}
 
 	if remoteEntry == nil && localEntry != nil {
+		if localEntry.FileInfo.Metadata.IsDirectory {
+			return &domain.LocalChange{
+				OldRelativePath: localEntry.RelativePath,
+				ChangeType:      domain.Delete,
+			}, nil, nil, nil, nil
+		}
 		// Конфликт удаления - удалено на remote, но изменено на local
 		if localEntry.FileInfo.Hash != baseEntry.FileInfo.Hash {
-			return &domain.Conflict{
+			return nil, nil, &domain.Conflict{
 				LocalRelativePath: localEntry.RelativePath,
 				BaseRelativePath:  baseEntry.RelativePath,
 				LocalModifiedUnix: localEntry.FileInfo.Metadata.ModifiedUnix,
@@ -189,7 +204,7 @@ func (s *ChangesPlannerWithTreeSkip) handleDeletion(
 		}
 
 		// Удалено на remote - нужно удалить на local
-		return nil, &potentialChange{
+		return nil, nil, nil, &potentialChange{
 			Changetype: domain.Delete,
 			Hash:       baseEntry.FileInfo.Hash,
 			Modify:     baseEntry.FileInfo.Metadata.ModifiedUnix,
@@ -197,15 +212,21 @@ func (s *ChangesPlannerWithTreeSkip) handleDeletion(
 		}, nil
 	}
 
-	return nil, nil, nil
+	return nil, nil, nil, nil, nil
 }
 
 func (s *ChangesPlannerWithTreeSkip) handleCreation(
 	localEntry, remoteEntry *domain.FileEntry,
-) (*potentialChange, *potentialChange, *domain.Conflict) {
+) (*domain.LocalChange, *domain.RemoteChange, *potentialChange, *potentialChange, *domain.Conflict) {
 	// создать на remote
 	if localEntry != nil && remoteEntry == nil {
-		return nil, &potentialChange{
+		if localEntry.FileInfo.Metadata.IsDirectory {
+			return nil, &domain.RemoteChange{
+				NewRelativePath: localEntry.RelativePath,
+				ChangeType:      domain.Create,
+			}, nil, nil, nil
+		}
+		return nil, nil, nil, &potentialChange{
 			Changetype: domain.Create,
 			Hash:       localEntry.FileInfo.Hash,
 			Modify:     localEntry.FileInfo.Metadata.ModifiedUnix,
@@ -215,7 +236,13 @@ func (s *ChangesPlannerWithTreeSkip) handleCreation(
 
 	// создать на local
 	if remoteEntry != nil && localEntry == nil {
-		return &potentialChange{
+		if remoteEntry.FileInfo.Metadata.IsDirectory {
+			return &domain.LocalChange{
+				NewRelativePath: remoteEntry.RelativePath,
+				ChangeType:      domain.Create,
+			}, nil, nil, nil, nil
+		}
+		return nil, nil, &potentialChange{
 			Changetype: domain.Create,
 			Hash:       remoteEntry.FileInfo.Hash,
 			Modify:     remoteEntry.FileInfo.Metadata.ModifiedUnix,
@@ -226,7 +253,7 @@ func (s *ChangesPlannerWithTreeSkip) handleCreation(
 	if localEntry != nil && remoteEntry != nil {
 		// Конфликт создания - оба создали файл с разным содержимым
 		if localEntry.FileInfo.Hash != remoteEntry.FileInfo.Hash {
-			return nil, nil, &domain.Conflict{
+			return nil, nil, nil, nil, &domain.Conflict{
 				LocalRelativePath:  localEntry.RelativePath,
 				RemoteRelativePath: remoteEntry.RelativePath,
 				LocalModifiedUnix:  localEntry.FileInfo.Metadata.ModifiedUnix,
@@ -235,7 +262,7 @@ func (s *ChangesPlannerWithTreeSkip) handleCreation(
 			}
 		}
 	}
-	return nil, nil, nil
+	return nil, nil, nil, nil, nil
 }
 
 func (s *ChangesPlannerWithTreeSkip) handleModification(

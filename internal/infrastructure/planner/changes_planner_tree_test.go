@@ -346,6 +346,50 @@ func TestPlanner_DeleteFileOnLocal_DeleteChangeOnRemote(t *testing.T) {
 	require.Equal(t, expectedRemoteChanges, plan.RemoteChanges[0])
 }
 
+func TestPlanner_DeleteFileOnRemoteAndLocalNewFileOnLocalWithOldNameDifferentHash_Conflict(t *testing.T) {
+	planner := NewChangesPlannerWithTreeSkip()
+	ctx := context.Background()
+
+	baseMetadata := createMetadata(10, 10, true)
+	baseFiles := []domain.FileEntry{
+		createFileEntry(t, "/a", "hash1", 2, &baseMetadata),
+		createFileEntry(t, "/a/b", "hash2", 1, nil),
+	}
+
+	locaDirlMetadata := createMetadata(10, 10, true)
+	localFileMetadata := createMetadata(119, 10, false)
+	localFiles := []domain.FileEntry{
+		createFileEntry(t, "/a", "hash3", 1, &locaDirlMetadata),
+		createFileEntry(t, "/a/b", "hash67", 1, &localFileMetadata),
+	}
+
+	remoteMetadata := createMetadata(10, 10, true)
+	remoteFiles := []domain.FileEntry{
+		createFileEntry(t, "/a", "hash1", 2, &remoteMetadata),
+	}
+
+	baseSnap := createSnapshot(t, baseFiles)
+	localSnap := createSnapshot(t, localFiles)
+	remoteSnap := createSnapshot(t, remoteFiles)
+
+	plan, err := planner.Plan(ctx, baseSnap, localSnap, remoteSnap)
+	require.NoError(t, err)
+
+	require.Len(t, plan.LocalChanges, 0)
+	require.Len(t, plan.RemoteChanges, 0)
+	require.Len(t, plan.Conflicts, 1)
+
+	expectedConflict := domain.Conflict{
+		BaseRelativePath:  mustPath(t, "/a/b"),
+		LocalRelativePath: mustPath(t, "/a/b"),
+		Conflict:          domain.ConflictRemoteDeletedLocalModified,
+		LocalModifiedUnix: 119,
+		BaseModifiedUnix:  1,
+	}
+
+	require.Equal(t, expectedConflict, plan.Conflicts[0])
+}
+
 // Возвращает пустой снапшот, если не заданы входные параметры
 func createSnapshot(t *testing.T, fileEntries []domain.FileEntry) domain.Snapshot {
 	t.Helper()
