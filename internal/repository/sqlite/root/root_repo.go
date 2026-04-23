@@ -32,7 +32,7 @@ func (r *RootRepository) GetRoots() (map[domain.RootName]domain.Path, error) {
 func (r *RootRepository) AddRoot(rootName domain.RootName, path domain.Path) error {
 	var root Root
 	err := r.db.First(&root, "root_name = ?", rootName).Error
-	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
 
