@@ -20,5 +20,6 @@ func (r RootName) String() string {
 }
 
 var (
-	ErrNoRoots = errors.New("Руты не найдены")
+	ErrNoRoots           = errors.New("Не найдено добавленых корневых каталогов")
+	ErrRootAlreadyExists = errors.New("Корневой каталог с таким путем уже существует")
 )

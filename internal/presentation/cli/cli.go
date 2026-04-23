@@ -200,7 +200,7 @@ func (c *Cli) createNodesCmd() *cobra.Command {
 		Use:   nodesCmdName,
 		Short: "Отобразить доступные для синхронизации узлы",
 		Args:  cobra.NoArgs,
-		Run:   c.nodesCmd,
+		RunE:  c.nodesCmd,
 	}
 }
 
@@ -209,7 +209,7 @@ func (c *Cli) createCurrentNodeCmd() *cobra.Command {
 		Use:   currentNodeCmdName,
 		Short: "Отобразить текущий узел",
 		Args:  cobra.NoArgs,
-		Run:   c.currentNodeCmd,
+		RunE:  c.currentNodeCmd,
 	}
 }
 
@@ -294,7 +294,7 @@ func (c *Cli) createSyncCmd() *cobra.Command {
 	return cmd
 }
 
-func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) {
+func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) error {
 	c.logger.Debug("Выполнение команды nodes")
 
 	cmdCtx := cmd.Context()
@@ -304,7 +304,7 @@ func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) {
 	nodeNamesChan, err := c.nodeUseCase.ShowNodeNames(interruptCtx)
 	if err != nil {
 		fmt.Print("Не удалось получить узлы\n")
-		return
+		return err
 	}
 
 	fmt.Println("Доступные узлы (динамический список, нажмите Ctrl+C для завершения):")
@@ -315,25 +315,34 @@ func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) {
 		fmt.Printf("%d. %s\n", i, nodeName)
 		i++
 		c.nodeNameCache = append(c.nodeNameCache, nodeName)
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Доступный узел", slog.String("name", nodeName.String()))
 	case <-interruptCtx.Done():
-		return
+		c.logger.Debug("Вызывано прерывание во время выполнения команды nodes")
+		return nil
 	}
+
+	return nil
 }
 
-func (c *Cli) currentNodeCmd(cmd *cobra.Command, args []string) {
+func (c *Cli) currentNodeCmd(cmd *cobra.Command, args []string) error {
 	c.logger.Debug("Выполнение команды current-node")
 
 	currentNode, err := c.connectUseCase.CurrentNodeName()
 	if err != nil {
 		if errors.Is(err, domain.ErrNotConnected) {
+			c.logger.Debug("Нет подключенного узла")
 			fmt.Println("Нет подключенного узла")
-			return
+			return nil
 		}
 
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось получить текущий узел", slog.String("error", err.Error()))
 		fmt.Println("Не удалось получить текущий узел")
-		return
+		return err
 	}
+	c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Получен текущий узел", slog.String("node", currentNode.String()))
 	fmt.Printf("Текущий подключенный узел: %s\n", currentNode)
+
+	return nil
 }
 
 func (c *Cli) addRootCmd(cmd *cobra.Command, args []string) error {
@@ -341,20 +350,25 @@ func (c *Cli) addRootCmd(cmd *cobra.Command, args []string) error {
 
 	rootName, err := domain.NewRootName(args[0])
 	if err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось создать корневой каталог", slog.String("error", err.Error()))
 		fmt.Println("Не удалось создать корневой каталог")
 		return err
 	}
 
 	rootRelativePath, err := domain.NewPath(args[1])
 	if err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось создать корневой каталог", slog.String("error", err.Error()))
 		fmt.Println("Не удалось создать корневой каталог")
 		return err
 	}
 
 	if err := c.rootUseCase.AddRoot(rootName, rootRelativePath); err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось добавить корневой каталог", slog.String("error", err.Error()))
+		fmt.Println("Не удалось добавить корневой каталог")
 		return err
 	}
 
+	c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Корневой каталог добавлен", slog.String("name", rootName.String()), slog.String("path", rootRelativePath.String()))
 	fmt.Printf("Корневой каталог %s добавлен\n", rootName)
 	return nil
 }
@@ -364,12 +378,14 @@ func (c *Cli) removeRootCmd(cmd *cobra.Command, args []string) error {
 
 	rootName, err := domain.NewRootName(args[0])
 	if err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось удалить корневой каталог", slog.String("error", err.Error()))
 		fmt.Println("Не удалось создать удалить корневой каталог")
 		return err
 	}
 
 	c.rootUseCase.RemoveRoot(rootName)
 
+	c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Корневой каталог удален", slog.String("name", rootName.String()))
 	fmt.Printf("Корневой каталог %s удален\n", rootName)
 
 	return nil
@@ -381,13 +397,16 @@ func (c *Cli) rootsCmd(cmd *cobra.Command, args []string) {
 	roots, err := c.rootUseCase.GetRoots()
 	if err != nil {
 		if errors.Is(err, domain.ErrNoRoots) {
+			c.logger.Debug("Нет корневых каталогов")
 			fmt.Println("Нет корневых каталогов")
 			return
 		}
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось получить корневые каталоги", slog.String("error", err.Error()))
 		fmt.Println("Не удалось получить корневые каталоги")
 		return
 	}
 
+	c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Получен список корневых каталогов", slog.Int("count", len(roots)))
 	fmt.Println("Список корневых каталогов:")
 	var i int
 	for root, path := range roots {
@@ -401,15 +420,19 @@ func (c *Cli) connectCmd(cmd *cobra.Command, args []string) error {
 
 	nodeName, err := domain.NewNodeName(args[0])
 	if err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось подключиться к узлу", slog.String("error", err.Error()))
 		fmt.Println("Не удалось подключиться к узлу")
 		return err
 	}
+	c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Подключение к узлу", slog.String("node", nodeName.String()))
 	fmt.Printf("Подключение к узлу %s\n", nodeName)
 
 	if err := c.connectUseCase.ConnectToNode(nodeName); err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось подключиться к узлу", slog.String("error", err.Error()))
 		return err
 	}
 
+	c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Подключение к узлу прошло успешно", slog.String("node", nodeName.String()))
 	fmt.Printf("Подключение к узлу %s прошло успешно\n", nodeName)
 
 	return nil
@@ -420,6 +443,7 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 
 	rootName, err := domain.NewRootName(args[0])
 	if err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось выполнить sync", slog.String("error", err.Error()))
 		fmt.Println("Не удалось выполнить sync")
 		return err
 	}
@@ -431,6 +455,7 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 	shouldUseCache := *c.shouldUseCache
 	appliedChanges, conflicts, baseSnapshotSaveError, userDecision, err := c.syncUseCase.ApplySyncChanges(interruptCtx, shouldUseCache, rootName)
 	if err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось выполнить sync", slog.String("error", err.Error()))
 		return err
 	}
 
@@ -439,14 +464,17 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 
 			changeEventErr := changeEvent.Err
 			if changeEventErr != nil {
+				c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось применить изменение", slog.String("error", changeEventErr.Error()))
 				fmt.Printf("Не удалось применить изменение: %s\n", changeEventErr)
 				continue
 			}
+			c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Применено изменение", slog.String("change", c.changeToHumanReadable(changeEvent.Change)))
 			fmt.Printf("Применено изменение: %s\n", c.changeToHumanReadable(changeEvent.Change))
 		}
 	}()
 
 	for conflict := range conflicts {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Обнаружен конфликт", slog.String("conflict", c.conflictToHumanReadable(conflict)))
 		conflictLabel := c.conflictToHumanReadable(conflict)
 		prompt := promptui.Select{
 			Label: conflictLabel,
@@ -459,6 +487,7 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 
 		_, decision, err := prompt.Run()
 		if err != nil {
+			c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Ошибка при выборе решения конфликта", slog.String("error", err.Error()))
 			return err
 		}
 
@@ -467,15 +496,18 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 
 	select {
 	case err := <-baseSnapshotSaveError:
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Ошибка при сохранении базового снимка", slog.String("error", err.Error()))
 		return err
 	default:
 	}
 
 	if interruptCtx.Err() != nil {
+		c.logger.Debug("Синхронизация прервана пользователем")
 		fmt.Println("Синхронизация прервана пользователем")
 		return nil
 	}
 
+	c.logger.Debug("Синхронизация завершена")
 	fmt.Println("Синхронизация завершена")
 
 	return nil
@@ -511,6 +543,7 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 	c.logger.Debug("Выполнение команды dry-run")
 	rootName, err := domain.NewRootName(args[0])
 	if err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось выполнить dry-run", slog.String("error", err.Error()))
 		fmt.Println("Не удалось выполнить dry-run")
 		return err
 	}
@@ -521,17 +554,20 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 
 	plan, err := c.scanUseCase.PlanSyncChanges(interruptCtx, rootName)
 	if err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось получить изменения для синхронизации", slog.String("error", err.Error()))
 		fmt.Print("Не удалось получить изменения для синхронизации\n")
 		return err
 	}
 
 	if plan.IsEmpty() {
+		c.logger.Debug("Нет изменений для синхронизации")
 		fmt.Print("Нет изменений для синхронизации\n")
 	}
 
 	changesHeader := c.getChangesHeader()
 
 	if plan.IsAnyLocalChange() {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Найдены локальные изменения", slog.Int("count", plan.LocalLength()))
 		fmt.Printf("Всего локальных изменений: %d\n%s", plan.LocalLength(), changesHeader)
 		localChanges := plan.LocalChanges
 		for i, change := range localChanges {
@@ -540,6 +576,7 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	if plan.IsAnyRemoteChange() {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Найдены удалённые изменения", slog.Int("count", plan.RemoteLength()))
 		fmt.Printf("Всего удалённых изменений: %d\n%s", plan.RemoteLength(), changesHeader)
 		remoteChanges := plan.RemoteChanges
 		for i, change := range remoteChanges {
@@ -548,6 +585,7 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	if plan.IsAnyConflict() {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Найдены конфликты", slog.Int("count", plan.ConflictLength()))
 		fmt.Printf("Всего конфликтов: %d\n%s", plan.ConflictLength(), changesHeader)
 		conflicts := plan.Conflicts
 		for i, conflict := range conflicts {

@@ -2,14 +2,17 @@ package sqlite
 
 import (
 	"errors"
+	"log/slog"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type SqliteGormOptions struct {
 	Dsn      string
 	Migrator IMigrator
+	Logger   *slog.Logger
 }
 
 var (
@@ -18,11 +21,19 @@ var (
 
 func NewGorm(opts SqliteGormOptions) (*gorm.DB, error) {
 	if opts.Dsn == "" ||
-		opts.Migrator == nil {
+		opts.Migrator == nil ||
+		opts.Logger == nil {
 		return nil, ErrInvalidSqliteGormOptions
 	}
 
-	db, err := gorm.Open(sqlite.Open(opts.Dsn))
+	db, err := gorm.Open(sqlite.Open(opts.Dsn), &gorm.Config{
+		Logger: logger.NewSlogLogger(opts.Logger, logger.Config{
+			LogLevel:                  logger.Silent,
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  true,
+		}),
+		TranslateError: true,
+	})
 	if err != nil {
 		return nil, err
 	}

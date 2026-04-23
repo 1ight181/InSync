@@ -39,7 +39,12 @@ func (r *RootRepository) AddRoot(rootName domain.RootName, path domain.Path) err
 	root.RootName = rootName.String()
 	root.RootPath = path.String()
 
-	return r.db.Save(&root).Error
+	err = r.db.Save(&root).Error
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return domain.ErrRootAlreadyExists
+	}
+
+	return err
 }
 
 func (r *RootRepository) RemoveRoot(rootName domain.RootName) error {

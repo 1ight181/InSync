@@ -56,6 +56,7 @@ const (
 	cliModuleName                        = "cli"
 	fileManagerModuleName                = "file_manager"
 	hashManagerModuleName                = "hash_manager"
+	dbModuleName                         = "db"
 )
 
 func RunApp() {
@@ -95,10 +96,13 @@ func RunApp() {
 	}
 	dsn := dbConfig.GetDsn()
 
+	dbLogger := logger.With(moduleAtrributeName, dbModuleName)
+
 	migrator := repo.NewAutoMigrator()
 	dbOpts := repo.SqliteGormOptions{
 		Dsn:      dsn,
 		Migrator: migrator,
+		Logger:   dbLogger,
 	}
 
 	db, err := repo.NewGorm(dbOpts)
