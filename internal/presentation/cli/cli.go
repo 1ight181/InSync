@@ -667,28 +667,36 @@ func (c *Cli) conflictToHumanReadable(s domain.Conflict) string {
 }
 
 func (c *Cli) suggestionFunc(comand *cobra.Command, annotationValue string, document *prompt.Document) []prompt.Suggest {
-	typedPrefix := document.TextBeforeCursor()
+	typedPrefix := strings.Split(document.TextBeforeCursor(), " ")
 
-	switch annotationValue {
-	case nodesCmdName:
-		c.nodeNameSuggestionFunc(typedPrefix)
-	case dryRunCmdName, syncCmdName:
-		c.rootNameSuggestionFunc(typedPrefix)
-	default:
+	if len(typedPrefix) <= 1 {
 		return nil
 	}
 
-	return nil
+	typedPrefixWithoutCommand := typedPrefix[1]
+
+	switch annotationValue {
+	case connectCmdName:
+		return c.nodeNameSuggestionFunc(typedPrefixWithoutCommand)
+	case dryRunCmdName, syncCmdName:
+		return c.rootNameSuggestionFunc(typedPrefixWithoutCommand)
+	default:
+		return nil
+	}
 }
 
 func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
 	suggestions := make([]prompt.Suggest, 0)
 	for _, nodeName := range c.nodeNameCache {
+		if nodeName.String() == prefix {
+			return nil
+		}
 		if strings.HasPrefix(nodeName.String(), prefix) {
 			suggestions = append(suggestions, prompt.Suggest{
 				Text: nodeName.String(),
 			})
 		}
+
 	}
 
 	return suggestions
