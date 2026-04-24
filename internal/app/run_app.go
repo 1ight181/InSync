@@ -308,7 +308,7 @@ func RunApp() {
 		ClientHolder:                  clientHolder,
 		GrpcClientLogger:              clientLogger,
 		Logger:                        connectionManagerLogger,
-		MDnsServerServiceType:         clientConfig.ServerServiceName,
+		MDnsServerServiceType:         clientConfig.ServerServiceType,
 		MDnsServerDomain:              clientConfig.ServerDomain,
 		MDnsServerInstanceNamePostfix: clientConfig.ServerPostfix,
 	}

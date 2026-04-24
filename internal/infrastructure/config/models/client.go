@@ -16,6 +16,7 @@ type ClientConfig struct {
 
 	//для mdns
 	ServerServiceName string `mapstructure:"server_service_name"`
+	ServerServiceType string `mapstructure:"server_service_type"`
 	ServerInterfaces  string `mapstructure:"server_interfaces"`
 	ServerPostfix     string `mapstructure:"server_postfix"`
 	ServerDomain      string `mapstructure:"server_domain"`
@@ -71,7 +72,8 @@ func (cc *ClientConfig) Validate() error {
 		(cc.ServerServiceName == "" ||
 			cc.ServerInterfaces == "" ||
 			cc.ServerPostfix == "" ||
-			cc.ServerDomain == "") {
+			cc.ServerDomain == "" ||
+			cc.ServerServiceType == "") {
 		return ErrInvalidConfigForMdns
 	}
 
