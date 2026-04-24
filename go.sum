@@ -1,11 +1,5 @@
-github.com/1ight181/comptplus-ctrl-c v0.0.0-20260424080319-aa02c953c54d h1:I8AcDbscM2/ZtGcwSGYYsCmHp65XYbYVWUSfPLOBNRk=
-github.com/1ight181/comptplus-ctrl-c v0.0.0-20260424080319-aa02c953c54d/go.mod h1:PxNT+wf1MhLKX+VFSert2u/w+I2pHCGjcavni9NUZvA=
-github.com/1ight181/comptplus-ctrl-c v0.0.1 h1:w//ho+ByVzs4zrw1/t/eQph+meuLcUHtcql4+BVLREo=
-github.com/1ight181/comptplus-ctrl-c v0.0.1/go.mod h1:s+voxAI6lAm8/P6yatPUPvkMI6G/OZZNxJWLltfFGe4=
 github.com/1ight181/comptplus-ctrl-c v0.0.2 h1:3sTqmk2h9ChR7tt249MVhi2vkYx8HJoun1+j+kIWlR8=
 github.com/1ight181/comptplus-ctrl-c v0.0.2/go.mod h1:XAFPvljYz3S85TAeCn3/CV9iYxTVRRKw2r4grjWVrNQ=
-github.com/1ight181/go-prompt-ctrl-c v0.0.1 h1:KpVtpzN5KSmTBo6vZeYCcsnFwH9piWL4OX5hHD6f6hY=
-github.com/1ight181/go-prompt-ctrl-c v0.0.1/go.mod h1:ILBVHuhC4GmqzmsIp29G7Zo8sNlWwJdNqFaGkUguSX0=
 github.com/1ight181/go-prompt-ctrl-c v0.0.2 h1:mdNfoXLQpaf72gbkcmsTGP9LbNesftFAaaekQzjd1So=
 github.com/1ight181/go-prompt-ctrl-c v0.0.2/go.mod h1:ILBVHuhC4GmqzmsIp29G7Zo8sNlWwJdNqFaGkUguSX0=
 github.com/cenkalti/backoff v2.2.1+incompatible h1:tNowT99t7UNflLxfYYSlKYsBpXdEet03Pg2g16Swow4=

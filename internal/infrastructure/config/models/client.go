@@ -11,14 +11,16 @@ type ClientConfig struct {
 	ResolverScheme string `mapstructure:"resolver_scheme"`
 
 	// для passthrough
-	ServerAddress string `mapstructure:"server_address"`
+	ServerIp   string `mapstructure:"server_ip"`
+	ServerPort int    `mapstructure:"server_port"`
 
 	//для mdns
 	ServerServiceName string `mapstructure:"server_service_name"`
 	ServerInterfaces  string `mapstructure:"server_interfaces"`
+	ServerPostfix     string `mapstructure:"server_postfix"`
+	ServerDomain      string `mapstructure:"server_domain"`
 
 	// общие
-	ServerPort           int    `mapstructure:"server_port"`
 	ServerNetworkType    string `mapstructure:"server_network_type"`
 	LoadBalancingPolicy  string `mapstructure:"load_balancing_policy"`
 	ShouldUseHealthCheck bool   `mapstructure:"should_use_health_check"`
@@ -65,20 +67,26 @@ func (cc *ClientConfig) Validate() error {
 		return err
 	}
 
-	if cc.ResolverScheme == "mdns" && cc.ServerServiceName == "" {
-		if cc.ServerAddress == "" {
-			return ErrAddressToConnectIsEmpty
-		}
+	if (cc.ResolverScheme == "mdns") &&
+		(cc.ServerServiceName == "" ||
+			cc.ServerInterfaces == "" ||
+			cc.ServerPostfix == "" ||
+			cc.ServerDomain == "") {
+		return ErrInvalidConfigForMdns
 	}
 
 	return nil
 }
 
 func (cc *ClientConfig) GetServerAddress() string {
-	if cc.ServerAddress == "" {
+	if cc.ServerIp == "" {
 		return ""
 	}
-	return fmt.Sprintf("%s:%s", cc.ServerAddress, strconv.Itoa(cc.ServerPort))
+	return fmt.Sprintf("%s:%s", cc.ServerIp, strconv.Itoa(cc.ServerPort))
+}
+
+func (cc *ClientConfig) GetServerNamePostfix() string {
+	return fmt.Sprintf(".%s.%s", cc.ServerPostfix, cc.ServerDomain)
 }
 
 func (cc *ClientConfig) GetInterfaces() []string {

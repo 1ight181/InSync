@@ -3,6 +3,7 @@ package connection
 import (
 	"context"
 	"errors"
+	"fmt"
 	"insync/internal/domain"
 	clt "insync/internal/infrastructure/client"
 	"insync/internal/interfaces"
@@ -10,8 +11,7 @@ import (
 )
 
 type ConnectionManager struct {
-	mdnsUrlResolver IMDnsUrlResolver
-	baseGrpcConf    *clt.GrpcConf
+	baseGrpcConf *clt.GrpcConf
 
 	grpcClientLogger *slog.Logger
 
@@ -22,11 +22,14 @@ type ConnectionManager struct {
 	clientHolder    IClientHolder
 
 	currentNodeName domain.NodeName
+
+	mDnsServerServiceType         string
+	mDnsServerDomain              string
+	mDnsServerInstanceNamePostfix string
 }
 
 type ConnectionManagerOptions struct {
-	MDnsUrlResolver IMDnsUrlResolver
-	BaseGrpcConf    *clt.GrpcConf
+	BaseGrpcConf *clt.GrpcConf
 
 	ClientConnector IClientConnector
 	ClientHolder    IClientHolder
@@ -34,6 +37,10 @@ type ConnectionManagerOptions struct {
 	GrpcClientLogger *slog.Logger
 
 	Logger *slog.Logger
+
+	MDnsServerServiceType         string
+	MDnsServerDomain              string
+	MDnsServerInstanceNamePostfix string
 }
 
 var (
@@ -42,20 +49,25 @@ var (
 
 func NewConnectionManager(opts ConnectionManagerOptions) (*ConnectionManager, error) {
 	if opts.BaseGrpcConf == nil ||
-		opts.MDnsUrlResolver == nil ||
 		opts.ClientHolder == nil ||
 		opts.GrpcClientLogger == nil ||
+		opts.MDnsServerServiceType == "" ||
+		opts.MDnsServerDomain == "" ||
+		opts.MDnsServerInstanceNamePostfix == "" ||
 		opts.Logger == nil {
 		return nil, ErrInvalidOpts
 	}
 	return &ConnectionManager{
-		mdnsUrlResolver: opts.MDnsUrlResolver,
-		baseGrpcConf:    opts.BaseGrpcConf,
+		baseGrpcConf: opts.BaseGrpcConf,
 
 		clientHolder: opts.ClientHolder,
 
 		grpcClientLogger: opts.GrpcClientLogger,
 		logger:           opts.Logger,
+
+		mDnsServerServiceType:         opts.MDnsServerServiceType,
+		mDnsServerDomain:              opts.MDnsServerDomain,
+		mDnsServerInstanceNamePostfix: opts.MDnsServerInstanceNamePostfix,
 	}, nil
 }
 
@@ -72,10 +84,12 @@ func (c *ConnectionManager) CurrentNodeName() (domain.NodeName, error) {
 }
 
 func (c *ConnectionManager) ConnectToNode(nodeName domain.NodeName) error {
-	mDnsUrl := c.mdnsUrlResolver.Resolve(nodeName)
+	mDnsUrl := c.resolveMDnsUrl(nodeName)
+	serverName := c.resolveServerName(nodeName)
 
 	grpcConf := c.baseGrpcConf
 	grpcConf.ServerAddress = mDnsUrl
+	grpcConf.ServerName = serverName
 
 	grpcClientOpts := clt.GrpcClientOptions{
 		Conf:   grpcConf,
@@ -122,4 +136,12 @@ func (c *ConnectionManager) Close() error {
 	}
 
 	return nil
+}
+
+func (c *ConnectionManager) resolveMDnsUrl(nodeName domain.NodeName) string {
+	return fmt.Sprintf("%s.%s.%s", c.mDnsServerServiceType, nodeName, c.mDnsServerDomain)
+}
+
+func (c *ConnectionManager) resolveServerName(nodeName domain.NodeName) string {
+	return fmt.Sprintf("%s.%s.%s", nodeName, c.mDnsServerInstanceNamePostfix, c.mDnsServerDomain)
 }

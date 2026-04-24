@@ -17,7 +17,6 @@ import (
 	"insync/internal/infrastructure/filemanager/pathtree"
 	"insync/internal/infrastructure/filesys"
 	"insync/internal/infrastructure/holder"
-	mdnsurl "insync/internal/infrastructure/mdnsurl"
 	planner "insync/internal/infrastructure/planner"
 	planres "insync/internal/infrastructure/planresolver"
 	base "insync/internal/infrastructure/planresolver/base"
@@ -302,24 +301,16 @@ func RunApp() {
 
 	connectionManagerLogger := logger.With(moduleAtrributeName, connectionManagerModuleName)
 
-	mdnsUrldResolverOpts := mdnsurl.MDnsUrlResolverOptions{
-		MDnsServerServiceType: mDnsBrowserConfig.ServerServiceType,
-		MDnsServerDomain:      mDnsBrowserConfig.ServerDomain,
-	}
-
-	mdnsUrlResolver, err := mdnsurl.NewMDnsUrlResolver(mdnsUrldResolverOpts)
-	if err != nil {
-		panic(fmt.Sprintf("Не удалось создать MDnsUrlResolver: %v", err))
-	}
-
 	clientHolder := holder.NewClientHolder()
 
 	connectionManagerOpts := conn.ConnectionManagerOptions{
-		MDnsUrlResolver:  mdnsUrlResolver,
-		BaseGrpcConf:     &grpcClientConf,
-		ClientHolder:     clientHolder,
-		GrpcClientLogger: clientLogger,
-		Logger:           connectionManagerLogger,
+		BaseGrpcConf:                  &grpcClientConf,
+		ClientHolder:                  clientHolder,
+		GrpcClientLogger:              clientLogger,
+		Logger:                        connectionManagerLogger,
+		MDnsServerServiceType:         clientConfig.ServerServiceName,
+		MDnsServerDomain:              clientConfig.ServerDomain,
+		MDnsServerInstanceNamePostfix: clientConfig.ServerPostfix,
 	}
 	connectionManager, err := conn.NewConnectionManager(connectionManagerOpts)
 	if err != nil {
@@ -409,6 +400,7 @@ func RunApp() {
 	remoteDeviceIdResolverOpts := deviceidremote.RemoteDeviceIdResolverOptions{
 		MDnsServerInstanceNamePostfix: remoteDeviceIdResolverConfig.MDnsServerInstanceNamePostfix,
 		NodeNameProvider:              connectionManager,
+		MDnsServerDomain:              remoteDeviceIdResolverConfig.MDnsServerDomain,
 	}
 	remoteDeviceIdResolver, err := deviceidremote.NewRemoteDeviceIdResolver(remoteDeviceIdResolverOpts)
 	if err != nil {
