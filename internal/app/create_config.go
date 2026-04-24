@@ -13,8 +13,7 @@ const (
 	defaultConfigFileDirEnvKey  = "INSYNC_CONFIG_FILE_DIR"
 	defaultConfigFileNameEnvKey = "INSYNC_CONFIG_FILE_NAME"
 	defaultConfigFileDir        = "../config"
-	defaultDebugConfigFileName  = "debug_config.yaml"
-	defaultProdConfigFileName   = "config.yaml"
+	defaultConfigFileName       = "config.yaml"
 	defaultEnvPrefix            = "INSYNC"
 	defaultEnvDelimiter         = "_"
 	defaultKoanfDelimiter       = "."
@@ -31,12 +30,7 @@ func getConfigFileInfoFromEnv() (string, string) {
 func createConfig() (*cnfmodels.GeneralConfig, error) {
 	configFileDir, configFileName := getConfigFileInfoFromEnv()
 	if configFileDir == "" || configFileName == "" {
-		if isDebug {
-			configFileName = defaultDebugConfigFileName
-		} else {
-			configFileName = defaultProdConfigFileName
-		}
-
+		configFileName = defaultConfigFileName
 		configFileDir = defaultConfigFileDir
 	}
 
