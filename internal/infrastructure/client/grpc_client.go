@@ -82,8 +82,6 @@ type GrpcConf struct {
 type GrpcClient struct {
 	conf *GrpcConf
 
-	ctx context.Context
-
 	logger    *slog.Logger
 	loggerCtx context.Context
 
@@ -245,11 +243,6 @@ func (gc *GrpcClient) Connect() (err error) {
 			MinConnectTimeout: defaultConnectionConfig.MinConnectTimeout,
 		})
 		dialOptions = append(dialOptions, withConnectParams)
-	}
-
-	ctx := gc.ctx
-	if ctx.Err() != nil {
-		return ctx.Err()
 	}
 
 	conn, err := grpc.NewClient(
