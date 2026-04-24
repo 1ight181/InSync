@@ -12,9 +12,9 @@ import (
 	"syscall"
 	"unsafe"
 
-	prompt "github.com/c-bata/go-prompt"
+	cobraprompt "github.com/1ight181/comptplus-ctrl-c"
+	prompt "github.com/1ight181/go-prompt-ctrl-c"
 	"github.com/spf13/cobra"
-	cobraprompt "github.com/stromland/cobra-prompt"
 	"golang.org/x/sys/windows"
 
 	promptui "github.com/manifoldco/promptui"
@@ -148,12 +148,13 @@ func (c *Cli) Start(ctx context.Context) {
 		RootCmd:                 rootCmd,
 		ShowHelpCommandAndFlags: true,
 		GoPromptOptions: []prompt.Option{
-			prompt.OptionTitle("InSync 0.1"),
-			prompt.OptionMaxSuggestion(5),
-			prompt.OptionPrefix("insync> "),
-			prompt.OptionInputTextColor(prompt.DarkGreen),
-			prompt.OptionSelectedSuggestionTextColor(prompt.Green),
-			prompt.OptionSuggestionTextColor(prompt.DarkGreen),
+			prompt.WithTitle("InSync 0.1"),
+			prompt.WithMaxSuggestion(5),
+			prompt.WithPrefix("insync> "),
+			prompt.WithInputTextColor(prompt.DarkGreen),
+			prompt.WithSelectedSuggestionTextColor(prompt.Green),
+			prompt.WithSuggestionTextColor(prompt.DarkGreen),
+			prompt.WithInterruptCallback(c.interruptCallback),
 		},
 		DynamicSuggestionsFunc: c.suggestionFunc,
 		OnErrorFunc: func(err error) {
@@ -169,6 +170,9 @@ func (c *Cli) Start(ctx context.Context) {
 	exitCtx, exitCtxCancel := context.WithCancel(ctx)
 	c.exitCtxCancel = exitCtxCancel
 	cobraPrompt.RunContext(exitCtx)
+}
+
+func (c *Cli) interruptCallback(code int) {
 }
 
 func (c *Cli) parseWindowsCommandLine(commandLine string) []string {
@@ -682,7 +686,7 @@ func (c *Cli) conflictToHumanReadable(s domain.Conflict) string {
 	)
 }
 
-func (c *Cli) suggestionFunc(annotationValue string, document *prompt.Document) []prompt.Suggest {
+func (c *Cli) suggestionFunc(comand *cobra.Command, annotationValue string, document *prompt.Document) []prompt.Suggest {
 	typedPrefix := document.TextBeforeCursor()
 
 	switch annotationValue {
