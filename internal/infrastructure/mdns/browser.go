@@ -58,6 +58,13 @@ func (b *MDnsNodeNamesBrowser) BrowseNodeNames(ctx context.Context) (chan domain
 		return nil, err
 	}
 
+	b.logger.LogAttrs(
+		b.loggerCtx,
+		slog.LevelDebug,
+		"Загружены интерфейсы для MDnsNodeNamesBrowser",
+		slog.Any("interfaces", ifaces),
+	)
+
 	resolver, err := zeroconf.NewResolver(
 		zeroconf.SelectIfaces(ifaces),
 	)
