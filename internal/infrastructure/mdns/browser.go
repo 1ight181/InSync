@@ -34,7 +34,7 @@ func NewMDnsNodeNamesBrowser(opts MDnsNodeNamesBrowserOptions) *MDnsNodeNamesBro
 		opts.ServerDomain == "" ||
 		opts.Interfaces == nil ||
 		opts.Logger == nil {
-		panic("Все поля MDnsResolverOptions должны быть заполнены")
+		panic("Все поля MDnsNodeNamesBrowserOptions должны быть заполнены")
 	}
 	return &MDnsNodeNamesBrowser{
 		serverServiceType: opts.ServerServiceType,
@@ -46,15 +46,14 @@ func NewMDnsNodeNamesBrowser(opts MDnsNodeNamesBrowserOptions) *MDnsNodeNamesBro
 }
 
 func (b *MDnsNodeNamesBrowser) BrowseNodeNames(ctx context.Context) (chan domain.NodeName, error) {
-	b.logger.Info("запуск MDnsResolver...")
+	b.logger.Info("запуск MDnsNodeNamesBrowser...")
 
 	ifaces, err := shared.GetNetworkInterfaces(b.interfaces)
-
 	if len(ifaces) == 0 {
 		b.logger.LogAttrs(
 			b.loggerCtx,
 			slog.LevelError,
-			"Интерфейсы не были переданы для MDnsResolver",
+			"Интерфейсы не были переданы для MDnsNodeNamesBrowser",
 		)
 		return nil, err
 	}
@@ -74,7 +73,7 @@ func (b *MDnsNodeNamesBrowser) BrowseNodeNames(ctx context.Context) (chan domain
 			b.logger.LogAttrs(
 				b.loggerCtx,
 				slog.LevelError,
-				"Ошибка при выполнении метода Browse в MDnsResolver",
+				"Ошибка при выполнении метода Browse в MDnsNodeNamesBrowser",
 				slog.String("error", err.Error()),
 			)
 		}
@@ -87,7 +86,7 @@ func (b *MDnsNodeNamesBrowser) BrowseNodeNames(ctx context.Context) (chan domain
 		b.sendToNodeNamesChan(ctx, nodeNamesChan)
 	}()
 
-	b.logger.Info("MDnsResolver успешно запущен")
+	b.logger.Info("MDnsNodeNamesBrowser успешно запущен")
 
 	return nodeNamesChan, nil
 }
@@ -107,7 +106,7 @@ func (b *MDnsNodeNamesBrowser) sendToNodeNamesChan(ctx context.Context, nodeChan
 				b.logger.LogAttrs(
 					b.loggerCtx,
 					slog.LevelError,
-					"Ошибка при выполнении метода NewNodeName в MDnsResolver",
+					"Ошибка при выполнении метода NewNodeName в MDnsNodeNamesBrowser",
 					slog.String("error", err.Error()),
 				)
 				continue
