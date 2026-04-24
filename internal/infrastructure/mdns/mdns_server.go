@@ -3,7 +3,6 @@ package mdns
 import (
 	"context"
 	"log/slog"
-	"net"
 	"sync/atomic"
 
 	shared "insync/internal/shared"
@@ -62,22 +61,16 @@ func (ms *MDnsServer) Start() error {
 	}
 
 	ms.logger.Info("Запуск mDNS сервера...")
-	interfaces, err := shared.GetNetworkInterfacesByName(ms.interfaces)
-	if err != nil {
+	interfaces, err := shared.GetNetworkInterfaces(ms.interfaces)
+	if len(interfaces) == 0 {
+		ms.logger.LogAttrs(
+			ms.loggerCtx,
+			slog.LevelError,
+			"Интерфейсы не были переданы для MDnsServer",
+		)
+
 		ms.isStarted.Store(false)
 		return err
-	}
-
-	if len(interfaces) == 0 {
-		interfaces, err = net.Interfaces()
-		if err != nil {
-			ms.logger.LogAttrs(
-				ms.loggerCtx,
-				slog.LevelError,
-				"Интерфейсы не были переданы, а net.Interfaces вернул ошибку",
-				slog.Any("err", err),
-			)
-		}
 	}
 
 	ms.logger.LogAttrs(

@@ -48,10 +48,17 @@ func NewMDnsNodeNamesBrowser(opts MDnsNodeNamesBrowserOptions) *MDnsNodeNamesBro
 func (b *MDnsNodeNamesBrowser) BrowseNodeNames(ctx context.Context) (chan domain.NodeName, error) {
 	b.logger.Info("запуск MDnsResolver...")
 
-	ifaces, err := shared.GetNetworkInterfacesByName(b.interfaces)
-	if err != nil {
+	ifaces, err := shared.GetNetworkInterfaces(b.interfaces)
+
+	if len(ifaces) == 0 {
+		b.logger.LogAttrs(
+			b.loggerCtx,
+			slog.LevelError,
+			"Интерфейсы не были переданы для MDnsResolver",
+		)
 		return nil, err
 	}
+
 	resolver, err := zeroconf.NewResolver(
 		zeroconf.SelectIfaces(ifaces),
 	)

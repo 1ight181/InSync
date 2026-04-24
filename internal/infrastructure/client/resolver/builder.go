@@ -72,7 +72,7 @@ func (b *mdnsBuilder) Build(target resolver.Target, clientConn resolver.ClientCo
 			return nil, err
 		}
 	} else {
-		ifaces, err = shared.GetNetworkInterfacesByName(resolverIfaces)
+		ifaces, err = shared.GetNetworkInterfaces(resolverIfaces)
 		if err != nil && len(ifaces) == 0 {
 			b.logger.LogAttrs(
 				b.loggerCtx,

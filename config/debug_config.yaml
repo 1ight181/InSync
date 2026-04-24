@@ -86,8 +86,9 @@ mdns_server:
   service_type: "_grpc._tcp"
   domain: "local"
   port: 50051
-  # формат "eth0;wlan0"
-  interfaces: ""
+  # формат "eth0;wlan0;Беспроводная сеть 5;8"
+  # поддерживает как имя интерфейса, так и индекс интерфейса
+  interfaces: "6"
 
 device_id_resolver:
   device_id_dir: "../deviceid"
@@ -96,8 +97,9 @@ device_id_resolver:
 mdns_browser:
   server_service_type: "_grpc._tcp"
   server_domain: "local"
-  # формат "eth0;wlan0"
-  interfaces: ""
+   # формат "eth0;wlan0;Беспроводная сеть 5;8"
+  # поддерживает как имя интерфейса, так и индекс интерфейса
+  interfaces: "6"
 
 remote_device_id_resolver:
   mdns_server_instance_name_postfix: *mdns_server_instance_name_postfix
