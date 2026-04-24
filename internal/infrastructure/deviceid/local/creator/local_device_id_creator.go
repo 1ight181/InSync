@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"insync/internal/domain"
+	"io"
+	"io/fs"
 
 	"github.com/google/uuid"
 )
@@ -32,23 +34,49 @@ func NewLocalDeviceIdCreator(opts LocalDeviceIdCreatorOptions) (*LocalDeviceIdCr
 	}, nil
 }
 
-func (c *LocalDeviceIdCreator) CreateLocalDeviceId() (domain.DeviceId, error) {
-	uuid := c.generateDeviceId()
-
-	reader := bytes.NewReader([]byte(uuid))
-
-	err := c.filsSys.AtomicWrite(c.deviceIdFilePath, reader)
+func (c *LocalDeviceIdCreator) ReadOrCreateLocalDeviceId() (domain.DeviceId, error) {
+	deviceIdFile, err := c.filsSys.Open(c.deviceIdFilePath)
 	if err != nil {
-		return "", err
-	}
-	deviceId, err := domain.NewDeviceId(uuid)
-	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return c.generateAndWriteDeviceId()
+		}
 		return "", err
 	}
 
+	deviceIdRaw, err := io.ReadAll(deviceIdFile)
+	if err != nil {
+		return "", err
+	}
+
+	deviceIdFile.Close()
+
+	if len(deviceIdRaw) == 0 {
+		return c.generateAndWriteDeviceId()
+	}
+
+	return domain.NewDeviceId(string(deviceIdRaw))
+
+}
+
+func (c *LocalDeviceIdCreator) generateAndWriteDeviceId() (domain.DeviceId, error) {
+	deviceId := c.generateDeviceId()
+	if err := c.writeOrCreateDeviceId(deviceId); err != nil {
+		return "", err
+	}
 	return deviceId, nil
 }
 
-func (c *LocalDeviceIdCreator) generateDeviceId() string {
-	return uuid.New().String()
+func (c *LocalDeviceIdCreator) generateDeviceId() domain.DeviceId {
+	return domain.DeviceId(uuid.New().String())
+}
+
+func (c LocalDeviceIdCreator) writeOrCreateDeviceId(deviceId domain.DeviceId) error {
+	reader := bytes.NewReader([]byte(deviceId.String()))
+
+	err := c.filsSys.AtomicWrite(c.deviceIdFilePath, reader)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

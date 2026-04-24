@@ -385,7 +385,7 @@ func RunApp() {
 
 	localDeviceId, err := localIdDeviceResolver.Resolve()
 	if err != nil {
-		panic("Не удалось получить localDeviceId для инициализации mDNS Server")
+		panic(fmt.Sprintf("Не удалось получить device id: %v", err))
 	}
 
 	mDnsServerInstanceName := localDeviceId.String()

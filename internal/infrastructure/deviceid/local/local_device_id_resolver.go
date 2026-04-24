@@ -27,7 +27,7 @@ func NewLocalDeviceIdResolver(opts LocalDeviceIdResolverOptions) (*LocalDeviceId
 
 func (r *LocalDeviceIdResolver) Resolve() (domain.DeviceId, error) {
 	if r.currentDeviceId == "" {
-		newDeviceId, err := r.localDeviceIdCreator.CreateLocalDeviceId()
+		newDeviceId, err := r.localDeviceIdCreator.ReadOrCreateLocalDeviceId()
 		if err != nil {
 			return "", err
 		}
