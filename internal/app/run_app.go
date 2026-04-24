@@ -40,8 +40,6 @@ import (
 	scanusecase "insync/internal/usecase/scan"
 	syncusecase "insync/internal/usecase/sync"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"google.golang.org/grpc/resolver"
@@ -80,9 +78,6 @@ func (stack cleanupStack) Run() <-chan struct{} {
 }
 
 func RunApp() {
-	appContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stopSignals()
-
 	var cleanups cleanupStack
 
 	config, err := createConfig()
@@ -547,9 +542,7 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать Cli: %v", err))
 	}
 
-	cliInstance.Start(appContext)
-	<-appContext.Done()
-
+	cliInstance.Start()
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
