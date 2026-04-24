@@ -29,7 +29,6 @@ const (
 	connectCmdName     = "connect"
 	dryRunCmdName      = "dry-run"
 	syncCmdName        = "sync"
-	exitCmdName        = "exit"
 )
 
 const (
@@ -73,7 +72,7 @@ type Cli struct {
 	loggerCtx context.Context
 
 	shouldUseCache *bool
-	nodeNameCache  []domain.NodeName
+	nodeNameCache  map[domain.NodeName]struct{}
 	exitCtxCancel  context.CancelFunc
 }
 
@@ -110,7 +109,7 @@ func NewCli(opts CliOptions) (*Cli, error) {
 
 		logger:        opts.Logger,
 		loggerCtx:     loggerCtx,
-		nodeNameCache: make([]domain.NodeName, 0),
+		nodeNameCache: make(map[domain.NodeName]struct{}),
 	}, nil
 }
 
@@ -319,7 +318,7 @@ func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) error {
 		case nodeName, ok := <-nodeNamesChan:
 			if ok {
 				fmt.Printf("%d. %s\n", i, nodeName)
-				c.nodeNameCache = append(c.nodeNameCache, nodeName)
+				c.nodeNameCache[nodeName] = struct{}{}
 				c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Доступный узел", slog.String("name", nodeName.String()))
 			}
 		case <-interruptCtx.Done():
@@ -687,7 +686,7 @@ func (c *Cli) suggestionFunc(comand *cobra.Command, annotationValue string, docu
 
 func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
 	suggestions := make([]prompt.Suggest, 0)
-	for _, nodeName := range c.nodeNameCache {
+	for nodeName := range c.nodeNameCache {
 		if nodeName.String() == prefix {
 			return nil
 		}
