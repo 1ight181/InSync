@@ -47,7 +47,6 @@ func (s *ClientSuite) SetupTest() {
 
 	clientOpts := GrpcClientOptions{
 		Conf:   &conf,
-		Ctx:    context.Background(),
 		Logger: slog.Default(),
 	}
 

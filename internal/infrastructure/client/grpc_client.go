@@ -97,8 +97,6 @@ type GrpcClient struct {
 type GrpcClientOptions struct {
 	Conf *GrpcConf
 
-	Ctx context.Context
-
 	Logger *slog.Logger
 }
 
@@ -143,9 +141,7 @@ func NewGrpcClient(opts GrpcClientOptions) (*GrpcClient, error) {
 		return nil, ErrInvalidOpts
 	}
 
-	if opts.Ctx == nil ||
-
-		opts.Conf.ChunkSizeInBytes <= 0 ||
+	if opts.Conf.ChunkSizeInBytes <= 0 ||
 
 		opts.Logger == nil {
 		return nil, ErrInvalidOpts
@@ -154,8 +150,6 @@ func NewGrpcClient(opts GrpcClientOptions) (*GrpcClient, error) {
 	loggerCtx := context.Background()
 	return &GrpcClient{
 		conf: opts.Conf,
-
-		ctx: opts.Ctx,
 
 		logger:    opts.Logger,
 		loggerCtx: loggerCtx,

@@ -93,8 +93,7 @@ func (c *ConnectionManager) ConnectToNode(nodeName domain.NodeName) error {
 
 	grpcClientOpts := clt.GrpcClientOptions{
 		Conf:   grpcConf,
-		Ctx:    nil,
-		Logger: nil,
+		Logger: c.grpcClientLogger,
 	}
 
 	newClient, err := clt.NewGrpcClient(grpcClientOpts)
