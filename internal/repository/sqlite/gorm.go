@@ -1,10 +1,11 @@
 package sqlite
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -41,6 +42,13 @@ func NewGorm(opts SqliteGormOptions) (*gorm.DB, error) {
 	if err := opts.Migrator.Migrate(db); err != nil {
 		return nil, err
 	}
+
+	opts.Logger.LogAttrs(
+		context.Background(),
+		slog.LevelInfo,
+		"Соединение с базой данных установлено",
+		slog.String("dsn", opts.Dsn),
+	)
 
 	return db, nil
 }
