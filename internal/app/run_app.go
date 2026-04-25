@@ -85,6 +85,10 @@ func RunApp() {
 	}
 
 	loggerConfig := config.LoggerConfig
+	logDir := loggerConfig.LogFileDirectory
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		panic(fmt.Sprintf("Не удалось создать директорию для логов: %v", err))
+	}
 	logger, err := createLogger(
 		loggerConfig.ShouldLogToFile,
 		loggerConfig.GetLogFilePath(),
