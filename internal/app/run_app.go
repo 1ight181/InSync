@@ -325,15 +325,6 @@ func RunApp() {
 		ConnectionManager: connectionManager,
 	}
 
-	nodeUseCaseOpts := nodeusecase.NodeUseCaseOptions{
-		NodeNamesBrowser: mDnsNodeNamesBrowser,
-	}
-
-	nodeUseCase, err := nodeusecase.NewNodeUseCase(nodeUseCaseOpts)
-	if err != nil {
-		panic(fmt.Sprintf("Не удалось создать NodeUseCase: %v", err))
-	}
-
 	connectUseCase, err := connusecase.NewConnectUseCase(connectUseCaseOpts)
 	if err != nil {
 		panic(fmt.Sprintf("Не удалось создать ConnectUseCase: %v", err))
@@ -376,6 +367,16 @@ func RunApp() {
 	localIdDeviceResolver, err := deviceidlocal.NewLocalDeviceIdResolver(localDeviceIdResolverOpts)
 	if err != nil {
 		panic(fmt.Sprintf("Не удалось создать LocalDeviceIdResolver: %v", err))
+	}
+
+	nodeUseCaseOpts := nodeusecase.NodeUseCaseOptions{
+		NodeNamesBrowser:      mDnsNodeNamesBrowser,
+		LocalDeviceIdResolver: localIdDeviceResolver,
+	}
+
+	nodeUseCase, err := nodeusecase.NewNodeUseCase(nodeUseCaseOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать NodeUseCase: %v", err))
 	}
 
 	localDeviceId, err := localIdDeviceResolver.Resolve()

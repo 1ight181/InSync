@@ -36,6 +36,6 @@ certs
 
 logs
 config.yaml
-db/app.db
+db
 
 deviceid

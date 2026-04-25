@@ -7,11 +7,13 @@ import (
 )
 
 type NodeUseCase struct {
-	nodeNamesBrowser INodeNamesBrowser
+	nodeNamesBrowser      INodeNamesBrowser
+	localDeviceIdResolver ILocalDeviceIdResolver
 }
 
 type NodeUseCaseOptions struct {
-	NodeNamesBrowser INodeNamesBrowser
+	NodeNamesBrowser      INodeNamesBrowser
+	LocalDeviceIdResolver ILocalDeviceIdResolver
 }
 
 var (
@@ -19,14 +21,42 @@ var (
 )
 
 func NewNodeUseCase(opts NodeUseCaseOptions) (*NodeUseCase, error) {
-	if opts.NodeNamesBrowser == nil {
+	if opts.NodeNamesBrowser == nil ||
+		opts.LocalDeviceIdResolver == nil {
 		return nil, ErrInvalidNodeUseCaseOptions
 	}
 	return &NodeUseCase{
-		nodeNamesBrowser: opts.NodeNamesBrowser,
+		nodeNamesBrowser:      opts.NodeNamesBrowser,
+		localDeviceIdResolver: opts.LocalDeviceIdResolver,
 	}, nil
 }
 
 func (c *NodeUseCase) ShowNodeNames(ctx context.Context) (chan domain.NodeName, error) {
-	return c.nodeNamesBrowser.BrowseNodeNames(ctx)
+	rawNodeNamesChan, err := c.nodeNamesBrowser.BrowseNodeNames(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	localDeviceId, err := c.localDeviceIdResolver.Resolve()
+	if err != nil {
+		return nil, err
+	}
+
+	validNodeNamesChan := make(chan domain.NodeName, 10)
+	selfNodeName, err := domain.NewNodeName(localDeviceId.String())
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		defer close(validNodeNamesChan)
+		for rawNodeName := range rawNodeNamesChan {
+			if rawNodeName == selfNodeName {
+				continue
+			}
+			validNodeNamesChan <- rawNodeName
+		}
+	}()
+
+	return validNodeNamesChan, nil
 }
