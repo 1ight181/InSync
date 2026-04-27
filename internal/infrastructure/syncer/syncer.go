@@ -50,6 +50,7 @@ func (s *Syncer) Sync(ctx context.Context, plan domain.SyncPlan, rootName domain
 		for _, change := range plan.LocalChanges {
 			if err := s.applyLocalChange(ctx, rootName, change); err != nil {
 				appliedChanges <- domain.ChangeEvent{Err: err}
+				continue
 			}
 
 			appliedChanges <- domain.ChangeEvent{Change: change.ToSyncChange()}
@@ -58,6 +59,7 @@ func (s *Syncer) Sync(ctx context.Context, plan domain.SyncPlan, rootName domain
 		for _, change := range plan.RemoteChanges {
 			if err := s.applyRemoteChange(ctx, rootName, change); err != nil {
 				appliedChanges <- domain.ChangeEvent{Err: err}
+				continue
 			}
 
 			appliedChanges <- domain.ChangeEvent{Change: change.ToSyncChange()}
@@ -76,6 +78,7 @@ func (s *Syncer) Sync(ctx context.Context, plan domain.SyncPlan, rootName domain
 					}
 
 					appliedChanges <- domain.ChangeEvent{Err: err}
+					continue
 				}
 
 				appliedChanges <- domain.ChangeEvent{Change: appliedChange}
