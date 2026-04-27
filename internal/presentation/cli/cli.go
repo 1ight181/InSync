@@ -548,7 +548,7 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 	}()
 
 	for conflict := range conflicts {
-		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Обнаружен конфликт", slog.String("conflict", c.conflictToHumanReadable(conflict)))
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Обнаружен конфликт", slog.Any("conflict", conflict))
 		conflictLabel := c.conflictToHumanReadable(conflict)
 		prompt := promptui.Select{
 			Label: conflictLabel,
