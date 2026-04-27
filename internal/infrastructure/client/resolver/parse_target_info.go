@@ -2,37 +2,42 @@ package resolver
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"google.golang.org/grpc/resolver"
 )
 
+var mdnsTargetRe = regexp.MustCompile(
+	`(?i)^([^.]+)\.(_[^.]+)\.(_[^.]+)\.((?:[^.]+\.)+)$`,
+)
+
 func parseTargetInfo(target resolver.Target) (targetInfo, error) {
-	url := target.URL
-
-	if url.Scheme != "mdns" {
-		return targetInfo{}, ErrInvalidScheme
+	if target.URL.Scheme != "mdns" {
+		return targetInfo{}, ErrUnsupportedScheme
 	}
 
-	endpoint := strings.Trim(url.Path, "/")
-
-	splited := strings.Split(endpoint, ".")
-	if len(splited) != 5 {
-		return targetInfo{}, ErrInvalidEndpointFormat
+	endpoint := strings.TrimSpace(target.URL.Path)
+	endpoint = strings.Trim(endpoint, "/")
+	if endpoint == "" {
+		return targetInfo{}, ErrEmptyEndpoint
 	}
 
-	serviceName := fmt.Sprintf("%s.%s", splited[0], splited[1])
-	if serviceName == "" {
-		return targetInfo{}, ErrMissingServiceName
+	matches := mdnsTargetRe.FindStringSubmatch(endpoint)
+	if matches == nil {
+		return targetInfo{}, ErrInvalidFormat
 	}
 
-	instanceName := fmt.Sprintf("%s.%s", splited[2], splited[3])
+	instanceName := matches[1]
+	service := matches[2]
+	proto := matches[3]
+	domain := matches[4]
 
-	domain := splited[4]
+	serviceType := fmt.Sprintf("%s.%s", service, proto)
 
 	return targetInfo{
 		instanceName: instanceName,
-		serviceName:  serviceName,
+		serviceType:  serviceType,
 		domain:       domain,
 	}, nil
 }

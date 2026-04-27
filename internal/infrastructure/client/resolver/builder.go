@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"net"
 	"strings"
-	"time"
 
 	"google.golang.org/grpc/resolver"
 
@@ -13,8 +12,7 @@ import (
 )
 
 const (
-	scheme                         = "mdns"
-	defaultBackgroundListenTimeout = 20 * time.Second
+	scheme = "mdns"
 )
 
 func init() {
@@ -22,36 +20,27 @@ func init() {
 }
 
 type mdnsBuilder struct {
-	resolverIfaces              []string
-	backgroundListenTimeout     time.Duration
-	shouldResolveIpv6           bool
-	shouldDisableResolverOnIdle bool
-	shouldReportError           bool
-	logger                      *slog.Logger
-	loggerCtx                   context.Context
+	resolverIfaces    []string
+	shouldResolveIpv6 bool
+	shouldReportError bool
+	logger            *slog.Logger
+	loggerCtx         context.Context
 }
 
 type BuilderOptions struct {
-	ResolverIfaces              []string
-	BackgroundListenTimeout     time.Duration
-	ShouldResolveIpv6           bool
-	ShouldDisableResolverOnIdle bool
-	ShouldReportError           bool
-	Logger                      *slog.Logger
+	ResolverIfaces    []string
+	ShouldResolveIpv6 bool
+	ShouldReportError bool
+	Logger            *slog.Logger
 }
 
 func NewBuilder(opts BuilderOptions) *mdnsBuilder {
-	if opts.BackgroundListenTimeout == 0 {
-		opts.BackgroundListenTimeout = defaultBackgroundListenTimeout
-	}
 	return &mdnsBuilder{
-		resolverIfaces:              opts.ResolverIfaces,
-		backgroundListenTimeout:     opts.BackgroundListenTimeout,
-		shouldResolveIpv6:           opts.ShouldResolveIpv6,
-		shouldDisableResolverOnIdle: opts.ShouldDisableResolverOnIdle,
-		shouldReportError:           opts.ShouldReportError,
-		logger:                      opts.Logger,
-		loggerCtx:                   context.Background(),
+		resolverIfaces:    opts.ResolverIfaces,
+		shouldResolveIpv6: opts.ShouldResolveIpv6,
+		shouldReportError: opts.ShouldReportError,
+		logger:            opts.Logger,
+		loggerCtx:         context.Background(),
 	}
 }
 
@@ -102,16 +91,14 @@ func (b *mdnsBuilder) Build(target resolver.Target, clientConn resolver.ClientCo
 	ctx, cancel := context.WithCancel(context.Background())
 
 	mdnsResolver := newMDnsResolver(mdnsResolverOptions{
-		TargetInfo:                  targetInfo,
-		ClientConn:                  clientConn,
-		Ctx:                         ctx,
-		Cancel:                      cancel,
-		Interfaces:                  ifaces, // ← передаём список интерфейсов
-		BackgroundListenTimeout:     b.backgroundListenTimeout,
-		ShouldResolveIpv6:           b.shouldResolveIpv6,
-		ShouldDisableResolverOnIdle: b.shouldDisableResolverOnIdle,
-		ShouldReportError:           b.shouldReportError,
-		Logger:                      b.logger,
+		TargetInfo:        targetInfo,
+		ClientConn:        clientConn,
+		Ctx:               ctx,
+		Cancel:            cancel,
+		Interfaces:        ifaces,
+		ShouldResolveIpv6: b.shouldResolveIpv6,
+		ShouldReportError: b.shouldReportError,
+		Logger:            b.logger,
 	})
 
 	mdnsResolver.Start()

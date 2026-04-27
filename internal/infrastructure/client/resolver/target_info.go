@@ -2,6 +2,6 @@ package resolver
 
 type targetInfo struct {
 	instanceName string
-	serviceName  string
+	serviceType  string
 	domain       string
 }

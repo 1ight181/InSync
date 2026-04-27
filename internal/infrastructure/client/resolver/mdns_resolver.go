@@ -19,13 +19,11 @@ type mdnsResolver struct {
 	ctx        context.Context
 	cancel     context.CancelFunc
 
-	interfaces []net.Interface // ← добавлено
+	interfaces []net.Interface
 
 	shouldResolveIpv6 bool
 
-	shouldDisableResolverOnIdle bool
-	backgroundListenTimeout     time.Duration
-	shouldReportError           bool
+	shouldReportError bool
 
 	logger    *slog.Logger
 	loggerCtx context.Context
@@ -34,7 +32,7 @@ type mdnsResolver struct {
 	entries        chan *mdns.ServiceEntry
 	wg             sync.WaitGroup
 
-	lastAddresses map[string]struct{} // дедупликация
+	lastAddresses map[string]struct{}
 }
 
 type mdnsResolverOptions struct {
@@ -43,7 +41,7 @@ type mdnsResolverOptions struct {
 	Ctx        context.Context
 	Cancel     context.CancelFunc
 
-	Interfaces []net.Interface // ← добавлено
+	Interfaces []net.Interface
 
 	ShouldResolveIpv6           bool
 	ShouldDisableResolverOnIdle bool
@@ -55,20 +53,18 @@ type mdnsResolverOptions struct {
 
 func newMDnsResolver(opts mdnsResolverOptions) *mdnsResolver {
 	return &mdnsResolver{
-		targetInfo:                  opts.TargetInfo,
-		clientConn:                  opts.ClientConn,
-		ctx:                         opts.Ctx,
-		cancel:                      opts.Cancel,
-		interfaces:                  opts.Interfaces,
-		shouldResolveIpv6:           opts.ShouldResolveIpv6,
-		shouldDisableResolverOnIdle: opts.ShouldDisableResolverOnIdle,
-		backgroundListenTimeout:     opts.BackgroundListenTimeout,
-		shouldReportError:           opts.ShouldReportError,
-		logger:                      opts.Logger,
-		loggerCtx:                   context.Background(),
-		resolveNowChan:              make(chan struct{}, 1),
-		entries:                     make(chan *mdns.ServiceEntry, 32),
-		lastAddresses:               make(map[string]struct{}),
+		targetInfo:        opts.TargetInfo,
+		clientConn:        opts.ClientConn,
+		ctx:               opts.Ctx,
+		cancel:            opts.Cancel,
+		interfaces:        opts.Interfaces,
+		shouldResolveIpv6: opts.ShouldResolveIpv6,
+		shouldReportError: opts.ShouldReportError,
+		logger:            opts.Logger,
+		loggerCtx:         context.Background(),
+		resolveNowChan:    make(chan struct{}, 1),
+		entries:           make(chan *mdns.ServiceEntry, 32),
+		lastAddresses:     make(map[string]struct{}),
 	}
 }
 
@@ -94,7 +90,6 @@ func (r *mdnsResolver) Start() {
 	r.ResolveNow(resolver.ResolveNowOptions{})
 }
 
-// lookup обрабатывает запросы на разрешение
 func (r *mdnsResolver) lookup() {
 	defer r.wg.Done()
 
@@ -110,27 +105,27 @@ func (r *mdnsResolver) lookup() {
 
 func (r *mdnsResolver) performLookup() {
 	for _, iface := range r.interfaces {
-		select {
-		case <-r.ctx.Done():
+		ctx := r.ctx
+		if ctx.Err() != nil {
 			return
-		default:
 		}
 
 		entriesCh := make(chan *mdns.ServiceEntry, 16)
 
 		params := &mdns.QueryParam{
-			Service:   r.targetInfo.serviceName,
+			Service:   r.targetInfo.serviceType,
 			Domain:    r.targetInfo.domain,
 			Timeout:   2500 * time.Millisecond,
-			Interface: &iface, // ← привязка к конкретному интерфейсу
+			Interface: &iface,
 			Entries:   entriesCh,
 		}
 
-		// Выполняем запрос асинхронно
+		r.wg.Add(1)
 		go func(ifaceName string) {
+			defer r.wg.Done()
 			if err := mdns.Query(params); err != nil && r.shouldReportError {
 				r.logger.LogAttrs(r.loggerCtx, slog.LevelWarn,
-					"mDNS Query error on interface",
+					"mDNS Query ошибка",
 					slog.String("interface", ifaceName),
 					slog.String("error", err.Error()),
 				)
@@ -139,12 +134,11 @@ func (r *mdnsResolver) performLookup() {
 			close(entriesCh)
 		}(iface.Name)
 
-		// Читаем результаты
 		for entry := range entriesCh {
 			if entry == nil {
 				continue
 			}
-			// Фильтрация по instanceName (если указан)
+
 			if r.targetInfo.instanceName != "" && !strings.HasPrefix(entry.Name, r.targetInfo.instanceName) {
 				continue
 			}
@@ -166,7 +160,7 @@ func (r *mdnsResolver) watcher() {
 		case <-r.ctx.Done():
 			return
 		case entry, ok := <-r.entries:
-			if !ok || entry == nil {
+			if !ok {
 				continue
 			}
 
@@ -191,9 +185,9 @@ func (r *mdnsResolver) watcher() {
 				slog.LevelDebug,
 				"Найдены адреса через mDNS",
 				slog.String("addrs", strings.Join(logAddrs, ", ")),
-				slog.String("interface", entry.Host), // или можно логировать отдельно
+				slog.String("interface", entry.Host),
 				slog.String("mdns_domain", r.targetInfo.domain),
-				slog.String("mdns_service_name", r.targetInfo.serviceName),
+				slog.String("mdns_service_name", r.targetInfo.serviceType),
 				slog.String("mdns_instance_name", r.targetInfo.instanceName),
 			)
 
@@ -208,14 +202,17 @@ func (r *mdnsResolver) buildAddresses(entry *mdns.ServiceEntry) []resolver.Addre
 	var addrs []resolver.Address
 
 	// IPv4
-	addrStr := net.JoinHostPort(entry.AddrV4.String(), strconv.Itoa(entry.Port))
-	addrs = append(addrs, resolver.Address{Addr: addrStr})
+	if entry.AddrV4 != nil {
+		addrStr := net.JoinHostPort(entry.AddrV4.String(), strconv.Itoa(entry.Port))
+		addrs = append(addrs, resolver.Address{Addr: addrStr})
+	}
 
 	// IPv6
 	if r.shouldResolveIpv6 {
-		addrStr := net.JoinHostPort(entry.AddrV6.String(), strconv.Itoa(entry.Port))
-		addrs = append(addrs, resolver.Address{Addr: addrStr})
-
+		if entry.AddrV6IPAddr.IP != nil {
+			addrStr := net.JoinHostPort(entry.AddrV6.String(), strconv.Itoa(entry.Port))
+			addrs = append(addrs, resolver.Address{Addr: addrStr})
+		}
 	}
 
 	return addrs

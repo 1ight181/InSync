@@ -254,12 +254,10 @@ func RunApp() {
 	clientLogger := logger.With(moduleAtrributeName, grpcClientModuleName)
 
 	builderOptions := mdnsresolver.BuilderOptions{
-		ResolverIfaces:              mDnsBrowserConfig.GetInterfaces(),
-		BackgroundListenTimeout:     time.Second * 30,
-		ShouldResolveIpv6:           true,
-		ShouldDisableResolverOnIdle: true,
-		ShouldReportError:           true,
-		Logger:                      logger,
+		ResolverIfaces:    mDnsBrowserConfig.GetInterfaces(),
+		ShouldResolveIpv6: true,
+		ShouldReportError: true,
+		Logger:            logger,
 	}
 
 	mDnsResolverBuilder := mdnsresolver.NewBuilder(
