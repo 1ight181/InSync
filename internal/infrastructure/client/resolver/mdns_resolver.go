@@ -78,7 +78,6 @@ func newMDnsResolver(opts mdnsResolverOptions) *mdnsResolver {
 func (r *mdnsResolver) Close() {
 	r.cancel()
 	r.wg.Wait()
-	close(r.entries)
 	close(r.resolveNowChan)
 }
 
