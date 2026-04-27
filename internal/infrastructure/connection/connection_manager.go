@@ -132,5 +132,8 @@ func (c *ConnectionManager) Close() error {
 }
 
 func (c *ConnectionManager) resolveServerName(nodeName domain.NodeName) string {
-	return strings.Replace(nodeName.String(), c.serverServiceType, c.serverNamePrefix, 1)
+	serverName := strings.Replace(nodeName.String(), c.serverServiceType, c.serverNamePrefix, 1)
+	serverNameWithoutDomainDot, _ := strings.CutSuffix(serverName, ".")
+
+	return serverNameWithoutDomainDot
 }
