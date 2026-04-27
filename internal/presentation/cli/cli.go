@@ -709,10 +709,11 @@ func (c *Cli) rootNameSuggestionFunc(prefix string) []prompt.Suggest {
 		return suggestions
 	}
 
-	for _, rootName := range rootNames {
+	for rootName, path := range rootNames {
 		if strings.HasPrefix(rootName.String(), prefix) {
 			suggestions = append(suggestions, prompt.Suggest{
-				Text: rootName.String(),
+				Text:        rootName.String(),
+				Description: path.String(),
 			})
 		}
 	}

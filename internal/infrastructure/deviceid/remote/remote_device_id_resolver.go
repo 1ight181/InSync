@@ -2,9 +2,7 @@ package deviceid
 
 import (
 	"errors"
-	"fmt"
 	"insync/internal/domain"
-	"strings"
 )
 
 var (
@@ -12,15 +10,11 @@ var (
 )
 
 type RemoteDeviceIdResolver struct {
-	mDnsServerInstanceNamePostfix string
-	mDnsServerDomain              string
-	nodeNameProvider              INodeNameProvider
+	nodeNameProvider INodeNameProvider
 }
 
 type RemoteDeviceIdResolverOptions struct {
-	MDnsServerInstanceNamePostfix string
-	MDnsServerDomain              string
-	NodeNameProvider              INodeNameProvider
+	NodeNameProvider INodeNameProvider
 }
 
 var (
@@ -28,13 +22,11 @@ var (
 )
 
 func NewRemoteDeviceIdResolver(opts RemoteDeviceIdResolverOptions) (*RemoteDeviceIdResolver, error) {
-	if opts.MDnsServerInstanceNamePostfix == "" || opts.NodeNameProvider == nil || opts.MDnsServerDomain == "" {
+	if opts.NodeNameProvider == nil {
 		return nil, ErrRemoteDeviceIdResolverInvalidOpts
 	}
 	return &RemoteDeviceIdResolver{
-		mDnsServerInstanceNamePostfix: opts.MDnsServerInstanceNamePostfix,
-		nodeNameProvider:              opts.NodeNameProvider,
-		mDnsServerDomain:              opts.MDnsServerDomain,
+		nodeNameProvider: opts.NodeNameProvider,
 	}, nil
 }
 
@@ -44,12 +36,5 @@ func (r *RemoteDeviceIdResolver) Resolve() (domain.DeviceId, error) {
 		return "", err
 	}
 
-	mDnsServerPostfixWithDotAndDomain := fmt.Sprintf(".%s.%s", r.mDnsServerInstanceNamePostfix, r.mDnsServerDomain)
-
-	instanceNamePrefix, found := strings.CutSuffix(nodeName.String(), mDnsServerPostfixWithDotAndDomain)
-	if !found || instanceNamePrefix == "" {
-		return "", ErrinvalidNodeName
-	}
-
-	return domain.DeviceId(instanceNamePrefix), nil
+	return domain.DeviceId(nodeName), nil
 }

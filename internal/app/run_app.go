@@ -400,12 +400,8 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось запустить mDNS сервер: %v", err))
 	}
 
-	remoteDeviceIdResolverConfig := config.RemoteDeviceIdResolverConfig
-
 	remoteDeviceIdResolverOpts := deviceidremote.RemoteDeviceIdResolverOptions{
-		MDnsServerInstanceNamePostfix: remoteDeviceIdResolverConfig.MDnsServerInstanceNamePostfix,
-		NodeNameProvider:              connectionManager,
-		MDnsServerDomain:              remoteDeviceIdResolverConfig.MDnsServerDomain,
+		NodeNameProvider: connectionManager,
 	}
 	remoteDeviceIdResolver, err := deviceidremote.NewRemoteDeviceIdResolver(remoteDeviceIdResolverOpts)
 	if err != nil {
