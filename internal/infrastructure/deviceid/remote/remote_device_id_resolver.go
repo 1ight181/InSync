@@ -3,6 +3,7 @@ package deviceid
 import (
 	"errors"
 	"insync/internal/domain"
+	"strings"
 )
 
 var (
@@ -36,5 +37,7 @@ func (r *RemoteDeviceIdResolver) Resolve() (domain.DeviceId, error) {
 		return "", err
 	}
 
-	return domain.DeviceId(nodeName), nil
+	remoteDeviceId := strings.Split(nodeName.String(), ".")[0]
+
+	return domain.DeviceId(remoteDeviceId), nil
 }
