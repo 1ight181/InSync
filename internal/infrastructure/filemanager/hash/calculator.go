@@ -1,11 +1,13 @@
 package hash
 
 import (
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	cont "insync/internal/infrastructure/filemanager/content"
 	"io"
+
+	cont "insync/internal/infrastructure/filemanager/content"
+
+	"github.com/zeebo/blake3"
 )
 
 type IHashCalculator interface {
@@ -19,26 +21,34 @@ func NewHashCalculator() IHashCalculator {
 }
 
 func (hc *HashCalculator) CalculateHash(content cont.ResourceContent) (string, error) {
-	hash := sha256.New()
+	hasher := blake3.New()
 
 	contentReader, err := content.OpenContent(content.FullPath, content.RelativePath)
 	if err != nil {
 		return "", err
 	}
+	defer func() {
+		_ = contentReader.Close()
+	}()
+
+	buf := make([]byte, 4096)
+
 	for {
-		buf := make([]byte, 4096)
 		n, err := contentReader.Read(buf)
+		if n > 0 {
+			if _, wErr := hasher.Write(buf[:n]); wErr != nil {
+				return "", wErr
+			}
+		}
+
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			}
 			return "", err
 		}
-		_, err = hash.Write(buf[:n])
-		if err != nil {
-			return "", err
-		}
 	}
 
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	sum := hasher.Sum(nil)
+	return hex.EncodeToString(sum), nil
 }
