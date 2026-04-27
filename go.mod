@@ -56,10 +56,9 @@ require (
 )
 
 require (
-	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
-	github.com/grandcat/zeroconf v1.0.0
+	github.com/hashicorp/mdns v1.0.6
 	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/miekg/dns v1.1.72 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect

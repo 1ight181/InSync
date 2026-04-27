@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/grandcat/zeroconf"
 	"google.golang.org/grpc/resolver"
 
 	shared "insync/internal/shared"
@@ -45,7 +44,6 @@ func NewBuilder(opts BuilderOptions) *mdnsBuilder {
 	if opts.BackgroundListenTimeout == 0 {
 		opts.BackgroundListenTimeout = defaultBackgroundListenTimeout
 	}
-	loggerCtx := context.Background()
 	return &mdnsBuilder{
 		resolverIfaces:              opts.ResolverIfaces,
 		backgroundListenTimeout:     opts.BackgroundListenTimeout,
@@ -53,7 +51,7 @@ func NewBuilder(opts BuilderOptions) *mdnsBuilder {
 		shouldDisableResolverOnIdle: opts.ShouldDisableResolverOnIdle,
 		shouldReportError:           opts.ShouldReportError,
 		logger:                      opts.Logger,
-		loggerCtx:                   loggerCtx,
+		loggerCtx:                   context.Background(),
 	}
 }
 
@@ -64,62 +62,58 @@ func (b *mdnsBuilder) Build(target resolver.Target, clientConn resolver.ClientCo
 	if err != nil {
 		return nil, err
 	}
+
+	// Загружаем интерфейсы
 	var ifaces []net.Interface
-	resolverIfaces := b.resolverIfaces
-	if resolverIfaces == nil {
+	if len(b.resolverIfaces) == 0 {
 		ifaces, err = net.Interfaces()
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		ifaces, err = shared.GetNetworkInterfaces(resolverIfaces)
-		if err != nil && len(ifaces) == 0 {
+		ifaces, err = shared.GetNetworkInterfaces(b.resolverIfaces)
+		if err != nil || len(ifaces) == 0 {
 			b.logger.LogAttrs(
 				b.loggerCtx,
 				slog.LevelWarn,
-				"Ни один интерфейс не был успешно загружен, фоллбэк на все интерфейсы",
+				"Не удалось загрузить указанные интерфейсы, фоллбэк на все интерфейсы",
 				slog.String("error", err.Error()),
+				slog.Any("requested_ifaces", b.resolverIfaces),
 			)
 			ifaces, err = net.Interfaces()
 			if err != nil {
 				return nil, err
 			}
-		} else if err != nil && len(ifaces) > 0 {
-			successfullyLoadedIfaces := make([]string, 0, len(ifaces))
-			for _, iface := range ifaces {
-				successfullyLoadedIfaces = append(successfullyLoadedIfaces, iface.Name)
+		} else if len(ifaces) > 0 {
+			loaded := make([]string, 0, len(ifaces))
+			for _, i := range ifaces {
+				loaded = append(loaded, i.Name)
 			}
 			b.logger.LogAttrs(
 				b.loggerCtx,
 				slog.LevelWarn,
-				"Не все интерфейсы были успешно загружены",
-				slog.String("error", err.Error()),
-				slog.String("all_ifaces", strings.Join(resolverIfaces, ",")),
-				slog.String("successfully_loaded_ifaces", strings.Join(successfullyLoadedIfaces, ",")),
+				"Не все интерфейсы удалось загрузить",
+				slog.String("requested", strings.Join(b.resolverIfaces, ",")),
+				slog.String("loaded", strings.Join(loaded, ",")),
 			)
 		}
 	}
 
-	mDnsResolver, err := zeroconf.NewResolver(zeroconf.SelectIfaces(ifaces))
-	if err != nil {
-		return nil, err
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
-	mdnsResolverOptions := mdnsResolverOptions{
+
+	mdnsResolver := newMDnsResolver(mdnsResolverOptions{
 		TargetInfo:                  targetInfo,
 		ClientConn:                  clientConn,
 		Ctx:                         ctx,
 		Cancel:                      cancel,
-		Resolver:                    mDnsResolver,
+		Interfaces:                  ifaces, // ← передаём список интерфейсов
 		BackgroundListenTimeout:     b.backgroundListenTimeout,
 		ShouldResolveIpv6:           b.shouldResolveIpv6,
 		ShouldDisableResolverOnIdle: b.shouldDisableResolverOnIdle,
 		ShouldReportError:           b.shouldReportError,
 		Logger:                      b.logger,
-	}
+	})
 
-	mdnsResolver := newMDnsResolver(mdnsResolverOptions)
 	mdnsResolver.Start()
 
 	return mdnsResolver, nil
