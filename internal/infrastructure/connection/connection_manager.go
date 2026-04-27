@@ -7,6 +7,7 @@ import (
 	clt "insync/internal/infrastructure/client"
 	"insync/internal/interfaces"
 	"log/slog"
+	"strings"
 )
 
 type ConnectionManager struct {
@@ -20,6 +21,9 @@ type ConnectionManager struct {
 	clientConnector IClientConnector
 	clientHolder    IClientHolder
 
+	serverServiceType string
+	serverNamePrefix  string
+
 	currentNodeName domain.NodeName
 }
 
@@ -28,6 +32,9 @@ type ConnectionManagerOptions struct {
 
 	ClientConnector IClientConnector
 	ClientHolder    IClientHolder
+
+	ServerServiceType string
+	ServerNamePrefix  string
 
 	GrpcClientLogger *slog.Logger
 
@@ -41,6 +48,8 @@ var (
 func NewConnectionManager(opts ConnectionManagerOptions) (*ConnectionManager, error) {
 	if opts.BaseGrpcConf == nil ||
 		opts.ClientHolder == nil ||
+		opts.ServerServiceType == "" ||
+		opts.ServerNamePrefix == "" ||
 		opts.GrpcClientLogger == nil ||
 		opts.Logger == nil {
 		return nil, ErrInvalidOpts
@@ -49,6 +58,9 @@ func NewConnectionManager(opts ConnectionManagerOptions) (*ConnectionManager, er
 		baseGrpcConf: opts.BaseGrpcConf,
 
 		clientHolder: opts.ClientHolder,
+
+		serverServiceType: opts.ServerServiceType,
+		serverNamePrefix:  opts.ServerNamePrefix,
 
 		grpcClientLogger: opts.GrpcClientLogger,
 		logger:           opts.Logger,
@@ -68,10 +80,11 @@ func (c *ConnectionManager) CurrentNodeName() (domain.NodeName, error) {
 }
 
 func (c *ConnectionManager) ConnectToNode(nodeName domain.NodeName) error {
-
 	grpcConf := c.baseGrpcConf
 	grpcConf.ServerAddress = nodeName.String()
-	grpcConf.ServerName = nodeName.String()
+	// Причина почему используется формат deviceid.serverprefix.domain., а не
+	// deviceid._service._proto.domain. в том, что wildcard не поддерживается для адресов с нижним подчеркиванием
+	grpcConf.ServerName = c.resolveServerName(nodeName)
 
 	grpcClientOpts := clt.GrpcClientOptions{
 		Conf:   grpcConf,
@@ -116,4 +129,8 @@ func (c *ConnectionManager) Close() error {
 	}
 
 	return nil
+}
+
+func (c *ConnectionManager) resolveServerName(nodeName domain.NodeName) string {
+	return strings.Replace(nodeName.String(), c.serverServiceType, c.serverNamePrefix, 1)
 }

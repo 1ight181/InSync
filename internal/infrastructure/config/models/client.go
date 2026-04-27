@@ -12,6 +12,11 @@ type ClientConfig struct {
 	// для passthrough
 	ServerIp   string `mapstructure:"server_ip"`
 	ServerPort int    `mapstructure:"server_port"`
+
+	// для mdns
+	MdnsServerNamePrefix  string `mapstructure:"mdns_server_name_prefix"`
+	MdnsServerServiceType string `mapstructure:"mdns_server_service_type"`
+
 	// общие
 	ServerServiceName    string `mapstructure:"server_service_name"`
 	ServerNetworkType    string `mapstructure:"server_network_type"`
@@ -50,6 +55,10 @@ func (cc *ClientConfig) Validate() error {
 
 	if cc.RpcTimeout <= 0 {
 		return ErrRpcTimeoutIsInvalid
+	}
+
+	if cc.ResolverScheme == "mdns" && (cc.MdnsServerNamePrefix == "" || cc.MdnsServerServiceType == "") {
+		return ErrInvalidOptsForMdnsScheme
 	}
 
 	if err := cc.RpcRetryPolicy.Validate(); err != nil {

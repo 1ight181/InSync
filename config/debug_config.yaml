@@ -1,5 +1,5 @@
 tls: &tls
-  ca_cert_dir: "../certs"
+  ca_cert_dir: "../gencerts"
   ca_cert_filename: "ca"
   ca_cert_extension: ".crt"
 
@@ -18,17 +18,22 @@ server:
 
   tls:
     <<: *tls
-    server_cert_dir: "../certs"
+    server_cert_dir: "../gencerts"
     server_cert_filename: "server"
     server_cert_extension: ".crt"
 
-    server_key_dir: "../certs"
+    server_key_dir: "../gencerts"
     server_key_filename: "server"
     server_key_extension: ".key"
 
 client:
     resolver_scheme: "mdns"
     server_service_name: *service_name
+    mdns_server_service_type: *mdns_server_service_type
+    # Используется для составления имени сервера для Tls-handshake
+    # так как обычный формат 94c52e3d-4cbb-479c-bba2-88789772bdcd._grpc._tcp.local. не подходит
+    # ввиду того, что в нем присутствует нижнее подчеркивание, следовательно к нему не применяется wildcard
+    mdns_server_name_prefix: *mdns_server_domain
     server_ip: ""
     server_port: 50051
     server_network_type: "tcp"
@@ -55,11 +60,11 @@ client:
 
     tls:
       <<: *tls
-      client_cert_dir: "../certs"
+      client_cert_dir: "../gencerts"
       client_cert_filename: "client"
       client_cert_extension: ".crt"
 
-      client_key_dir: "../certs"
+      client_key_dir: "../gencerts"
       client_key_filename: "client"
       client_key_extension: ".key"
 

@@ -10,6 +10,7 @@ var (
 
 // Ошибки валидации конфигурации клиента
 var (
+	ErrInvalidOptsForMdnsScheme    = errors.New("Неверные опции для схемы mDNS")
 	ErrAddressToConnectIsEmpty     = errors.New("Адрес сервера, к которому нужно подключиться, не может быть пустым")
 	ErrPortToConnectIsInvalid      = errors.New("Порт сервера, к которому нужно подключиться, должен быть целым числом в диапозоне от 0 до 65535")
 	ErrNetworkToConnectTypeIsEmpty = errors.New("Тип сети сервера, к которому нужно подключиться, не может быть пустым")
