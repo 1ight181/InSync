@@ -92,6 +92,7 @@ func (s *Syncer) Sync(ctx context.Context, plan domain.SyncPlan, rootName domain
 		close(appliedChanges)
 		close(conflicts)
 		close(userDecision)
+		close(baseSnapshotSaveError)
 
 	}()
 
