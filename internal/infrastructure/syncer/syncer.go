@@ -29,8 +29,9 @@ func NewSyncer(opts SyncerOptions) (*Syncer, error) {
 		return nil, ErrInvalidSyncerOptions
 	}
 	return &Syncer{
-		changeApplier:    opts.ChangeApplier,
-		conflictResolver: opts.ConflictResolver,
+		changeApplier:                 opts.ChangeApplier,
+		conflictResolver:              opts.ConflictResolver,
+		postSyncBaseSnapshotPersister: opts.PostSyncBaseSnapshotPersister,
 	}, nil
 }
 
