@@ -31,6 +31,7 @@ func NewPostSyncBaseSnapshotPersister(opts PostSyncBaseSnapshotPersisterOptions)
 	return &PostSyncBaseSnapshotPersister{
 		baseSnapshotRepository: opts.BaseSnapshotRepository,
 		deviceIdProvider:       opts.DeviceIdProvider,
+		snapshotProvider:       opts.SnapshotProvider,
 	}, nil
 }
 
