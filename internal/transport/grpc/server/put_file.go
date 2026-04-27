@@ -1,11 +1,11 @@
 package server
 
 import (
+	"bytes"
 	"errors"
 	"insync/internal/domain"
 	"insync/internal/transport/grpc/insyncpb"
 	"io"
-	"log/slog"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 
@@ -21,6 +21,9 @@ func (gs *GrpcServer) PutFile(stream grpc.ClientStreamingServer[insyncpb.PutFile
 	}
 
 	initMessage := initRequest.GetInit()
+	if initMessage == nil {
+		return errors.New("missing init message")
+	}
 
 	rootName := initMessage.GetRootName()
 	validRootName, err := domain.NewRootName(rootName)
@@ -39,12 +42,8 @@ func (gs *GrpcServer) PutFile(stream grpc.ClientStreamingServer[insyncpb.PutFile
 		return err
 	}
 
-	pipeReader, pipeWriter := io.Pipe()
+	var content bytes.Buffer
 
-	err = gs.fileUseCase.PutFile(ctx, scopedPath, pipeReader)
-	if err != nil {
-		return err
-	}
 	for {
 		request, err := stream.Recv()
 		if err == io.EOF {
@@ -53,48 +52,26 @@ func (gs *GrpcServer) PutFile(stream grpc.ClientStreamingServer[insyncpb.PutFile
 		if err != nil {
 			return err
 		}
-		errChan := make(chan error)
 
 		chunk := request.GetChunk()
-		chunkData := chunk.GetData()
+		if chunk == nil {
+			return errors.New("missing chunk message")
+		}
 
-		go func() {
-			_, err = pipeWriter.Write(chunkData)
-			errChan <- err
-		}()
+		if _, err := content.Write(chunk.GetData()); err != nil {
+			return err
+		}
 
-		select {
-		case writeErr := <-errChan:
-			if writeErr != nil {
-				if err := pipeWriter.CloseWithError(writeErr); errors.Is(err, io.ErrClosedPipe) {
-					gs.logger.LogAttrs(
-						gs.loggerCtx,
-						slog.LevelWarn,
-						"Попытка повторно закрыть пайп методом CloseWithError при выполнении PutFile, который уже был закрыт",
-						slog.String("writeErr", writeErr.Error()),
-					)
-				}
-				return writeErr
-			}
-		case <-ctx.Done():
-			ctxErr := ctx.Err()
-			if err := pipeWriter.CloseWithError(ctxErr); errors.Is(err, io.ErrClosedPipe) {
-				gs.logger.LogAttrs(
-					gs.loggerCtx,
-					slog.LevelWarn,
-					"Попытка повторно закрыть пайп методом CloseWithError при выполнении PutFile, который уже был закрыт",
-					slog.String("ctxErr", ctxErr.Error()),
-				)
-			}
-			return ctxErr
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 	}
 
-	if err := pipeWriter.Close(); err != nil {
+	reader := bytes.NewReader(content.Bytes())
+
+	if err := gs.fileUseCase.PutFile(ctx, scopedPath, reader); err != nil {
 		return err
 	}
 
-	return stream.SendAndClose(
-		&emptypb.Empty{},
-	)
+	return stream.SendAndClose(&emptypb.Empty{})
 }
