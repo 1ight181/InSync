@@ -87,7 +87,7 @@ func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName)
 		return domain.Snapshot{}, err
 	}
 
-	allEntries, err := f.collectAllFileEntries(ctx, resolvedRootPath, rootName)
+	allEntries, err := f.collectAllFileEntries(ctx, resolvedRootPath, scopedPath.Path, rootName)
 	if err != nil {
 		return domain.Snapshot{}, err
 	}
@@ -319,6 +319,7 @@ func (f *FileManager) createMetadata(entryInfo fs.FileInfo) domain.FileMetadata 
 func (f *FileManager) collectAllFileEntries(
 	ctx context.Context,
 	rootAbsolutePath domain.Path,
+	rootRelativePath domain.Path,
 	rootName domain.RootName,
 ) ([]domain.FileEntry, error) {
 
@@ -326,14 +327,14 @@ func (f *FileManager) collectAllFileEntries(
 		return nil, ctx.Err()
 	}
 
-	children, childrenSubtreeSize, err := f.collectFileEntriesRecursive(ctx, rootAbsolutePath, "", rootName)
+	children, childrenSubtreeSize, err := f.collectFileEntriesRecursive(ctx, rootAbsolutePath, rootRelativePath, rootName)
 	if err != nil {
 		return nil, err
 	}
 
 	rootEntrySubtreeSize := uint64(1 + childrenSubtreeSize) // размер корневой директории
 
-	rootEntry, err := f.createFileEntryForDirectory(ctx, rootAbsolutePath, "", rootEntrySubtreeSize, rootName)
+	rootEntry, err := f.createFileEntryForDirectory(ctx, rootAbsolutePath, rootRelativePath, rootEntrySubtreeSize, rootName)
 	if err != nil {
 		return nil, err
 	}
@@ -460,7 +461,9 @@ func (f *FileManager) createFileEntryForDirectory(
 	}
 
 	resourceContent := cont.ResourceContent{
-		OpenContent: f.openDirContent,
+		FullPath:     absolutePath,
+		RelativePath: relativePath,
+		OpenContent:  f.openDirContent,
 	}
 
 	hashValue, err := f.hashManager.ResolveHash(resourceContent, rootName)

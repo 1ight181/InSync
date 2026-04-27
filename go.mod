@@ -5,6 +5,7 @@ go 1.25.3
 require (
 	github.com/1ight181/comptplus-ctrl-c v0.0.2
 	github.com/1ight181/go-prompt-ctrl-c v0.0.2
+	github.com/glebarez/sqlite v1.11.0
 	github.com/google/uuid v1.6.0
 	github.com/knadh/koanf/parsers/yaml v1.1.0
 	github.com/knadh/koanf/providers/env v1.1.0
@@ -16,7 +17,6 @@ require (
 	go.uber.org/multierr v1.11.0
 	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11
-	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1
 )
 
@@ -26,7 +26,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/glebarez/go-sqlite v1.21.2 // indirect
-	github.com/glebarez/sqlite v1.11.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
@@ -34,7 +33,6 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.21 // indirect
 	github.com/mattn/go-runewidth v0.0.23 // indirect
-	github.com/mattn/go-sqlite3 v1.14.42 // indirect
 	github.com/mattn/go-tty v0.0.8 // indirect
 	github.com/pkg/term v1.2.0-beta.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

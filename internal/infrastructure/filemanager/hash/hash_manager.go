@@ -49,9 +49,10 @@ func NewHashManager(options HashManagerOptions) (*HashManager, error) {
 }
 
 func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, rootName domain.RootName) (string, error) {
-	scopedPath, err := domain.NewScopedPath(rootName, resourceContent.FullPath)
-	if err != nil {
-		return "", err
+	// TODO: сделать отдельно rel и abs пути, сделать через конструктор
+	scopedPath := domain.ScopedPath{
+		Root: rootName,
+		Path: resourceContent.FullPath,
 	}
 	if _, isDirty := h.dirtyPaths[scopedPath]; !isDirty {
 		if hash, err := h.hashCache.GetHashCache(resourceContent.FullPath); err == nil {

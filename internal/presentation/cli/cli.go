@@ -29,6 +29,7 @@ const (
 	connectCmdName     = "connect"
 	dryRunCmdName      = "dry-run"
 	syncCmdName        = "sync"
+	initCmdName        = "init"
 )
 
 const (
@@ -67,6 +68,7 @@ type Cli struct {
 	nodeUseCase    INodeUseCase
 	connectUseCase IConnectUseCase
 	rootUseCase    IRootUseCase
+	initUseCase    IInitUseCase
 
 	logger    *slog.Logger
 	loggerCtx context.Context
@@ -82,12 +84,14 @@ type CliOptions struct {
 	NodeUseCase    INodeUseCase
 	ConnectUseCase IConnectUseCase
 	RootUseCase    IRootUseCase
+	InitUseCase    IInitUseCase
 
 	Logger *slog.Logger
 }
 
 var (
-	ErrInvalidCliOptions = errors.New("Все поля CliOptions должны быть заполнены")
+	ErrInvalidCliOptions   = errors.New("Все поля CliOptions должны быть заполнены")
+	ErrInvalidBaseProvider = errors.New("Базовый провайдер должен быть remote или local")
 )
 
 func NewCli(opts CliOptions) (*Cli, error) {
@@ -96,6 +100,7 @@ func NewCli(opts CliOptions) (*Cli, error) {
 		opts.NodeUseCase == nil ||
 		opts.ConnectUseCase == nil ||
 		opts.RootUseCase == nil ||
+		opts.InitUseCase == nil ||
 		opts.Logger == nil {
 		return nil, ErrInvalidCliOptions
 	}
@@ -106,6 +111,7 @@ func NewCli(opts CliOptions) (*Cli, error) {
 		nodeUseCase:    opts.NodeUseCase,
 		connectUseCase: opts.ConnectUseCase,
 		rootUseCase:    opts.RootUseCase,
+		initUseCase:    opts.InitUseCase,
 
 		logger:        opts.Logger,
 		loggerCtx:     loggerCtx,
@@ -115,6 +121,8 @@ func NewCli(opts CliOptions) (*Cli, error) {
 
 func (c *Cli) Start() {
 	rootCmd := c.createRootCmd()
+
+	initCmd := c.createInitCmd()
 
 	nodesCmd := c.createNodesCmd()
 	connectCmd := c.createConnectCmd()
@@ -129,6 +137,8 @@ func (c *Cli) Start() {
 
 	rootCmd.AddCommand(nodesCmd)
 	rootCmd.AddCommand(currentNodeCmd)
+
+	rootCmd.AddCommand(initCmd)
 
 	rootCmd.AddCommand(addRootCmd)
 	rootCmd.AddCommand(removeRootCmd)
@@ -196,6 +206,22 @@ func (c *Cli) createRootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Short:         "InSync - инструмент для синхронизации файлов между различными хранилищами",
+	}
+}
+
+func (c *Cli) createInitCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   fmt.Sprintf("%s base_snapshot_provider root_name", initCmdName),
+		Short: "Инициализация",
+		Long: `Инициализация. Создает базовый снимок. Если вызывается повторно, то перезаписывает снимок.
+		base_snapshot_provider - remote или local, то есть, кто будет основной для первой синхронизации
+		root_name - имя корневого каталога
+		`,
+		Args: cobra.ExactArgs(2),
+		RunE: c.initCmd,
+		Annotations: map[string]string{
+			cobraprompt.DynamicSuggestionsAnnotation: initCmdName,
+		},
 	}
 }
 
@@ -268,8 +294,10 @@ func (c *Cli) createDryRunCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   fmt.Sprintf("%s root-name", dryRunCmdName),
 		Short: "Показать, какие файлы/каталоги будут синхронизированы, без фактического выполнения синхронизации",
-		RunE:  c.dryRunCmd,
-		Args:  cobra.ExactArgs(1),
+		Long: `Показать, какие файлы/каталоги будут синхронизированы, без фактического выполнения синхронизации. 
+		root-name - имя корневого каталога`,
+		RunE: c.dryRunCmd,
+		Args: cobra.ExactArgs(1),
 		Annotations: map[string]string{
 			cobraprompt.DynamicSuggestionsAnnotation: dryRunCmdName,
 		},
@@ -280,8 +308,10 @@ func (c *Cli) createSyncCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   fmt.Sprintf("%s root-name", syncCmdName),
 		Short: "Выполнить синхронизацию",
-		RunE:  c.syncCmd,
-		Args:  cobra.ExactArgs(1),
+		Long: `Выполнить синхронизацию. 
+		root-name - имя корневого каталога`,
+		RunE: c.syncCmd,
+		Args: cobra.ExactArgs(1),
 		Annotations: map[string]string{
 			cobraprompt.DynamicSuggestionsAnnotation: syncCmdName,
 		},
@@ -296,6 +326,46 @@ func (c *Cli) createSyncCmd() *cobra.Command {
 	c.shouldUseCache = shouldUseCachePtr
 
 	return cmd
+}
+
+func (c *Cli) initCmd(cmd *cobra.Command, args []string) error {
+	c.logger.Debug("Выполнение команды init")
+	baseProvider := args[0]
+	if baseProvider != "remote" && baseProvider != "local" {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Неверный базовый провайдер", slog.String("baseProvider", baseProvider))
+		return ErrInvalidBaseProvider
+	}
+
+	rootName, err := domain.NewRootName(args[1])
+	if err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось создать корневой каталог", slog.String("error", err.Error()))
+		fmt.Println("Не удалось создать корневой каталог")
+		return err
+	}
+
+	cmdCtx := cmd.Context()
+	interruptCtx, interruptCancel := signal.NotifyContext(cmdCtx, os.Interrupt)
+	defer interruptCancel()
+
+	if baseProvider == "remote" {
+		if err := c.initUseCase.InitFromRemote(interruptCtx, rootName); err != nil {
+			c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось выполнить init", slog.String("error", err.Error()))
+			fmt.Println("Не удалось выполнить init")
+			return err
+		}
+	} else {
+		if err := c.initUseCase.InitFromLocal(interruptCtx, rootName); err != nil {
+			c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось выполнить init", slog.String("error", err.Error()))
+			fmt.Println("Не удалось выполнить init")
+			return err
+		}
+	}
+
+	fmt.Println("Базовый снимок создан")
+
+	c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Выполнено init", slog.String("rootName", rootName.String()))
+
+	return nil
 }
 
 func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) error {
@@ -679,6 +749,8 @@ func (c *Cli) suggestionFunc(comand *cobra.Command, annotationValue string, docu
 		return c.nodeNameSuggestionFunc(typedPrefixWithoutCommand)
 	case dryRunCmdName, syncCmdName:
 		return c.rootNameSuggestionFunc(typedPrefixWithoutCommand)
+	case initCmdName:
+		return c.initNameSuggestionFunc(typedPrefixWithoutCommand)
 	default:
 		return nil
 	}
@@ -687,9 +759,6 @@ func (c *Cli) suggestionFunc(comand *cobra.Command, annotationValue string, docu
 func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
 	suggestions := make([]prompt.Suggest, 0)
 	for nodeName := range c.nodeNameCache {
-		if nodeName.String() == prefix {
-			return nil
-		}
 		if strings.HasPrefix(nodeName.String(), prefix) {
 			suggestions = append(suggestions, prompt.Suggest{
 				Text: nodeName.String(),
@@ -699,6 +768,22 @@ func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
 	}
 
 	return suggestions
+}
+
+func (c *Cli) initNameSuggestionFunc(prefix string) []prompt.Suggest {
+	suggestions := make([]prompt.Suggest, 0)
+	if !strings.Contains(prefix, "remote") && !strings.Contains(prefix, "local") {
+		suggestions = append(suggestions, prompt.Suggest{
+			Text: "local",
+		})
+		suggestions = append(suggestions, prompt.Suggest{
+			Text: "remote",
+		})
+
+		return suggestions
+	}
+
+	return c.rootNameSuggestionFunc(prefix)
 }
 
 func (c *Cli) rootNameSuggestionFunc(prefix string) []prompt.Suggest {
@@ -711,6 +796,15 @@ func (c *Cli) rootNameSuggestionFunc(prefix string) []prompt.Suggest {
 
 	for rootName, path := range rootNames {
 		if strings.HasPrefix(rootName.String(), prefix) {
+			suggestions = append(suggestions, prompt.Suggest{
+				Text:        rootName.String(),
+				Description: path.String(),
+			})
+		}
+	}
+
+	if len(suggestions) == 0 {
+		for rootName, path := range rootNames {
 			suggestions = append(suggestions, prompt.Suggest{
 				Text:        rootName.String(),
 				Description: path.String(),

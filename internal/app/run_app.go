@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"insync/internal/domain"
+	base "insync/internal/infrastructure/base"
 	clt "insync/internal/infrastructure/client"
 	mdnsresolver "insync/internal/infrastructure/client/resolver"
 	conn "insync/internal/infrastructure/connection"
@@ -17,11 +18,10 @@ import (
 	"insync/internal/infrastructure/filemanager/pathtree"
 	"insync/internal/infrastructure/filesys"
 	"insync/internal/infrastructure/holder"
+	local "insync/internal/infrastructure/local"
 	planner "insync/internal/infrastructure/planner"
 	planres "insync/internal/infrastructure/planresolver"
-	base "insync/internal/infrastructure/planresolver/base"
-	local "insync/internal/infrastructure/planresolver/local"
-	remote "insync/internal/infrastructure/planresolver/remote"
+	remote "insync/internal/infrastructure/remote"
 	"insync/internal/infrastructure/root"
 	syncer "insync/internal/infrastructure/syncer"
 	changeappl "insync/internal/infrastructure/syncer/applier"
@@ -34,6 +34,7 @@ import (
 	server "insync/internal/transport/grpc/server"
 	connusecase "insync/internal/usecase/connect"
 	fileusecase "insync/internal/usecase/file"
+	initusecase "insync/internal/usecase/init"
 	nodeusecase "insync/internal/usecase/node"
 	rootusecase "insync/internal/usecase/root"
 	scanusecase "insync/internal/usecase/scan"
@@ -418,13 +419,13 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать DeviceIdProvider: %v", err))
 	}
 
-	baseSnapshotProviderOpts := base.BaseSnapshotProviderOptions{
+	BaseSnapshotManagerOpts := base.BaseSnapshotManagerOptions{
 		BaseSnapshotRepository: baseSnapshotRepository,
 		DeviceIdProvider:       deviceIdProvider,
 	}
-	baseSnapshotProvider, err := base.NewBaseSnapshotProvider(baseSnapshotProviderOpts)
+	BaseSnapshotManager, err := base.NewBaseSnapshotManager(BaseSnapshotManagerOpts)
 	if err != nil {
-		panic(fmt.Sprintf("Не удалось создать BaseSnapshotProvider: %v", err))
+		panic(fmt.Sprintf("Не удалось создать BaseSnapshotManager: %v", err))
 	}
 
 	remoteSnapshotProviderOpts := remote.RemoteSnapshotProviderOptions{
@@ -448,7 +449,7 @@ func RunApp() {
 	planCache := planres.NewSyncPlanCache()
 
 	planResolverOpts := planres.PlanResolverOptions{
-		BaseSnapshotProvider:   baseSnapshotProvider,
+		BaseSnapshotProvider:   BaseSnapshotManager,
 		RemoteSnapshotProvider: remoteSnapshotProvider,
 		LocalSnapshotProvider:  localSnapshotProvider,
 
@@ -491,7 +492,7 @@ func RunApp() {
 	postSyncBaseSnapshotPersisterOpts := persister.PostSyncBaseSnapshotPersisterOptions{
 		BaseSnapshotRepository: baseSnapshotRepository,
 		DeviceIdProvider:       deviceIdProvider,
-		SnapshotProvider:       baseSnapshotProvider,
+		SnapshotProvider:       BaseSnapshotManager,
 	}
 	postSyncBaseSnapshotPersister, err := persister.NewPostSyncBaseSnapshotPersister(postSyncBaseSnapshotPersisterOpts)
 	if err != nil {
@@ -520,12 +521,23 @@ func RunApp() {
 
 	cliLogger := logger.With(moduleAtrributeName, cliModuleName)
 
+	initUseCaseOpts := initusecase.InitUseCaseOptions{
+		BaseSnapshotCreator:    BaseSnapshotManager,
+		RemoteSnapshotProvider: remoteSnapshotProvider,
+		LocalSnapshotProvider:  localSnapshotProvider,
+	}
+	initUseCase, err := initusecase.NewInitUseCase(initUseCaseOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать InitUseCase: %v", err))
+	}
+
 	cliInstanceOpts := cli.CliOptions{
 		SyncUseCase:    syncUseCase,
 		ScanUseCase:    scanUseCase,
 		NodeUseCase:    nodeUseCase,
 		ConnectUseCase: connectUseCase,
 		RootUseCase:    rootUseCase,
+		InitUseCase:    initUseCase,
 
 		Logger: cliLogger,
 	}
