@@ -13,15 +13,8 @@ type ClientConfig struct {
 	// для passthrough
 	ServerIp   string `mapstructure:"server_ip"`
 	ServerPort int    `mapstructure:"server_port"`
-
-	//для mdns
-	ServerServiceName string `mapstructure:"server_service_name"`
-	ServerServiceType string `mapstructure:"server_service_type"`
-	ServerInterfaces  string `mapstructure:"server_interfaces"`
-	ServerPostfix     string `mapstructure:"server_postfix"`
-	ServerDomain      string `mapstructure:"server_domain"`
-
 	// общие
+	ServerServiceName    string `mapstructure:"server_service_name"`
 	ServerNetworkType    string `mapstructure:"server_network_type"`
 	LoadBalancingPolicy  string `mapstructure:"load_balancing_policy"`
 	ShouldUseHealthCheck bool   `mapstructure:"should_use_health_check"`
@@ -66,15 +59,6 @@ func (cc *ClientConfig) Validate() error {
 
 	if err := cc.ConnectionConfig.Validate(); err != nil {
 		return err
-	}
-
-	if (cc.ResolverScheme == "mdns") &&
-		(cc.ServerServiceName == "" ||
-			cc.ServerInterfaces == "" ||
-			cc.ServerPostfix == "" ||
-			cc.ServerDomain == "" ||
-			cc.ServerServiceType == "") {
-		return ErrInvalidConfigForMdns
 	}
 
 	return nil

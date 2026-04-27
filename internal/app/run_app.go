@@ -309,13 +309,10 @@ func RunApp() {
 	clientHolder := holder.NewClientHolder()
 
 	connectionManagerOpts := conn.ConnectionManagerOptions{
-		BaseGrpcConf:                  &grpcClientConf,
-		ClientHolder:                  clientHolder,
-		GrpcClientLogger:              clientLogger,
-		Logger:                        connectionManagerLogger,
-		MDnsServerServiceType:         clientConfig.ServerServiceType,
-		MDnsServerDomain:              clientConfig.ServerDomain,
-		MDnsServerInstanceNamePostfix: clientConfig.ServerPostfix,
+		BaseGrpcConf:     &grpcClientConf,
+		ClientHolder:     clientHolder,
+		GrpcClientLogger: clientLogger,
+		Logger:           connectionManagerLogger,
 	}
 	connectionManager, err := conn.NewConnectionManager(connectionManagerOpts)
 	if err != nil {

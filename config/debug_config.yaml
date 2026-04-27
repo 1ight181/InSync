@@ -11,11 +11,16 @@ tls: &tls
 
 chunk_size_in_bytes: &chunk_size 1024
 
+postfix: &mdns_server_instance_name_postfix "server"
+server_domain: &mdns_server_domain "local."
+server_service_type: &mdns_server_service_type "_grpc._tcp"
+service_name: &service_name "insincpb.FileSyncService"
+
 server:
   ip: ""
   port: 50051
   network_type: "tcp"
-  service_name: "insincpb.FileSyncService"
+  service_name: *service_name
   chunk_size_in_bytes: *chunk_size
 
   tls:
@@ -30,9 +35,12 @@ server:
 
 client:
     resolver_scheme: "mdns"
-    server_address: "_grpc._tcp/server1.server.local"
-    server_service_name: "insincpb.FileSyncService"
-    server_interfaces: ""
+    server_postfix: *mdns_server_instance_name_postfix
+    server_domain: *mdns_server_domain
+    server_service_name: *service_name
+    server_service_type: *mdns_server_service_type
+    server_interfaces: "Беспроводная сеть 5"
+    server_ip: ""
     server_port: 50051
     server_network_type: "tcp"
     load_balancing_policy: "pick_first"
@@ -78,28 +86,27 @@ logger:
   log_file_extension: "txt"
   log_level: "debug"
 
-postfix: &mdns_server_instance_name_postfix "server"
 
 mdns_server:
-  instance_name: "server1"
   instance_name_postfix: *mdns_server_instance_name_postfix
-  service_type: "_grpc._tcp"
-  domain: "local"
+  service_type: *mdns_server_service_type
+  domain: *mdns_server_domain
   port: 50051
   # формат "eth0;wlan0;Беспроводная сеть 5;8"
   # поддерживает как имя интерфейса, так и индекс интерфейса
-  interfaces: "6"
+  interfaces: "Беспроводная сеть 5"
 
 device_id_resolver:
   device_id_dir: "../deviceid"
   device_id_file_name: "device_id.txt"
 
 mdns_browser:
-  server_service_type: "_grpc._tcp"
-  server_domain: "local"
+  server_service_type: *mdns_server_service_type
+  server_domain: *mdns_server_domain
    # формат "eth0;wlan0;Беспроводная сеть 5;8"
   # поддерживает как имя интерфейса, так и индекс интерфейса
-  interfaces: "6"
+  interfaces: "Беспроводная сеть 5"
 
 remote_device_id_resolver:
   mdns_server_instance_name_postfix: *mdns_server_instance_name_postfix
+  mdns_server_domain: *mdns_server_domain
