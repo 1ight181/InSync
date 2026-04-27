@@ -7,8 +7,8 @@ import (
 
 type HashCacheEntry struct {
 	Id       string `gorm:"primaryKey;type:uuid"`
-	Hash     string `gorm:"type:varchar(255);uniqueIndex:ux_cache_hash_path"`
-	FullPath string
+	Hash     string `gorm:"type:varchar(255);not null"`
+	FullPath string `gorm:"type:varchar(255);not null;uniqueIndex:ux_hash_cache_full_path"`
 }
 
 func (e *HashCacheEntry) BeforeCreate(tx *gorm.DB) error {

@@ -158,7 +158,7 @@ func (f *FileManager) GetFile(ctx context.Context, scopedPath domain.ScopedPath)
 		return nil, err
 	}
 
-	return f.openFileContentWithHeader(resolvedFullPath, scopedPath.Path)
+	return f.openFileContent(resolvedFullPath, scopedPath.Path)
 }
 
 func (f *FileManager) PutFile(ctx context.Context, scopedPath domain.ScopedPath, content io.Reader) error {
