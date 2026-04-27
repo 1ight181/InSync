@@ -75,7 +75,6 @@ var (
 
 // Ошибки валидации конфигурации mDNS сервера
 var (
-	ErrMDnsServerInstanceNameIsEmpty        = errors.New("Название экземпляра сервера mDNS не может быть пустым")
 	ErrMDnsServerInstanceNamePostfixIsEmpty = errors.New("Постфикс названия экземпляра сервера mDNS не может быть пустым")
 	ErrMDnsServerServiceTypeIsEmpty         = errors.New("Тип сервиса mDNS не может быть пустым")
 	ErrMDnsServerDomainIsEmpty              = errors.New("Домен mDNS не может быть пустым")
