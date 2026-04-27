@@ -3,6 +3,8 @@ package mdns
 import (
 	"context"
 	"fmt"
+	"io"
+	"log"
 	"log/slog"
 	"sync/atomic"
 
@@ -10,6 +12,10 @@ import (
 
 	"github.com/hashicorp/mdns"
 )
+
+func init() {
+	log.Default().SetOutput(io.Discard)
+}
 
 type MDnsServer struct {
 	instanceName string
@@ -63,7 +69,6 @@ func (ms *MDnsServer) Start() error {
 
 	ms.logger.Info("Запуск mDNS сервера...")
 
-	// Проверяем и логируем интерфейсы (для совместимости с твоим shared кодом)
 	ifaces, err := shared.GetNetworkInterfaces(ms.interfaces)
 	if err != nil || len(ifaces) == 0 {
 		ms.logger.LogAttrs(
@@ -88,25 +93,23 @@ func (ms *MDnsServer) Start() error {
 		slog.Any("interfaces", ifaces),
 	)
 
-	// Создаём описание сервиса
 	service, err := mdns.NewMDNSService(
-		ms.instanceName, // Instance name
-		ms.serviceType,  // Service type (_myapp._tcp)
-		ms.domain,       // Domain (обычно "local.")
-		"",              // Host name (пусто = берётся автоматически)
+		ms.instanceName,
+		ms.serviceType,
+		ms.domain,
+		"",
 		ms.port,
-		nil, // IPs: nil = все адреса интерфейса
-		nil, // TXT records (можно добавить []string{...} при необходимости)
+		nil,
+		nil,
 	)
 	if err != nil {
 		ms.isStarted.Store(false)
 		return fmt.Errorf("failed to create MDNSService: %w", err)
 	}
 
-	// Запускаем mDNS сервер
 	server, err := mdns.NewServer(&mdns.Config{
-		Zone: service,
-		// Iface: nil — слушает на всех интерфейсах (рекомендуется для большинства случаев)
+		Zone:  service,
+		Iface: &ifaces[0],
 	})
 	if err != nil {
 		ms.isStarted.Store(false)
