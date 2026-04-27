@@ -15,7 +15,6 @@ var (
 	ErrNetworkToConnectTypeIsEmpty = errors.New("Тип сети сервера, к которому нужно подключиться, не может быть пустым")
 	ErrClientResolverSchemeIsEmpty = errors.New("Схема резолвера не может быть пустой")
 	ErrChunkSizeIsInvalid          = errors.New("Размер чанка должен быть положительным целым числом")
-	ErrInvalidConfigForMdns        = errors.New("Невалидные опции для схемы mdns")
 	ErrLoadBalancingPolicyIsEmpty  = errors.New("Политика балансировки не может быть пустой")
 	ErrRpcTimeoutIsInvalid         = errors.New("Таймаут RPC должен быть положительным целым числом")
 )

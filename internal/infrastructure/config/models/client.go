@@ -3,7 +3,6 @@ package models
 import (
 	"fmt"
 	"strconv"
-	"strings"
 )
 
 type ClientConfig struct {
@@ -69,12 +68,4 @@ func (cc *ClientConfig) GetServerAddress() string {
 		return ""
 	}
 	return fmt.Sprintf("%s:%s", cc.ServerIp, strconv.Itoa(cc.ServerPort))
-}
-
-func (cc *ClientConfig) GetServerNamePostfix() string {
-	return fmt.Sprintf(".%s.%s", cc.ServerPostfix, cc.ServerDomain)
-}
-
-func (cc *ClientConfig) GetInterfaces() []string {
-	return strings.Split(cc.ServerInterfaces, ";")
 }
