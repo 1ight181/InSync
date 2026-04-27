@@ -3,7 +3,6 @@ package connection
 import (
 	"context"
 	"errors"
-	"fmt"
 	"insync/internal/domain"
 	clt "insync/internal/infrastructure/client"
 	"insync/internal/interfaces"
@@ -22,10 +21,6 @@ type ConnectionManager struct {
 	clientHolder    IClientHolder
 
 	currentNodeName domain.NodeName
-
-	mDnsServerServiceType         string
-	mDnsServerDomain              string
-	mDnsServerInstanceNamePostfix string
 }
 
 type ConnectionManagerOptions struct {
@@ -37,10 +32,6 @@ type ConnectionManagerOptions struct {
 	GrpcClientLogger *slog.Logger
 
 	Logger *slog.Logger
-
-	MDnsServerServiceType         string
-	MDnsServerDomain              string
-	MDnsServerInstanceNamePostfix string
 }
 
 var (
@@ -51,9 +42,6 @@ func NewConnectionManager(opts ConnectionManagerOptions) (*ConnectionManager, er
 	if opts.BaseGrpcConf == nil ||
 		opts.ClientHolder == nil ||
 		opts.GrpcClientLogger == nil ||
-		opts.MDnsServerServiceType == "" ||
-		opts.MDnsServerDomain == "" ||
-		opts.MDnsServerInstanceNamePostfix == "" ||
 		opts.Logger == nil {
 		return nil, ErrInvalidOpts
 	}
@@ -64,10 +52,6 @@ func NewConnectionManager(opts ConnectionManagerOptions) (*ConnectionManager, er
 
 		grpcClientLogger: opts.GrpcClientLogger,
 		logger:           opts.Logger,
-
-		mDnsServerServiceType:         opts.MDnsServerServiceType,
-		mDnsServerDomain:              opts.MDnsServerDomain,
-		mDnsServerInstanceNamePostfix: opts.MDnsServerInstanceNamePostfix,
 	}, nil
 }
 
@@ -84,12 +68,10 @@ func (c *ConnectionManager) CurrentNodeName() (domain.NodeName, error) {
 }
 
 func (c *ConnectionManager) ConnectToNode(nodeName domain.NodeName) error {
-	mDnsUrl := c.resolveMDnsUrl(nodeName)
-	serverName := c.resolveServerName(nodeName)
 
 	grpcConf := c.baseGrpcConf
-	grpcConf.ServerAddress = mDnsUrl
-	grpcConf.ServerName = serverName
+	grpcConf.ServerAddress = nodeName.String()
+	grpcConf.ServerName = nodeName.String()
 
 	grpcClientOpts := clt.GrpcClientOptions{
 		Conf:   grpcConf,
@@ -121,7 +103,6 @@ func (c *ConnectionManager) ConnectToNode(nodeName domain.NodeName) error {
 		slog.LevelDebug,
 		"Успешное подключение к узлу",
 		slog.String("nodeName", nodeName.String()),
-		slog.String("mDnsUrl", mDnsUrl),
 	)
 
 	return nil
@@ -135,12 +116,4 @@ func (c *ConnectionManager) Close() error {
 	}
 
 	return nil
-}
-
-func (c *ConnectionManager) resolveMDnsUrl(nodeName domain.NodeName) string {
-	return fmt.Sprintf("%s.%s.%s.%s", c.mDnsServerServiceType, nodeName, c.mDnsServerInstanceNamePostfix, c.mDnsServerDomain)
-}
-
-func (c *ConnectionManager) resolveServerName(nodeName domain.NodeName) string {
-	return fmt.Sprintf("%s.%s.%s", nodeName, c.mDnsServerInstanceNamePostfix, c.mDnsServerDomain)
 }
