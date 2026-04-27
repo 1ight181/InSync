@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"fmt"
 	"strings"
 
 	"google.golang.org/grpc/resolver"
@@ -13,23 +14,21 @@ func parseTargetInfo(target resolver.Target) (targetInfo, error) {
 		return targetInfo{}, ErrInvalidScheme
 	}
 
-	serviceName := url.Host
+	endpoint := strings.Trim(url.Path, "/")
+
+	splited := strings.Split(endpoint, ".")
+	if len(splited) != 5 {
+		return targetInfo{}, ErrInvalidEndpointFormat
+	}
+
+	serviceName := fmt.Sprintf("%s.%s", splited[0], splited[1])
 	if serviceName == "" {
 		return targetInfo{}, ErrMissingServiceName
 	}
 
-	endpoint := strings.TrimPrefix(url.Path, "/")
-	if endpoint == "" {
-		return targetInfo{}, ErrMissingEndpoint
-	}
+	instanceName := fmt.Sprintf("%s.%s", splited[2], splited[3])
 
-	lastDotIndex := strings.LastIndexByte(endpoint, '.')
-	if lastDotIndex == -1 {
-		return targetInfo{}, ErrInvalidEndpointFormat
-	}
-
-	instanceName := endpoint[:lastDotIndex]
-	domain := endpoint[lastDotIndex+1:]
+	domain := splited[4]
 
 	return targetInfo{
 		instanceName: instanceName,

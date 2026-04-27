@@ -138,7 +138,7 @@ func (c *ConnectionManager) Close() error {
 }
 
 func (c *ConnectionManager) resolveMDnsUrl(nodeName domain.NodeName) string {
-	return fmt.Sprintf("%s.%s.%s", c.mDnsServerServiceType, nodeName, c.mDnsServerDomain)
+	return fmt.Sprintf("%s.%s.%s.%s", c.mDnsServerServiceType, nodeName, c.mDnsServerInstanceNamePostfix, c.mDnsServerDomain)
 }
 
 func (c *ConnectionManager) resolveServerName(nodeName domain.NodeName) string {
