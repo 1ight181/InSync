@@ -19,8 +19,9 @@ type MDnsNodeNamesBrowser struct {
 
 	interfaces []string
 
-	logger    *slog.Logger
-	loggerCtx context.Context
+	logger        *slog.Logger
+	loggerCtx     context.Context
+	seenNodeNames map[domain.NodeName]struct{}
 }
 
 type MDnsNodeNamesBrowserOptions struct {
@@ -44,6 +45,7 @@ func NewMDnsNodeNamesBrowser(opts MDnsNodeNamesBrowserOptions) *MDnsNodeNamesBro
 		interfaces:        opts.Interfaces,
 		logger:            opts.Logger,
 		loggerCtx:         context.Background(),
+		seenNodeNames:     make(map[domain.NodeName]struct{}),
 	}
 }
 
@@ -83,9 +85,8 @@ func (b *MDnsNodeNamesBrowser) BrowseNodeNames(ctx context.Context) (chan domain
 	return nodeNamesChan, nil
 }
 
-// discoveryLoop выполняет периодический mDNS query на всех указанных интерфейсах
 func (b *MDnsNodeNamesBrowser) discoveryLoop(ctx context.Context, ifaces []net.Interface, nodeChan chan domain.NodeName) {
-	ticker := time.NewTicker(2 * time.Second) // как часто повторять запрос
+	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -112,12 +113,11 @@ func (b *MDnsNodeNamesBrowser) queryAllInterfaces(ctx context.Context, ifaces []
 			Service:             b.serverServiceType,
 			Domain:              b.serverDomain,
 			Timeout:             1500 * time.Millisecond,
-			Interface:           &iface, // привязываемся к конкретному интерфейсу
+			Interface:           &iface,
 			Entries:             entriesCh,
 			WantUnicastResponse: false,
 		}
 
-		// Запускаем запрос асинхронно
 		go func(ifaceName string) {
 			if err := mdns.Query(params); err != nil {
 				b.logger.LogAttrs(
@@ -130,7 +130,6 @@ func (b *MDnsNodeNamesBrowser) queryAllInterfaces(ctx context.Context, ifaces []
 			}
 		}(iface.Name)
 
-		// Собираем результаты (с таймаутом чуть больше Query.Timeout)
 		timeout := time.After(2 * time.Second)
 		for {
 			select {
@@ -166,7 +165,11 @@ func (b *MDnsNodeNamesBrowser) processEntry(entry *mdns.ServiceEntry, nodeChan c
 		return
 	}
 
-	// Отправляем без блокировки (если канал переполнен — пропускаем)
+	if _, exists := b.seenNodeNames[nodeName]; exists {
+		return
+	}
+	b.seenNodeNames[nodeName] = struct{}{}
+
 	select {
 	case nodeChan <- nodeName:
 	default:
