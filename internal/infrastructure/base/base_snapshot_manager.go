@@ -32,7 +32,6 @@ func NewBaseSnapshotManager(opts BaseSnapshotManagerOptions) (*BaseSnapshotManag
 }
 
 func (b *BaseSnapshotManager) GetBaseSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
-
 	localDeviceId, err := b.deviceIdProvider.GetCurrentLocalDeviceId()
 	if err != nil {
 		return domain.Snapshot{}, err

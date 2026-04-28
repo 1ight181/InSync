@@ -191,15 +191,6 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать fileManager: %v", err))
 	}
 
-	fileUseCaseOpts := fileusecase.FileUseCaseOptions{
-		FileManager: fileManager,
-	}
-
-	fileUseCase, err := fileusecase.NewFileUseCase(fileUseCaseOpts)
-	if err != nil {
-		panic(fmt.Sprintf("Не удалось создать fileUseCase: %v", err))
-	}
-
 	deviceIdResolverConfig := config.DeviceIdResolverConfig
 	deviceIdDir := deviceIdResolverConfig.DeviceIdDir
 	if err := os.MkdirAll(deviceIdDir, 0755); err != nil {
@@ -352,7 +343,8 @@ func RunApp() {
 	}
 
 	localSnapshotProviderOpts := local.LocalSnapshotProviderOptions{
-		FileManager: fileManager,
+		FileManager:          fileManager,
+		BaseSnapshotProvider: baseSnapshotManager,
 	}
 	localSnapshotProvider, err := local.NewLocalSnapshotProvider(localSnapshotProviderOpts)
 	if err != nil {
@@ -367,6 +359,16 @@ func RunApp() {
 	baseUseCase, err := baseusecase.NewBaseSnapshotUseCase(baseUseCaseOpts)
 	if err != nil {
 		panic(fmt.Sprintf("Не удалось создать BaseSnapshotUseCase: %v", err))
+	}
+
+	fileUseCaseOpts := fileusecase.FileUseCaseOptions{
+		FileManager:          fileManager,
+		BaseSnapshotProvider: baseSnapshotManager,
+	}
+
+	fileUseCase, err := fileusecase.NewFileUseCase(fileUseCaseOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать fileUseCase: %v", err))
 	}
 
 	serverLogger := logger.With(moduleAtrributeName, grpcServerModuleName)

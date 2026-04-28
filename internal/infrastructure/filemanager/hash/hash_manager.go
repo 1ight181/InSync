@@ -83,7 +83,7 @@ func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, rootName
 	return h.calcHash(resourceContent)
 }
 
-func (h *HashManager) ResolveWithForceRecalc(resourceContent cont.ResourceContent, rootName domain.RootName) (string, error) {
+func (h *HashManager) ResolveWithForceRecalc(resourceContent cont.ResourceContent) (string, error) {
 	return h.calcHash(resourceContent)
 }
 

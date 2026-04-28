@@ -7,11 +7,13 @@ import (
 )
 
 type LocalSnapshotProvider struct {
-	fileManager IFileManager
+	fileManager          IFileManager
+	baseSnapshotProvider IBaseSnapshotProvider
 }
 
 type LocalSnapshotProviderOptions struct {
-	FileManager IFileManager
+	FileManager          IFileManager
+	BaseSnapshotProvider IBaseSnapshotProvider
 }
 
 var (
@@ -19,14 +21,23 @@ var (
 )
 
 func NewLocalSnapshotProvider(opts LocalSnapshotProviderOptions) (*LocalSnapshotProvider, error) {
-	if opts.FileManager == nil {
+	if opts.FileManager == nil ||
+		opts.BaseSnapshotProvider == nil {
 		return nil, ErrInvalidOpts
 	}
-	return &LocalSnapshotProvider{fileManager: opts.FileManager}, nil
+	return &LocalSnapshotProvider{
+		fileManager:          opts.FileManager,
+		baseSnapshotProvider: opts.BaseSnapshotProvider,
+	}, nil
 }
 
 func (p *LocalSnapshotProvider) GetLocalSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
-	snapshot, err := p.fileManager.GetSnapshot(ctx, rootName)
+	baseSnapshot, err := p.baseSnapshotProvider.GetBaseSnapshot(ctx, rootName)
+	if err != nil {
+		return domain.Snapshot{}, err
+	}
+
+	snapshot, err := p.fileManager.GetSnapshot(ctx, rootName, &baseSnapshot)
 	if err != nil {
 		return domain.Snapshot{}, err
 	}

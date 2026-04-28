@@ -8,11 +8,13 @@ import (
 )
 
 type FileUseCase struct {
-	fileManager IFileManager
+	fileManager          IFileManager
+	baseSnapshotProvider IBaseSnapshotProvider
 }
 
 type FileUseCaseOptions struct {
-	FileManager IFileManager
+	FileManager          IFileManager
+	BaseSnapshotProvider IBaseSnapshotProvider
 }
 
 var (
@@ -20,14 +22,23 @@ var (
 )
 
 func NewFileUseCase(opts FileUseCaseOptions) (*FileUseCase, error) {
-	if opts.FileManager == nil {
+	if opts.FileManager == nil ||
+		opts.BaseSnapshotProvider == nil {
 		return nil, ErrInvalidOpts
 	}
-	return &FileUseCase{fileManager: opts.FileManager}, nil
+	return &FileUseCase{
+		fileManager:          opts.FileManager,
+		baseSnapshotProvider: opts.BaseSnapshotProvider,
+	}, nil
 }
 
 func (f *FileUseCase) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
-	return f.fileManager.GetSnapshot(ctx, rootName)
+	baseSnapshot, err := f.baseSnapshotProvider.GetBaseSnapshot(ctx, rootName)
+	if err != nil {
+		return domain.Snapshot{}, err
+	}
+
+	return f.fileManager.GetSnapshot(ctx, rootName, &baseSnapshot)
 }
 
 func (f *FileUseCase) DeleteFile(ctx context.Context, scopedPath domain.ScopedPath) error {

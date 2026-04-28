@@ -77,7 +77,7 @@ func NewFileManager(opts FileManagerOptions) (*FileManager, error) {
 	}, nil
 }
 
-func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
+func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName, baseSnapshot *domain.Snapshot) (domain.Snapshot, error) {
 	scopedPath, err := domain.NewScopedPath(rootName, ".")
 	if err != nil {
 		return domain.Snapshot{}, err
@@ -87,7 +87,14 @@ func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName)
 		return domain.Snapshot{}, err
 	}
 
-	allEntries, err := f.collectAllFileEntries(ctx, resolvedRootPath, scopedPath.Path, rootName)
+	baseMetadataByPath := make(map[domain.Path]domain.FileMetadata)
+	if baseSnapshot != nil {
+		for _, entry := range baseSnapshot.Files {
+			baseMetadataByPath[entry.RelativePath] = entry.FileInfo.Metadata
+		}
+	}
+
+	allEntries, err := f.collectAllFileEntries(ctx, resolvedRootPath, scopedPath.Path, rootName, baseMetadataByPath)
 	if err != nil {
 		return domain.Snapshot{}, err
 	}
@@ -333,25 +340,39 @@ func (f *FileManager) createMetadata(entryInfo fs.FileInfo) domain.FileMetadata 
 	}
 }
 
+func (f *FileManager) resolveHash(
+	resourceContent cont.ResourceContent,
+	rootName domain.RootName,
+	currentMetadata domain.FileMetadata,
+	baseMetadataByPath map[domain.Path]domain.FileMetadata,
+) (string, error) {
+	if baseMetadata, ok := baseMetadataByPath[resourceContent.RelativePath]; ok && baseMetadata != currentMetadata {
+		return f.hashManager.ResolveWithForceRecalc(resourceContent)
+	}
+
+	return f.hashManager.ResolveHash(resourceContent, rootName)
+}
+
 func (f *FileManager) collectAllFileEntries(
 	ctx context.Context,
 	rootAbsolutePath domain.Path,
 	rootRelativePath domain.Path,
 	rootName domain.RootName,
+	baseMetadataByPath map[domain.Path]domain.FileMetadata,
 ) ([]domain.FileEntry, error) {
 
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
 
-	children, childrenSubtreeSize, err := f.collectFileEntriesRecursive(ctx, rootAbsolutePath, rootRelativePath, rootName)
+	children, childrenSubtreeSize, err := f.collectFileEntriesRecursive(ctx, rootAbsolutePath, rootRelativePath, rootName, baseMetadataByPath)
 	if err != nil {
 		return nil, err
 	}
 
 	rootEntrySubtreeSize := uint64(1 + childrenSubtreeSize) // размер корневой директории
 
-	rootEntry, err := f.createFileEntryForDirectory(ctx, rootAbsolutePath, rootRelativePath, rootEntrySubtreeSize, rootName)
+	rootEntry, err := f.createFileEntryForDirectory(ctx, rootAbsolutePath, rootRelativePath, rootEntrySubtreeSize, rootName, baseMetadataByPath)
 	if err != nil {
 		return nil, err
 	}
@@ -368,6 +389,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 	currentAbsolutePath domain.Path,
 	currentPath domain.Path,
 	rootName domain.RootName,
+	baseMetadataByPath map[domain.Path]domain.FileMetadata,
 ) ([]domain.FileEntry, uint64, error) {
 	directoryEntries, err := f.fileSystem.ReadDir(currentAbsolutePath)
 	if err != nil {
@@ -427,12 +449,11 @@ func (f *FileManager) collectFileEntriesRecursive(
 			OpenContent:  resourceContentFunc,
 		}
 
-		hashValue, err := f.hashManager.ResolveHash(resourceContent, rootName)
+		fileMetadata := f.createMetadata(entryInfo)
+		hashValue, err := f.resolveHash(resourceContent, rootName, fileMetadata, baseMetadataByPath)
 		if err != nil {
 			return nil, 0, err
 		}
-
-		fileMetadata := f.createMetadata(entryInfo)
 		fileInfo, err := domain.NewFileInfo(fileMetadata, hashValue)
 		if err != nil {
 			return nil, 0, err
@@ -444,7 +465,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 		}
 
 		if directoryEntry.IsDir() {
-			nested, nestedSubtreeSize, err := f.collectFileEntriesRecursive(ctx, nextAbsolutePath, nextPath, rootName)
+			nested, nestedSubtreeSize, err := f.collectFileEntriesRecursive(ctx, nextAbsolutePath, nextPath, rootName, baseMetadataByPath)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -472,6 +493,7 @@ func (f *FileManager) createFileEntryForDirectory(
 	relativePath domain.Path,
 	subtreeSize uint64,
 	rootName domain.RootName,
+	baseMetadataByPath map[domain.Path]domain.FileMetadata,
 ) (domain.FileEntry, error) {
 	if ctx.Err() != nil {
 		return domain.FileEntry{}, ctx.Err()
@@ -483,17 +505,16 @@ func (f *FileManager) createFileEntryForDirectory(
 		OpenContent:  f.openDirContent,
 	}
 
-	hashValue, err := f.hashManager.ResolveHash(resourceContent, rootName)
-	if err != nil {
-		return domain.FileEntry{}, err
-	}
-
 	info, err := f.fileSystem.Stat(absolutePath)
 	if err != nil {
 		return domain.FileEntry{}, err
 	}
 
 	metadata := f.createMetadata(info)
+	hashValue, err := f.resolveHash(resourceContent, rootName, metadata, baseMetadataByPath)
+	if err != nil {
+		return domain.FileEntry{}, err
+	}
 	fileInfo, err := domain.NewFileInfo(metadata, hashValue)
 	if err != nil {
 		return domain.FileEntry{}, err

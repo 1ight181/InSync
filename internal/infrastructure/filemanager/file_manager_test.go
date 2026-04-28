@@ -160,6 +160,62 @@ func (s *FileManagerSuite) TestPutFile_Success() {
 	s.Require().NoError(err)
 }
 
+func (s *FileManagerSuite) TestGetSnapshot_UsesResolveWithForceRecalc_WhenMetadataDiffers() {
+	ctx := context.Background()
+	rootName := domain.RootName("root")
+	rootPath := mustPath(s.T(), os.TempDir())
+	scopedPath := mustScopedPath(s.T(), rootName, mustPath(s.T(), "."))
+
+	baseMetadata := domain.FileMetadata{
+		ModifiedUnix: 1,
+		SizeBytes:    0,
+		IsDirectory:  true,
+	}
+	baseFileInfo, err := domain.NewFileInfo(baseMetadata, "base-hash")
+	s.Require().NoError(err)
+	baseEntry, err := domain.NewFileEntry(scopedPath.Path, 1, baseFileInfo)
+	s.Require().NoError(err)
+	baseSnapshot := domain.NewSnapshot([]domain.FileEntry{baseEntry})
+
+	s.mockRootResolver.On("ResolveRoot", scopedPath).Return(rootPath, nil)
+	s.mockFileSystem.On("ReadDir", rootPath).Return([]fs.DirEntry{}, nil)
+	s.mockFileSystem.On("Stat", rootPath).Return(mockFileInfo{size: 0, modTime: time.Unix(2, 0), isDir: true}, nil)
+	s.mockHashManager.On("ResolveWithForceRecalc", mock.Anything).Return("recalc-hash", nil)
+
+	snapshot, err := s.fileManager.GetSnapshot(ctx, rootName, &baseSnapshot)
+	s.Require().NoError(err)
+	s.Require().Len(snapshot.Files, 1)
+	s.Equal("recalc-hash", snapshot.Files[0].FileInfo.Hash)
+}
+
+func (s *FileManagerSuite) TestGetSnapshot_UsesResolveHash_WhenMetadataMatches() {
+	ctx := context.Background()
+	rootName := domain.RootName("root")
+	rootPath := mustPath(s.T(), os.TempDir())
+	scopedPath := mustScopedPath(s.T(), rootName, mustPath(s.T(), "."))
+
+	baseMetadata := domain.FileMetadata{
+		ModifiedUnix: uint64(time.Now().Unix()),
+		SizeBytes:    0,
+		IsDirectory:  true,
+	}
+	baseFileInfo, err := domain.NewFileInfo(baseMetadata, "base-hash")
+	s.Require().NoError(err)
+	baseEntry, err := domain.NewFileEntry(scopedPath.Path, 1, baseFileInfo)
+	s.Require().NoError(err)
+	baseSnapshot := domain.NewSnapshot([]domain.FileEntry{baseEntry})
+
+	s.mockRootResolver.On("ResolveRoot", scopedPath).Return(rootPath, nil)
+	s.mockFileSystem.On("ReadDir", rootPath).Return([]fs.DirEntry{}, nil)
+	s.mockFileSystem.On("Stat", rootPath).Return(mockFileInfo{size: 0, modTime: time.Unix(int64(baseMetadata.ModifiedUnix), 0), isDir: true}, nil)
+	s.mockHashManager.On("ResolveHash", mock.Anything, rootName).Return("cached-hash", nil)
+
+	snapshot, err := s.fileManager.GetSnapshot(ctx, rootName, &baseSnapshot)
+	s.Require().NoError(err)
+	s.Require().Len(snapshot.Files, 1)
+	s.Equal("cached-hash", snapshot.Files[0].FileInfo.Hash)
+}
+
 func mustPath(t *testing.T, raw string) domain.Path {
 	t.Helper()
 	p, err := domain.NewPath(raw)
@@ -189,6 +245,11 @@ type MockIHashManager struct {
 
 func (m *MockIHashManager) ResolveHash(resourceContent resource.ResourceContent, rootName domain.RootName) (string, error) {
 	args := m.Called(resourceContent, rootName)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockIHashManager) ResolveWithForceRecalc(resourceContent resource.ResourceContent) (string, error) {
+	args := m.Called(resourceContent)
 	return args.String(0), args.Error(1)
 }
 
@@ -287,12 +348,14 @@ func (f *mockFsFile) Name() string {
 }
 
 type mockFileInfo struct {
-	size int64
+	size    int64
+	modTime time.Time
+	isDir   bool
 }
 
 func (m mockFileInfo) Name() string       { return "file.txt" }
 func (m mockFileInfo) Size() int64        { return m.size }
 func (m mockFileInfo) Mode() fs.FileMode  { return 0 }
-func (m mockFileInfo) ModTime() time.Time { return time.Time{} }
-func (m mockFileInfo) IsDir() bool        { return false }
+func (m mockFileInfo) ModTime() time.Time { return m.modTime }
+func (m mockFileInfo) IsDir() bool        { return m.isDir }
 func (m mockFileInfo) Sys() interface{}   { return nil }
