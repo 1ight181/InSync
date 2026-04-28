@@ -46,9 +46,10 @@ func NewHashManager(opts HashManagerOptions) (*HashManager, error) {
 	}
 
 	return &HashManager{
-		hashCache:      opts.HashCache,
-		hashCalculator: opts.HashCalculator,
-		pathTreeReader: opts.PathTreeReader,
+		hashCache:            opts.HashCache,
+		hashCalculator:       opts.HashCalculator,
+		pathTreeReader:       opts.PathTreeReader,
+		dirtyPathsRepository: opts.DirtyPathsRepository,
 
 		dirtyPaths: dirtyPaths,
 		logger:     opts.Logger,
