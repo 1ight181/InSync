@@ -500,7 +500,8 @@ func RunApp() {
 	postSyncBaseSnapshotPersisterOpts := persister.PostSyncBaseSnapshotPersisterOptions{
 		BaseSnapshotRepository: baseSnapshotRepository,
 		DeviceIdProvider:       deviceIdProvider,
-		SnapshotProvider:       baseSnapshotManager,
+		LocalSnapshotProvider:  localSnapshotProvider,
+		ClientFactory:          connectionManager,
 	}
 	postSyncBaseSnapshotPersister, err := persister.NewPostSyncBaseSnapshotPersister(postSyncBaseSnapshotPersisterOpts)
 	if err != nil {
