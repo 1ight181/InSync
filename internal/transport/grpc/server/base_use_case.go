@@ -6,5 +6,5 @@ import (
 )
 
 type IBaseSnapshotUseCase interface {
-	SetBaseSnapshot(ctx context.Context, snapshot domain.Snapshot, rootName domain.RootName) error
+	UpdateBaseSnapshot(ctx context.Context, rootName domain.RootName) error
 }

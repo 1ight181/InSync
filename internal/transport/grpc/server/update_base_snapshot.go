@@ -9,17 +9,14 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-func (gs *GrpcServer) SetBaseSnapshot(ctx context.Context, request *insyncpb.SetBaseSnapshotRequest) (*emptypb.Empty, error) {
+func (gs *GrpcServer) UpdateBaseSnapshot(ctx context.Context, request *insyncpb.UpdateBaseSnapshotRequest) (*emptypb.Empty, error) {
 	rootName := request.GetRootName()
 	validRootName, err := domain.NewRootName(rootName)
 	if err != nil {
 		return &emptypb.Empty{}, err
 	}
 
-	rawSnapshot := request.GetSnapshot()
-	snapshot := pbSnapshotToDomain(rawSnapshot)
-
-	err = gs.baseUseCase.SetBaseSnapshot(ctx, snapshot, validRootName)
+	err = gs.baseUseCase.UpdateBaseSnapshot(ctx, validRootName)
 	if err != nil {
 		return &emptypb.Empty{}, err
 	}
