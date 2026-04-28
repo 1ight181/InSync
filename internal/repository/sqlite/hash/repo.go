@@ -3,6 +3,7 @@ package hash
 import (
 	"errors"
 	"insync/internal/domain"
+	"insync/internal/repository/sqlite/hash/dirty"
 
 	"gorm.io/gorm"
 )
@@ -54,15 +55,16 @@ func (r *HashRepository) SetHashCache(fullPath domain.Path, hash string) error {
 	return nil
 }
 
-func (r *HashRepository) GetDirtyPaths() ([]domain.Path, error) {
-	var entries []HashCacheEntry
-	if err := r.db.Find(&entries).Error; err != nil {
+func (r *HashRepository) GetDirtyPaths(rootName domain.RootName) (map[domain.Path]struct{}, error) {
+	var entries []dirty.DirtyPath
+	if err := r.db.Find(&entries, "root_name = ?", rootName).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 
-	dirtyPaths := make([]domain.Path, 0, len(entries))
+	dirtyPaths := make(map[domain.Path]struct{}, len(entries))
 	for _, entry := range entries {
-		dirtyPaths = append(dirtyPaths, domain.Path(entry.FullPath))
+		// Уже валидированные при добавлении
+		dirtyPaths[domain.Path(entry.FullPath)] = struct{}{}
 	}
 
 	return dirtyPaths, nil

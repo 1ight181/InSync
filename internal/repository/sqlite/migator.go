@@ -27,7 +27,7 @@ func (a *AutoMigrator) Migrate(db *gorm.DB) error {
 		&snap.FileInfo{},
 		&snap.FileMetadata{},
 		&root.Root{},
-		&dirty.DirtyPaths{},
+		&dirty.DirtyPath{},
 	)
 	if err != nil {
 		return err
