@@ -25,6 +25,7 @@ const (
 	FileSyncService_PutFile_FullMethodName     = "/insyncpb.FileSyncService/PutFile"
 	FileSyncService_DeleteFile_FullMethodName  = "/insyncpb.FileSyncService/DeleteFile"
 	FileSyncService_RenameFile_FullMethodName  = "/insyncpb.FileSyncService/RenameFile"
+	FileSyncService_CreateDir_FullMethodName   = "/insyncpb.FileSyncService/CreateDir"
 )
 
 // FileSyncServiceClient is the client API for FileSyncService service.
@@ -38,6 +39,7 @@ type FileSyncServiceClient interface {
 	PutFile(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[PutFileRequest, emptypb.Empty], error)
 	DeleteFile(ctx context.Context, in *DeleteFileRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	RenameFile(ctx context.Context, in *RenameFileRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	CreateDir(ctx context.Context, in *CreateDirRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type fileSyncServiceClient struct {
@@ -110,6 +112,16 @@ func (c *fileSyncServiceClient) RenameFile(ctx context.Context, in *RenameFileRe
 	return out, nil
 }
 
+func (c *fileSyncServiceClient) CreateDir(ctx context.Context, in *CreateDirRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, FileSyncService_CreateDir_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FileSyncServiceServer is the server API for FileSyncService service.
 // All implementations must embed UnimplementedFileSyncServiceServer
 // for forward compatibility.
@@ -121,6 +133,7 @@ type FileSyncServiceServer interface {
 	PutFile(grpc.ClientStreamingServer[PutFileRequest, emptypb.Empty]) error
 	DeleteFile(context.Context, *DeleteFileRequest) (*emptypb.Empty, error)
 	RenameFile(context.Context, *RenameFileRequest) (*emptypb.Empty, error)
+	CreateDir(context.Context, *CreateDirRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedFileSyncServiceServer()
 }
 
@@ -145,6 +158,9 @@ func (UnimplementedFileSyncServiceServer) DeleteFile(context.Context, *DeleteFil
 }
 func (UnimplementedFileSyncServiceServer) RenameFile(context.Context, *RenameFileRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method RenameFile not implemented")
+}
+func (UnimplementedFileSyncServiceServer) CreateDir(context.Context, *CreateDirRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateDir not implemented")
 }
 func (UnimplementedFileSyncServiceServer) mustEmbedUnimplementedFileSyncServiceServer() {}
 func (UnimplementedFileSyncServiceServer) testEmbeddedByValue()                         {}
@@ -239,6 +255,24 @@ func _FileSyncService_RenameFile_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FileSyncService_CreateDir_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateDirRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FileSyncServiceServer).CreateDir(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FileSyncService_CreateDir_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FileSyncServiceServer).CreateDir(ctx, req.(*CreateDirRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FileSyncService_ServiceDesc is the grpc.ServiceDesc for FileSyncService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -257,6 +291,10 @@ var FileSyncService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RenameFile",
 			Handler:    _FileSyncService_RenameFile_Handler,
+		},
+		{
+			MethodName: "CreateDir",
+			Handler:    _FileSyncService_CreateDir_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

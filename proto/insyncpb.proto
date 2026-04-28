@@ -49,6 +49,8 @@ message PutFileInit {
     string relative_path = 2;
 }
 
+
+
 message PutFileRequest {
     oneof payload {
         PutFileInit init = 1;
@@ -58,6 +60,12 @@ message PutFileRequest {
 
 // Тип запроса для удаления файла
 message DeleteFileRequest {
+    string root_name = 1;
+    string relative_path = 2;
+}
+
+// Тип запроса для создания директории
+message CreateDirRequest {
     string root_name = 1;
     string relative_path = 2;
 }
@@ -83,4 +91,5 @@ service FileSyncService {
     rpc PutFile(stream PutFileRequest) returns (google.protobuf.Empty);
     rpc DeleteFile(DeleteFileRequest) returns (google.protobuf.Empty);
     rpc RenameFile(RenameFileRequest) returns (google.protobuf.Empty);
+    rpc CreateDir(CreateDirRequest) returns (google.protobuf.Empty);
 }

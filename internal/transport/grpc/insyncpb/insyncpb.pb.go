@@ -534,6 +534,59 @@ func (x *DeleteFileRequest) GetRelativePath() string {
 	return ""
 }
 
+// Тип запроса для создания директории
+type CreateDirRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RootName      string                 `protobuf:"bytes,1,opt,name=root_name,json=rootName,proto3" json:"root_name,omitempty"`
+	RelativePath  string                 `protobuf:"bytes,2,opt,name=relative_path,json=relativePath,proto3" json:"relative_path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateDirRequest) Reset() {
+	*x = CreateDirRequest{}
+	mi := &file_proto_insyncpb_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateDirRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateDirRequest) ProtoMessage() {}
+
+func (x *CreateDirRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_insyncpb_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateDirRequest.ProtoReflect.Descriptor instead.
+func (*CreateDirRequest) Descriptor() ([]byte, []int) {
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *CreateDirRequest) GetRootName() string {
+	if x != nil {
+		return x.RootName
+	}
+	return ""
+}
+
+func (x *CreateDirRequest) GetRelativePath() string {
+	if x != nil {
+		return x.RelativePath
+	}
+	return ""
+}
+
 // Тип запроса для переименования файла
 type RenameFileRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
@@ -546,7 +599,7 @@ type RenameFileRequest struct {
 
 func (x *RenameFileRequest) Reset() {
 	*x = RenameFileRequest{}
-	mi := &file_proto_insyncpb_proto_msgTypes[9]
+	mi := &file_proto_insyncpb_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -558,7 +611,7 @@ func (x *RenameFileRequest) String() string {
 func (*RenameFileRequest) ProtoMessage() {}
 
 func (x *RenameFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_insyncpb_proto_msgTypes[9]
+	mi := &file_proto_insyncpb_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -571,7 +624,7 @@ func (x *RenameFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenameFileRequest.ProtoReflect.Descriptor instead.
 func (*RenameFileRequest) Descriptor() ([]byte, []int) {
-	return file_proto_insyncpb_proto_rawDescGZIP(), []int{9}
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RenameFileRequest) GetRootName() string {
@@ -606,7 +659,7 @@ type FileChunk struct {
 
 func (x *FileChunk) Reset() {
 	*x = FileChunk{}
-	mi := &file_proto_insyncpb_proto_msgTypes[10]
+	mi := &file_proto_insyncpb_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -618,7 +671,7 @@ func (x *FileChunk) String() string {
 func (*FileChunk) ProtoMessage() {}
 
 func (x *FileChunk) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_insyncpb_proto_msgTypes[10]
+	mi := &file_proto_insyncpb_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -631,7 +684,7 @@ func (x *FileChunk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileChunk.ProtoReflect.Descriptor instead.
 func (*FileChunk) Descriptor() ([]byte, []int) {
-	return file_proto_insyncpb_proto_rawDescGZIP(), []int{10}
+	return file_proto_insyncpb_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *FileChunk) GetIndex() uint64 {
@@ -682,6 +735,9 @@ const file_proto_insyncpb_proto_rawDesc = "" +
 	"\apayload\"U\n" +
 	"\x11DeleteFileRequest\x12\x1b\n" +
 	"\troot_name\x18\x01 \x01(\tR\brootName\x12#\n" +
+	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\"T\n" +
+	"\x10CreateDirRequest\x12\x1b\n" +
+	"\troot_name\x18\x01 \x01(\tR\brootName\x12#\n" +
 	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\"\x88\x01\n" +
 	"\x11RenameFileRequest\x12\x1b\n" +
 	"\troot_name\x18\x01 \x01(\tR\brootName\x12*\n" +
@@ -689,7 +745,7 @@ const file_proto_insyncpb_proto_rawDesc = "" +
 	"\x11new_relative_path\x18\x03 \x01(\tR\x0fnewRelativePath\"5\n" +
 	"\tFileChunk\x12\x14\n" +
 	"\x05index\x18\x01 \x01(\x04R\x05index\x12\x12\n" +
-	"\x04data\x18\x02 \x01(\fR\x04data2\xe4\x02\n" +
+	"\x04data\x18\x02 \x01(\fR\x04data2\xa5\x03\n" +
 	"\x0fFileSyncService\x12J\n" +
 	"\vGetSnapshot\x12\x1c.insyncpb.GetSnapshotRequest\x1a\x1d.insyncpb.GetSnapshotResponse\x12@\n" +
 	"\aGetFile\x12\x18.insyncpb.GetFileRequest\x1a\x19.insyncpb.GetFileResponse0\x01\x12=\n" +
@@ -697,7 +753,8 @@ const file_proto_insyncpb_proto_rawDesc = "" +
 	"\n" +
 	"DeleteFile\x12\x1b.insyncpb.DeleteFileRequest\x1a\x16.google.protobuf.Empty\x12A\n" +
 	"\n" +
-	"RenameFile\x12\x1b.insyncpb.RenameFileRequest\x1a\x16.google.protobuf.EmptyB+Z)internal/transport/grpc/insyncpb;insyncpbb\x06proto3"
+	"RenameFile\x12\x1b.insyncpb.RenameFileRequest\x1a\x16.google.protobuf.Empty\x12?\n" +
+	"\tCreateDir\x12\x1a.insyncpb.CreateDirRequest\x1a\x16.google.protobuf.EmptyB+Z)internal/transport/grpc/insyncpb;insyncpbb\x06proto3"
 
 var (
 	file_proto_insyncpb_proto_rawDescOnce sync.Once
@@ -711,7 +768,7 @@ func file_proto_insyncpb_proto_rawDescGZIP() []byte {
 	return file_proto_insyncpb_proto_rawDescData
 }
 
-var file_proto_insyncpb_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_proto_insyncpb_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_proto_insyncpb_proto_goTypes = []any{
 	(*FileEntry)(nil),           // 0: insyncpb.FileEntry
 	(*Snapshot)(nil),            // 1: insyncpb.Snapshot
@@ -722,28 +779,31 @@ var file_proto_insyncpb_proto_goTypes = []any{
 	(*PutFileInit)(nil),         // 6: insyncpb.PutFileInit
 	(*PutFileRequest)(nil),      // 7: insyncpb.PutFileRequest
 	(*DeleteFileRequest)(nil),   // 8: insyncpb.DeleteFileRequest
-	(*RenameFileRequest)(nil),   // 9: insyncpb.RenameFileRequest
-	(*FileChunk)(nil),           // 10: insyncpb.FileChunk
-	(*emptypb.Empty)(nil),       // 11: google.protobuf.Empty
+	(*CreateDirRequest)(nil),    // 9: insyncpb.CreateDirRequest
+	(*RenameFileRequest)(nil),   // 10: insyncpb.RenameFileRequest
+	(*FileChunk)(nil),           // 11: insyncpb.FileChunk
+	(*emptypb.Empty)(nil),       // 12: google.protobuf.Empty
 }
 var file_proto_insyncpb_proto_depIdxs = []int32{
 	0,  // 0: insyncpb.Snapshot.files:type_name -> insyncpb.FileEntry
 	1,  // 1: insyncpb.GetSnapshotResponse.snapshot:type_name -> insyncpb.Snapshot
-	10, // 2: insyncpb.GetFileResponse.chunk:type_name -> insyncpb.FileChunk
+	11, // 2: insyncpb.GetFileResponse.chunk:type_name -> insyncpb.FileChunk
 	6,  // 3: insyncpb.PutFileRequest.init:type_name -> insyncpb.PutFileInit
-	10, // 4: insyncpb.PutFileRequest.chunk:type_name -> insyncpb.FileChunk
+	11, // 4: insyncpb.PutFileRequest.chunk:type_name -> insyncpb.FileChunk
 	2,  // 5: insyncpb.FileSyncService.GetSnapshot:input_type -> insyncpb.GetSnapshotRequest
 	4,  // 6: insyncpb.FileSyncService.GetFile:input_type -> insyncpb.GetFileRequest
 	7,  // 7: insyncpb.FileSyncService.PutFile:input_type -> insyncpb.PutFileRequest
 	8,  // 8: insyncpb.FileSyncService.DeleteFile:input_type -> insyncpb.DeleteFileRequest
-	9,  // 9: insyncpb.FileSyncService.RenameFile:input_type -> insyncpb.RenameFileRequest
-	3,  // 10: insyncpb.FileSyncService.GetSnapshot:output_type -> insyncpb.GetSnapshotResponse
-	5,  // 11: insyncpb.FileSyncService.GetFile:output_type -> insyncpb.GetFileResponse
-	11, // 12: insyncpb.FileSyncService.PutFile:output_type -> google.protobuf.Empty
-	11, // 13: insyncpb.FileSyncService.DeleteFile:output_type -> google.protobuf.Empty
-	11, // 14: insyncpb.FileSyncService.RenameFile:output_type -> google.protobuf.Empty
-	10, // [10:15] is the sub-list for method output_type
-	5,  // [5:10] is the sub-list for method input_type
+	10, // 9: insyncpb.FileSyncService.RenameFile:input_type -> insyncpb.RenameFileRequest
+	9,  // 10: insyncpb.FileSyncService.CreateDir:input_type -> insyncpb.CreateDirRequest
+	3,  // 11: insyncpb.FileSyncService.GetSnapshot:output_type -> insyncpb.GetSnapshotResponse
+	5,  // 12: insyncpb.FileSyncService.GetFile:output_type -> insyncpb.GetFileResponse
+	12, // 13: insyncpb.FileSyncService.PutFile:output_type -> google.protobuf.Empty
+	12, // 14: insyncpb.FileSyncService.DeleteFile:output_type -> google.protobuf.Empty
+	12, // 15: insyncpb.FileSyncService.RenameFile:output_type -> google.protobuf.Empty
+	12, // 16: insyncpb.FileSyncService.CreateDir:output_type -> google.protobuf.Empty
+	11, // [11:17] is the sub-list for method output_type
+	5,  // [5:11] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
 	5,  // [5:5] is the sub-list for extension extendee
 	0,  // [0:5] is the sub-list for field type_name
@@ -764,7 +824,7 @@ func file_proto_insyncpb_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_insyncpb_proto_rawDesc), len(file_proto_insyncpb_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
