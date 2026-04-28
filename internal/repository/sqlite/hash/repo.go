@@ -43,12 +43,15 @@ func (r *HashRepository) GetHashCache() (map[domain.Path]string, error) {
 }
 
 func (r *HashRepository) SetHashCache(fullPath domain.Path, hash string) error {
-	entry := &HashCacheEntry{
-		FullPath: fullPath.String(),
-		Hash:     hash,
+	var hashCacheEntry HashCacheEntry
+	if err := r.db.First(&hashCacheEntry, "full_path = ?", fullPath).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
 	}
 
-	if err := r.db.Save(entry).Error; err != nil {
+	hashCacheEntry.FullPath = fullPath.String()
+	hashCacheEntry.Hash = hash
+
+	if err := r.db.Save(&hashCacheEntry).Error; err != nil {
 		return err
 	}
 
