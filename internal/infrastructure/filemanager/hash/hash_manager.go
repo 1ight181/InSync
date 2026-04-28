@@ -19,9 +19,10 @@ type HashManager struct {
 }
 
 type HashManagerOptions struct {
-	HashCache      IHashCache
-	HashCalculator IHashCalculator
-	PathTreeReader IPathTreeReader
+	HashCache            IHashCache
+	HashCalculator       IHashCalculator
+	PathTreeReader       IPathTreeReader
+	DirtyPathsRepository IDirtyPathsRepository
 
 	Logger *slog.Logger
 }
@@ -30,20 +31,26 @@ var (
 	ErrInvalidOpts = errors.New("Все поля HashManagerOptions должны быть заполнены")
 )
 
-func NewHashManager(options HashManagerOptions) (*HashManager, error) {
-	if options.HashCache == nil ||
-		options.HashCalculator == nil ||
-		options.PathTreeReader == nil ||
-		options.Logger == nil {
+func NewHashManager(opts HashManagerOptions) (*HashManager, error) {
+	if opts.HashCache == nil ||
+		opts.HashCalculator == nil ||
+		opts.PathTreeReader == nil ||
+		opts.Logger == nil {
 		return nil, ErrInvalidOpts
 	}
-	return &HashManager{
-		hashCache:      options.HashCache,
-		hashCalculator: options.HashCalculator,
-		pathTreeReader: options.PathTreeReader,
 
-		dirtyPaths: make(map[domain.ScopedPath]struct{}),
-		logger:     options.Logger,
+	dirtyPaths, err := opts.DirtyPathsRepository.GetDirtyPaths()
+	if err != nil {
+		return nil, err
+	}
+
+	return &HashManager{
+		hashCache:      opts.HashCache,
+		hashCalculator: opts.HashCalculator,
+		pathTreeReader: opts.PathTreeReader,
+
+		dirtyPaths: dirtyPaths,
+		logger:     opts.Logger,
 		loggerCtx:  context.Background(),
 	}, nil
 }
