@@ -534,12 +534,14 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	var wasErr bool
 	var i int
 	go func() {
 		for changeEvent := range appliedChanges {
 			i++
 			changeEventErr := changeEvent.Err
 			if changeEventErr != nil {
+				wasErr = true
 				c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось применить изменение", slog.String("error", changeEventErr.Error()))
 				fmt.Printf("Не удалось применить изменение: %s\n", changeEventErr)
 				continue
@@ -563,6 +565,7 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 
 		_, decision, err := prompt.Run()
 		if err != nil {
+			wasErr = true
 			c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Ошибка при выборе решения конфликта", slog.String("error", err.Error()))
 			return err
 		}
@@ -571,6 +574,7 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	if err := <-baseSnapshotSaveError; err != nil {
+		wasErr = true
 		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Ошибка при сохранении базового снимка", slog.String("error", err.Error()))
 		return err
 	}
@@ -578,6 +582,12 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 	if interruptCtx.Err() != nil {
 		c.logger.Debug("Синхронизация прервана пользователем")
 		fmt.Println("Синхронизация прервана пользователем")
+		return nil
+	}
+
+	if wasErr {
+		c.logger.Debug("Синхронизация завершена с ошибками")
+		fmt.Println("Синхронизация завершена с ошибками")
 		return nil
 	}
 
