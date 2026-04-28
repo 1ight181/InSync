@@ -46,3 +46,7 @@ func (f *FileSystem) Stat(fullPath domain.Path) (fs.FileInfo, error) {
 func (f *FileSystem) AtomicWrite(fullPath domain.Path, data io.Reader) error {
 	return atom.WriteFile(fullPath.String(), data)
 }
+
+func (f *FileSystem) Mkdir(fullPath domain.Path, perm fs.FileMode) error {
+	return os.Mkdir(fullPath.String(), perm)
+}
