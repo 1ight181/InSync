@@ -347,7 +347,7 @@ func (f *FileManager) resolveHash(
 	baseMetadataByPath map[domain.Path]domain.FileMetadata,
 ) (string, error) {
 	if baseMetadata, ok := baseMetadataByPath[resourceContent.RelativePath]; ok && baseMetadata != currentMetadata {
-		return f.hashManager.ResolveWithForceRecalc(resourceContent)
+		return f.hashManager.ResolveWithForceRecalc(resourceContent, rootName)
 	}
 
 	return f.hashManager.ResolveHash(resourceContent, rootName)
@@ -370,7 +370,7 @@ func (f *FileManager) collectAllFileEntries(
 		return nil, err
 	}
 
-	rootEntrySubtreeSize := uint64(1 + childrenSubtreeSize) // размер корневой директории
+	rootEntrySubtreeSize := uint64(1 + childrenSubtreeSize)
 
 	rootEntry, err := f.createFileEntryForDirectory(ctx, rootAbsolutePath, rootRelativePath, rootEntrySubtreeSize, rootName, baseMetadataByPath)
 	if err != nil {

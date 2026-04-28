@@ -9,10 +9,11 @@ import (
 )
 
 type HashManager struct {
-	hashCache      IHashCache
-	hashCalculator IHashCalculator
-	pathTreeReader IPathTreeReader
-	dirtyPaths     map[domain.ScopedPath]struct{}
+	hashCache            IHashCache
+	hashCalculator       IHashCalculator
+	pathTreeReader       IPathTreeReader
+	dirtyPaths           map[domain.ScopedPath]struct{}
+	dirtyPathsRepository IDirtyPathsRepository
 
 	logger    *slog.Logger
 	loggerCtx context.Context
@@ -80,15 +81,16 @@ func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, rootName
 		)
 	}
 
-	return h.calcHash(resourceContent)
+	return h.calcHash(resourceContent, rootName)
 }
 
-func (h *HashManager) ResolveWithForceRecalc(resourceContent cont.ResourceContent) (string, error) {
-	return h.calcHash(resourceContent)
+func (h *HashManager) ResolveWithForceRecalc(resourceContent cont.ResourceContent, rootName domain.RootName) (string, error) {
+	return h.calcHash(resourceContent, rootName)
 }
 
 func (h *HashManager) MarkDirty(scopedPath domain.ScopedPath) error {
 	h.dirtyPaths[scopedPath] = struct{}{}
+	h.dirtyPathsRepository.SetDirtyPath(scopedPath)
 
 	parents, err := h.pathTreeReader.GetParents(scopedPath)
 	if err != nil {
@@ -97,12 +99,13 @@ func (h *HashManager) MarkDirty(scopedPath domain.ScopedPath) error {
 
 	for _, parent := range parents {
 		h.dirtyPaths[parent] = struct{}{}
+		h.dirtyPathsRepository.SetDirtyPath(parent)
 	}
 
 	return nil
 }
 
-func (h *HashManager) calcHash(resourceContent cont.ResourceContent) (string, error) {
+func (h *HashManager) calcHash(resourceContent cont.ResourceContent, rootName domain.RootName) (string, error) {
 	hash, err := h.hashCalculator.CalculateHash(resourceContent)
 	if err != nil {
 		return "", err
@@ -127,6 +130,14 @@ func (h *HashManager) calcHash(resourceContent cont.ResourceContent) (string, er
 		slog.String("fullPath", resourceContent.FullPath.String()),
 		slog.String("hash", hash),
 	)
+
+	scopedPath, err := domain.NewScopedPath(rootName, resourceContent.FullPath)
+	if err != nil {
+		return "", err
+	}
+
+	delete(h.dirtyPaths, scopedPath)
+	h.dirtyPathsRepository.RemoveDirtyPath(scopedPath)
 
 	return hash, nil
 }

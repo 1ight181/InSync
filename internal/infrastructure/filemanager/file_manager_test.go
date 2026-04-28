@@ -180,7 +180,7 @@ func (s *FileManagerSuite) TestGetSnapshot_UsesResolveWithForceRecalc_WhenMetada
 	s.mockRootResolver.On("ResolveRoot", scopedPath).Return(rootPath, nil)
 	s.mockFileSystem.On("ReadDir", rootPath).Return([]fs.DirEntry{}, nil)
 	s.mockFileSystem.On("Stat", rootPath).Return(mockFileInfo{size: 0, modTime: time.Unix(2, 0), isDir: true}, nil)
-	s.mockHashManager.On("ResolveWithForceRecalc", mock.Anything).Return("recalc-hash", nil)
+	s.mockHashManager.On("ResolveWithForceRecalc", mock.Anything, rootName).Return("recalc-hash", nil)
 
 	snapshot, err := s.fileManager.GetSnapshot(ctx, rootName, &baseSnapshot)
 	s.Require().NoError(err)
@@ -248,8 +248,8 @@ func (m *MockIHashManager) ResolveHash(resourceContent resource.ResourceContent,
 	return args.String(0), args.Error(1)
 }
 
-func (m *MockIHashManager) ResolveWithForceRecalc(resourceContent resource.ResourceContent) (string, error) {
-	args := m.Called(resourceContent)
+func (m *MockIHashManager) ResolveWithForceRecalc(resourceContent resource.ResourceContent, rootName domain.RootName) (string, error) {
+	args := m.Called(resourceContent, rootName)
 	return args.String(0), args.Error(1)
 }
 

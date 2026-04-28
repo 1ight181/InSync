@@ -8,7 +8,7 @@ import (
 type DirtyPath struct {
 	Id       string `gorm:"primaryKey;type:uuid"`
 	FullPath string `gorm:"type:varchar(255);not null;uniqueIndex:ux_dirty_full_path"`
-	RootName string `gorm:"type:varchar(255);not null;uniqueIndex:ux_dirty_root_name"`
+	RootName string `gorm:"type:varchar(255);not null"`
 }
 
 func (d *DirtyPath) BeforeCreate(tx *gorm.DB) error {
