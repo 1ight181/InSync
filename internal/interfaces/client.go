@@ -15,4 +15,5 @@ type IClient interface {
 	DeleteFile(ctx context.Context, scopedPath domain.ScopedPath) error
 	RenameFile(ctx context.Context, oldScopedPath domain.ScopedPath, newScopedPath domain.ScopedPath) error
 	CreateDir(ctx context.Context, scopedPath domain.ScopedPath) error
+	UpdateBaseSnapshot(ctx context.Context, rootName domain.RootName) error
 }
