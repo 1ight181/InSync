@@ -68,3 +68,11 @@ func (r *HashRepository) GetDirtyPaths() (map[domain.ScopedPath]struct{}, error)
 
 	return dirtyPaths, nil
 }
+
+func (r *HashRepository) SetDirtyPath(scopedPath domain.ScopedPath) error {
+	return r.db.Save(&dirty.DirtyPath{RootName: scopedPath.Root.String(), FullPath: scopedPath.Path.String()}).Error
+}
+
+func (r *HashRepository) RemoveDirtyPath(scopedPath domain.ScopedPath) error {
+	return r.db.Delete(&dirty.DirtyPath{RootName: scopedPath.Root.String(), FullPath: scopedPath.Path.String()}).Error
+}
