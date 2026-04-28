@@ -131,7 +131,7 @@ func (h *HashManager) calcHash(resourceContent cont.ResourceContent, rootName do
 		slog.String("hash", hash),
 	)
 
-	scopedPath, err := domain.NewScopedPath(rootName, resourceContent.FullPath)
+	scopedPath, err := domain.NewScopedPath(rootName, resourceContent.RelativePath)
 	if err != nil {
 		return "", err
 	}
