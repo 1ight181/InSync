@@ -32,6 +32,7 @@ import (
 	hashrepo "insync/internal/repository/sqlite/hash"
 	rootrepo "insync/internal/repository/sqlite/root"
 	server "insync/internal/transport/grpc/server"
+	baseusecase "insync/internal/usecase/base"
 	connusecase "insync/internal/usecase/connect"
 	fileusecase "insync/internal/usecase/file"
 	initusecase "insync/internal/usecase/init"
@@ -198,44 +199,42 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать fileUseCase: %v", err))
 	}
 
-	serverLogger := logger.With(moduleAtrributeName, grpcServerModuleName)
-	serverConfig := config.ServerConfig
-	grpcServerOpts := server.GrpcServerOptions{
-		FileUseCase: fileUseCase,
-
-		CertPath:   serverConfig.TlsConfig.GetServerCertPath(),
-		KeyPath:    serverConfig.TlsConfig.GetServerKeyPath(),
-		CaCertPath: serverConfig.TlsConfig.GetCaCertPath(),
-
-		NetworkType: serverConfig.NetworkType,
-		Address:     serverConfig.GetAddress(),
-		ServiceName: serverConfig.ServiceName,
-
-		ChunkSizeInBytes: serverConfig.ChunkSizeInBytes,
-
-		ShouldStartHealthServer: true,
-
-		Logger: serverLogger,
+	deviceIdResolverConfig := config.DeviceIdResolverConfig
+	deviceIdDir := deviceIdResolverConfig.DeviceIdDir
+	if err := os.MkdirAll(deviceIdDir, 0755); err != nil {
+		panic(fmt.Sprintf("Не удалось создать директорию для хранения device id: %v", err))
 	}
 
-	grpcServer, err := server.NewGrpcServer(grpcServerOpts)
+	deviceIdFilePathRaw := deviceIdResolverConfig.GetDeviceIdFilePath()
+	deviceIdFilePath, err := domain.NewPath(deviceIdFilePathRaw)
 	if err != nil {
-		panic(fmt.Sprintf("Не удалось создать gRPC сервер: %v", err))
+		panic(fmt.Sprintf("Не удалось создать путь для хранения device id: %v", err))
 	}
-	err = grpcServer.Start()
+
+	if err := os.MkdirAll(deviceIdResolverConfig.DeviceIdDir, 0755); err != nil {
+		panic(fmt.Sprintf("Не удалось создать директорию для : %v", err))
+	}
+
+	deviceidLocalCreatorOpts := deviceidcreator.LocalDeviceIdCreatorOptions{
+		FileSys:          fileSystem,
+		DeviceIdFilePath: deviceIdFilePath,
+	}
+
+	deviceidlocalCreator, err := deviceidcreator.NewLocalDeviceIdCreator(deviceidLocalCreatorOpts)
 	if err != nil {
-		panic("Не удалось запустить gRPC сервер")
+		panic(fmt.Sprintf("Не удалось создать LocalDeviceIdCreator: %v", err))
+	}
+	localDeviceIdResolverOpts := deviceidlocal.LocalDeviceIdResolverOptions{
+		LocalDeviceIdCreator: deviceidlocalCreator,
 	}
 
-	cleanups.Add(func() {
-		timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), grpcServerGracefulStopTimeoutSeconds*time.Second)
-		defer timeoutCancel()
+	localIdDeviceResolver, err := deviceidlocal.NewLocalDeviceIdResolver(localDeviceIdResolverOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать LocalDeviceIdResolver: %v", err))
+	}
 
-		err := grpcServer.Stop(timeoutCtx)
-		if err != nil {
-			logger.Warn("Не удалось коректно остановить grpcServer")
-		}
-	})
+	clientConfig := config.ClientConfig
+	clientLogger := logger.With(moduleAtrributeName, grpcClientModuleName)
 
 	mDnsBrowserConfig := config.MDnsBrowserConfig
 	mDnsBrowserLogger := logger.With(moduleAtrributeName, mDnsBrowserModuleName)
@@ -249,9 +248,6 @@ func RunApp() {
 	if err != nil {
 		panic(fmt.Sprintf("Не удалось создать MDnsNodeNamesBrowser: %v", err))
 	}
-
-	clientConfig := config.ClientConfig
-	clientLogger := logger.With(moduleAtrributeName, grpcClientModuleName)
 
 	builderOptions := mdnsresolver.BuilderOptions{
 		ResolverIfaces:    mDnsBrowserConfig.GetInterfaces(),
@@ -319,13 +315,22 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать ConnectionManager: %v", err))
 	}
 
-	connectUseCaseOpts := connusecase.ConnectUseCaseOptions{
-		ConnectionManager: connectionManager,
+	remoteDeviceIdResolverOpts := deviceidremote.RemoteDeviceIdResolverOptions{
+		NodeNameProvider: connectionManager,
+	}
+	remoteDeviceIdResolver, err := deviceidremote.NewRemoteDeviceIdResolver(remoteDeviceIdResolverOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать RemoteDeviceIdResolver: %v", err))
 	}
 
-	connectUseCase, err := connusecase.NewConnectUseCase(connectUseCaseOpts)
+	deviceIdProviderOpts := deviceid.DeviceIdProviderOptions{
+		LocalDeviceIdResolver:  localIdDeviceResolver,
+		RemoteDeviceIdResolver: remoteDeviceIdResolver,
+	}
+
+	deviceIdProvider, err := deviceid.NewDeviceIdProvider(deviceIdProviderOpts)
 	if err != nil {
-		panic(fmt.Sprintf("Не удалось создать ConnectUseCase: %v", err))
+		panic(fmt.Sprintf("Не удалось создать DeviceIdProvider: %v", err))
 	}
 
 	baseSnapshotRepositoryOpts := baserepo.BaseSnapshotRepositoryOptions{
@@ -336,35 +341,68 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать BaseSnapshotRepository: %v", err))
 	}
 
-	deviceIdResolverConfig := config.DeviceIdResolverConfig
-	deviceIdDir := deviceIdResolverConfig.DeviceIdDir
-	if err := os.MkdirAll(deviceIdDir, 0755); err != nil {
-		panic(fmt.Sprintf("Не удалось создать директорию для хранения device id: %v", err))
+	baseSnapshotManagerOpts := base.BaseSnapshotManagerOptions{
+		BaseSnapshotRepository: baseSnapshotRepository,
+		DeviceIdProvider:       deviceIdProvider,
 	}
-
-	deviceIdFilePathRaw := deviceIdResolverConfig.GetDeviceIdFilePath()
-	deviceIdFilePath, err := domain.NewPath(deviceIdFilePathRaw)
-
-	if err := os.MkdirAll(deviceIdResolverConfig.DeviceIdDir, 0755); err != nil {
-		panic(fmt.Sprintf("Не удалось создать директорию для : %v", err))
-	}
-
-	deviceidLocalCreatorOpts := deviceidcreator.LocalDeviceIdCreatorOptions{
-		FileSys:          fileSystem,
-		DeviceIdFilePath: deviceIdFilePath,
-	}
-
-	deviceidlocalCreator, err := deviceidcreator.NewLocalDeviceIdCreator(deviceidLocalCreatorOpts)
+	baseSnapshotManager, err := base.NewBaseSnapshotManager(baseSnapshotManagerOpts)
 	if err != nil {
-		panic(fmt.Sprintf("Не удалось создать LocalDeviceIdCreator: %v", err))
-	}
-	localDeviceIdResolverOpts := deviceidlocal.LocalDeviceIdResolverOptions{
-		LocalDeviceIdCreator: deviceidlocalCreator,
+		panic(fmt.Sprintf("Не удалось создать BaseSnapshotManager: %v", err))
 	}
 
-	localIdDeviceResolver, err := deviceidlocal.NewLocalDeviceIdResolver(localDeviceIdResolverOpts)
+	baseUseCaseOpts := baseusecase.BaseSnapshotUseCaseOpts{
+		BaseSnapshotCreator: baseSnapshotManager,
+	}
+
+	baseUseCase, err := baseusecase.NewBaseSnapshotUseCase(baseUseCaseOpts)
+
+	serverLogger := logger.With(moduleAtrributeName, grpcServerModuleName)
+	serverConfig := config.ServerConfig
+	grpcServerOpts := server.GrpcServerOptions{
+		FileUseCase: fileUseCase,
+		BaseUseCase: baseUseCase,
+
+		CertPath:   serverConfig.TlsConfig.GetServerCertPath(),
+		KeyPath:    serverConfig.TlsConfig.GetServerKeyPath(),
+		CaCertPath: serverConfig.TlsConfig.GetCaCertPath(),
+
+		NetworkType: serverConfig.NetworkType,
+		Address:     serverConfig.GetAddress(),
+		ServiceName: serverConfig.ServiceName,
+
+		ChunkSizeInBytes: serverConfig.ChunkSizeInBytes,
+
+		ShouldStartHealthServer: true,
+
+		Logger: serverLogger,
+	}
+
+	grpcServer, err := server.NewGrpcServer(grpcServerOpts)
 	if err != nil {
-		panic(fmt.Sprintf("Не удалось создать LocalDeviceIdResolver: %v", err))
+		panic(fmt.Sprintf("Не удалось создать gRPC сервер: %v", err))
+	}
+	err = grpcServer.Start()
+	if err != nil {
+		panic("Не удалось запустить gRPC сервер")
+	}
+
+	cleanups.Add(func() {
+		timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), grpcServerGracefulStopTimeoutSeconds*time.Second)
+		defer timeoutCancel()
+
+		err := grpcServer.Stop(timeoutCtx)
+		if err != nil {
+			logger.Warn("Не удалось коректно остановить grpcServer")
+		}
+	})
+
+	connectUseCaseOpts := connusecase.ConnectUseCaseOptions{
+		ConnectionManager: connectionManager,
+	}
+
+	connectUseCase, err := connusecase.NewConnectUseCase(connectUseCaseOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать ConnectUseCase: %v", err))
 	}
 
 	nodeUseCaseOpts := nodeusecase.NodeUseCaseOptions{
@@ -398,33 +436,6 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось запустить mDNS сервер: %v", err))
 	}
 
-	remoteDeviceIdResolverOpts := deviceidremote.RemoteDeviceIdResolverOptions{
-		NodeNameProvider: connectionManager,
-	}
-	remoteDeviceIdResolver, err := deviceidremote.NewRemoteDeviceIdResolver(remoteDeviceIdResolverOpts)
-	if err != nil {
-		panic(fmt.Sprintf("Не удалось создать RemoteDeviceIdResolver: %v", err))
-	}
-
-	deviceIdProviderOpts := deviceid.DeviceIdProviderOptions{
-		LocalDeviceIdResolver:  localIdDeviceResolver,
-		RemoteDeviceIdResolver: remoteDeviceIdResolver,
-	}
-
-	deviceIdProvider, err := deviceid.NewDeviceIdProvider(deviceIdProviderOpts)
-	if err != nil {
-		panic(fmt.Sprintf("Не удалось создать DeviceIdProvider: %v", err))
-	}
-
-	BaseSnapshotManagerOpts := base.BaseSnapshotManagerOptions{
-		BaseSnapshotRepository: baseSnapshotRepository,
-		DeviceIdProvider:       deviceIdProvider,
-	}
-	BaseSnapshotManager, err := base.NewBaseSnapshotManager(BaseSnapshotManagerOpts)
-	if err != nil {
-		panic(fmt.Sprintf("Не удалось создать BaseSnapshotManager: %v", err))
-	}
-
 	remoteSnapshotProviderOpts := remote.RemoteSnapshotProviderOptions{
 		ClientFactory: connectionManager,
 	}
@@ -446,7 +457,7 @@ func RunApp() {
 	planCache := planres.NewSyncPlanCache()
 
 	planResolverOpts := planres.PlanResolverOptions{
-		BaseSnapshotProvider:   BaseSnapshotManager,
+		BaseSnapshotProvider:   baseSnapshotManager,
 		RemoteSnapshotProvider: remoteSnapshotProvider,
 		LocalSnapshotProvider:  localSnapshotProvider,
 
@@ -489,7 +500,7 @@ func RunApp() {
 	postSyncBaseSnapshotPersisterOpts := persister.PostSyncBaseSnapshotPersisterOptions{
 		BaseSnapshotRepository: baseSnapshotRepository,
 		DeviceIdProvider:       deviceIdProvider,
-		SnapshotProvider:       BaseSnapshotManager,
+		SnapshotProvider:       baseSnapshotManager,
 	}
 	postSyncBaseSnapshotPersister, err := persister.NewPostSyncBaseSnapshotPersister(postSyncBaseSnapshotPersisterOpts)
 	if err != nil {
@@ -519,7 +530,7 @@ func RunApp() {
 	cliLogger := logger.With(moduleAtrributeName, cliModuleName)
 
 	initUseCaseOpts := initusecase.InitUseCaseOptions{
-		BaseSnapshotCreator:    BaseSnapshotManager,
+		BaseSnapshotCreator:    baseSnapshotManager,
 		RemoteSnapshotProvider: remoteSnapshotProvider,
 		LocalSnapshotProvider:  localSnapshotProvider,
 	}
