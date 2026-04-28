@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"insync/internal/domain"
 	"insync/internal/transport/grpc/insyncpb"
 	"io"
@@ -52,9 +53,19 @@ func (m *MockFileUseCase) CreateDir(ctx context.Context, scopedPath domain.Scope
 	return args.Error(0)
 }
 
+type MockIBaseSnapshotUseCase struct {
+	mock.Mock
+}
+
+func (m *MockIBaseSnapshotUseCase) UpdateBaseSnapshot(ctx context.Context, rootName domain.RootName) error {
+	args := m.Called(ctx, rootName)
+	return args.Error(0)
+}
+
 type ServerSuite struct {
 	suite.Suite
 	mockFileUseCase *MockFileUseCase
+	mockBaseUseCase *MockIBaseSnapshotUseCase
 	grpcServer      *GrpcServer
 	server          *grpc.Server
 	client          *grpc.ClientConn
@@ -64,10 +75,12 @@ type ServerSuite struct {
 
 func (s *ServerSuite) SetupTest() {
 	s.mockFileUseCase = &MockFileUseCase{}
+	s.mockBaseUseCase = &MockIBaseSnapshotUseCase{}
 	s.lis = bufconn.Listen(1024 * 1024)
 
 	grpcServerOpts := GrpcServerOptions{
 		FileUseCase:             s.mockFileUseCase,
+		BaseUseCase:             s.mockBaseUseCase,
 		Creds:                   insecure.NewCredentials(),
 		NetworkType:             "bufnet",
 		Address:                 "bufnet",
@@ -141,6 +154,35 @@ func (s *ServerSuite) TestServer_DeleteFile_Success() {
 	s.Require().NotNil(responce)
 
 	s.mockFileUseCase.AssertExpectations(s.T())
+}
+
+func (s *ServerSuite) TestServer_UpdateBaseSnapshot_Success() {
+	ctx := context.Background()
+	rootName := domain.RootName("root")
+	s.mockBaseUseCase.On("UpdateBaseSnapshot", mock.Anything, rootName).Return(nil)
+
+	response, err := s.pbClient.UpdateBaseSnapshot(ctx, &insyncpb.UpdateBaseSnapshotRequest{
+		RootName: rootName.String(),
+	})
+	s.Require().NoError(err)
+	s.Require().NotNil(response)
+
+	s.mockBaseUseCase.AssertExpectations(s.T())
+}
+
+func (s *ServerSuite) TestServer_UpdateBaseSnapshot_Fails_ReturnsError() {
+	ctx := context.Background()
+	rootName := domain.RootName("root")
+	expectedErr := errors.New("update failed")
+	s.mockBaseUseCase.On("UpdateBaseSnapshot", mock.Anything, rootName).Return(expectedErr)
+
+	_, err := s.pbClient.UpdateBaseSnapshot(ctx, &insyncpb.UpdateBaseSnapshotRequest{
+		RootName: rootName.String(),
+	})
+	s.Require().Error(err)
+	s.Require().ErrorContains(err, expectedErr.Error())
+
+	s.mockBaseUseCase.AssertExpectations(s.T())
 }
 
 func (s *ServerSuite) TestServer_RenameFile_Success() {

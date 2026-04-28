@@ -139,6 +139,37 @@ func (s *ClientSuite) TestClient_CreateDir_Success() {
 	s.Require().NoError(err)
 }
 
+func (s *ClientSuite) TestClient_Close_Success() {
+	s.Require().NoError(s.client.Connect())
+
+	err := s.client.Close()
+	s.Require().NoError(err)
+	s.False(s.client.isStarted.Load())
+}
+
+func (s *ClientSuite) TestClient_Close_AlreadyStopped_ReturnErrClientAlreadyStopped() {
+	if s.client.isStarted.Load() {
+		_ = s.client.Close()
+	}
+
+	err := s.client.Close()
+	s.Require().ErrorIs(err, ErrClientAlreadyStopped)
+}
+
+func (s *ClientSuite) TestClient_Connect_AlreadyStarted_ReturnErrClientAlreadyStarted() {
+	s.Require().NoError(s.client.Connect())
+
+	err := s.client.Connect()
+	s.Require().ErrorIs(err, ErrClientAlreadyStarted)
+}
+
+func (s *ClientSuite) TestClient_UpdateBaseSnapshot_Success() {
+	s.Require().NoError(s.client.Connect())
+
+	err := s.client.UpdateBaseSnapshot(context.Background(), domain.RootName("photos"))
+	s.Require().NoError(err)
+}
+
 func (s *ClientSuite) TestClient_Methods_WhenNotStarted_ReturnErrClientNotStarted() {
 	s.client.isStarted.Store(false)
 	_, err := s.client.GetSnapshot(context.Background(), domain.RootName("root"))
@@ -159,6 +190,9 @@ func (s *ClientSuite) TestClient_Methods_WhenNotStarted_ReturnErrClientNotStarte
 	s.Require().ErrorIs(err, ErrClientNotStarted)
 
 	err = s.client.CreateDir(context.Background(), scopedPath)
+	s.Require().ErrorIs(err, ErrClientNotStarted)
+
+	err = s.client.UpdateBaseSnapshot(context.Background(), domain.RootName("root"))
 	s.Require().ErrorIs(err, ErrClientNotStarted)
 }
 
@@ -213,5 +247,9 @@ func (s *testClient_FileSyncServer) RenameFile(context.Context, *insyncpb.Rename
 }
 
 func (s *testClient_FileSyncServer) CreateDir(context.Context, *insyncpb.CreateDirRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
+}
+
+func (s *testClient_FileSyncServer) UpdateBaseSnapshot(context.Context, *insyncpb.UpdateBaseSnapshotRequest) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, nil
 }
