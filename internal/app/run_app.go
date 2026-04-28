@@ -163,10 +163,11 @@ func RunApp() {
 	hashManagerLogger := logger.With(moduleAtrributeName, hashManagerModuleName)
 
 	hashManagerOpts := hash.HashManagerOptions{
-		HashCache:      hashCache,
-		HashCalculator: hashCalc,
-		PathTreeReader: pathTree,
-		Logger:         hashManagerLogger,
+		HashCache:            hashCache,
+		HashCalculator:       hashCalc,
+		PathTreeReader:       pathTree,
+		DirtyPathsRepository: hashCacheRepo,
+		Logger:               hashManagerLogger,
 	}
 
 	hashManager, err := hash.NewHashManager(hashManagerOpts)
