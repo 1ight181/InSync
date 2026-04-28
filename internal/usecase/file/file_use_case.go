@@ -45,3 +45,7 @@ func (f *FileUseCase) RenameFile(ctx context.Context, scopedOldPath domain.Scope
 func (f *FileUseCase) GetFile(ctx context.Context, scopedPath domain.ScopedPath) (io.ReadCloser, error) {
 	return f.fileManager.GetFile(ctx, scopedPath)
 }
+
+func (f *FileUseCase) CreateDir(ctx context.Context, scopedPath domain.ScopedPath) error {
+	return f.fileManager.CreateDir(ctx, scopedPath)
+}
