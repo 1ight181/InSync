@@ -294,7 +294,7 @@ func TestPlanner_ThreeNewFilesAndDirOnLocalOneFileOnRemote_CreateChangeOnRemote(
 		},
 		{
 			NewRelativePath: mustPath(t, "/a/b/e"),
-			ChangeType:      domain.CreateFile,
+			ChangeType:      domain.CreateDir,
 		},
 	}
 
@@ -631,6 +631,132 @@ func TestPlanner_BothRenamedDifferently_ReturnsConflict(t *testing.T) {
 	require.Len(t, plan.RemoteChanges, 0)
 	require.Len(t, plan.Conflicts, 1)
 	require.Equal(t, domain.ConflictLocalRenamedRemoteRenamed, plan.Conflicts[0].Conflict)
+}
+
+func TestPlanner_NewDirectoryOnLocal_CreateDirChangeOnRemote(t *testing.T) {
+	planner := NewChangesPlannerWithTreeSkip()
+	ctx := context.Background()
+
+	baseFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/a", "dir-a-base", 1, 100, 0),
+	}
+
+	localFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/a", "dir-a-local", 2, 100, 0),
+		createDirectoryEntry(t, "/a/b", "dir-a-b-local", 1, 110, 0),
+	}
+
+	remoteFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/a", "dir-a-base", 1, 100, 0),
+	}
+
+	baseSnap := createSnapshot(t, baseFiles)
+	localSnap := createSnapshot(t, localFiles)
+	remoteSnap := createSnapshot(t, remoteFiles)
+
+	plan, err := planner.Plan(ctx, baseSnap, localSnap, remoteSnap)
+	require.NoError(t, err)
+	require.Len(t, plan.LocalChanges, 0)
+	require.Len(t, plan.RemoteChanges, 1)
+	require.Len(t, plan.Conflicts, 0)
+
+	require.Equal(t, domain.CreateDir, plan.RemoteChanges[0].ChangeType)
+	require.Equal(t, mustPath(t, "/a/b"), plan.RemoteChanges[0].NewRelativePath)
+}
+
+func TestPlanner_NewDirectoryOnRemote_CreateDirChangeOnLocal(t *testing.T) {
+	planner := NewChangesPlannerWithTreeSkip()
+	ctx := context.Background()
+
+	baseFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/a", "dir-a-base", 1, 100, 0),
+	}
+
+	localFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/a", "dir-a-base", 1, 100, 0),
+	}
+
+	remoteFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/a", "dir-a-remote", 2, 100, 0),
+		createDirectoryEntry(t, "/a/b", "dir-a-b-remote", 1, 110, 0),
+	}
+
+	baseSnap := createSnapshot(t, baseFiles)
+	localSnap := createSnapshot(t, localFiles)
+	remoteSnap := createSnapshot(t, remoteFiles)
+
+	plan, err := planner.Plan(ctx, baseSnap, localSnap, remoteSnap)
+	require.NoError(t, err)
+	require.Len(t, plan.LocalChanges, 1)
+	require.Len(t, plan.RemoteChanges, 0)
+	require.Len(t, plan.Conflicts, 0)
+
+	require.Equal(t, domain.CreateDir, plan.LocalChanges[0].ChangeType)
+	require.Equal(t, mustPath(t, "/a/b"), plan.LocalChanges[0].NewRelativePath)
+}
+
+func TestPlanner_DeletedDirectoryOnLocal_DeleteChangeOnRemote(t *testing.T) {
+	planner := NewChangesPlannerWithTreeSkip()
+	ctx := context.Background()
+
+	baseFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/a", "dir-a-base", 2, 100, 0),
+		createDirectoryEntry(t, "/a/b", "dir-a-b-base", 1, 110, 0),
+	}
+
+	localFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/a", "dir-a-local", 1, 100, 0),
+	}
+
+	remoteFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/a", "dir-a-remote", 2, 100, 0),
+		createDirectoryEntry(t, "/a/b", "dir-a-b-base", 1, 110, 0),
+	}
+
+	baseSnap := createSnapshot(t, baseFiles)
+	localSnap := createSnapshot(t, localFiles)
+	remoteSnap := createSnapshot(t, remoteFiles)
+
+	plan, err := planner.Plan(ctx, baseSnap, localSnap, remoteSnap)
+	require.NoError(t, err)
+	require.Len(t, plan.LocalChanges, 0)
+	require.Len(t, plan.RemoteChanges, 1)
+	require.Len(t, plan.Conflicts, 0)
+
+	require.Equal(t, domain.Delete, plan.RemoteChanges[0].ChangeType)
+	require.Equal(t, mustPath(t, "/a/b"), plan.RemoteChanges[0].OldRelativePath)
+}
+
+func TestPlanner_DeletedDirectoryOnRemote_DeleteChangeOnLocal(t *testing.T) {
+	planner := NewChangesPlannerWithTreeSkip()
+	ctx := context.Background()
+
+	baseFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/a", "dir-a-base", 2, 100, 0),
+		createDirectoryEntry(t, "/a/b", "dir-a-b-base", 1, 110, 0),
+	}
+
+	localFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/a", "dir-a-local", 2, 100, 0),
+		createDirectoryEntry(t, "/a/b", "dir-a-b-base", 1, 110, 0),
+	}
+
+	remoteFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/a", "dir-a-remote", 1, 100, 0),
+	}
+
+	baseSnap := createSnapshot(t, baseFiles)
+	localSnap := createSnapshot(t, localFiles)
+	remoteSnap := createSnapshot(t, remoteFiles)
+
+	plan, err := planner.Plan(ctx, baseSnap, localSnap, remoteSnap)
+	require.NoError(t, err)
+	require.Len(t, plan.LocalChanges, 1)
+	require.Len(t, plan.RemoteChanges, 0)
+	require.Len(t, plan.Conflicts, 0)
+
+	require.Equal(t, domain.Delete, plan.LocalChanges[0].ChangeType)
+	require.Equal(t, mustPath(t, "/a/b"), plan.LocalChanges[0].OldRelativePath)
 }
 
 // Возвращает пустой снапшот, если не заданы входные параметры
