@@ -55,16 +55,15 @@ func (r *HashRepository) SetHashCache(fullPath domain.Path, hash string) error {
 	return nil
 }
 
-func (r *HashRepository) GetDirtyPaths(rootName domain.RootName) (map[domain.Path]struct{}, error) {
-	var entries []dirty.DirtyPath
-	if err := r.db.Find(&entries, "root_name = ?", rootName).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+func (r *HashRepository) GetDirtyPaths() (map[domain.ScopedPath]struct{}, error) {
+	var dirtyPathEntries []dirty.DirtyPath
+	if err := r.db.Find(&dirtyPathEntries).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 
-	dirtyPaths := make(map[domain.Path]struct{}, len(entries))
-	for _, entry := range entries {
-		// Уже валидированные при добавлении
-		dirtyPaths[domain.Path(entry.FullPath)] = struct{}{}
+	dirtyPaths := make(map[domain.ScopedPath]struct{})
+	for _, dirtyPathEntry := range dirtyPathEntries {
+		dirtyPaths[domain.ScopedPath{Root: domain.RootName(dirtyPathEntry.RootName), Path: domain.Path(dirtyPathEntry.FullPath)}] = struct{}{}
 	}
 
 	return dirtyPaths, nil
