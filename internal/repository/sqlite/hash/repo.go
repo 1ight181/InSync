@@ -33,15 +33,21 @@ func (r *HashRepository) GetHashCache() (map[domain.Path]string, error) {
 	if err := r.db.Find(&entries).Error; err != nil {
 		return nil, err
 	}
-
+	var expired []HashCacheEntry
 	cache := make(map[domain.Path]string, len(entries))
 	for _, entry := range entries {
 		if entry.Expires < time.Now().Unix() {
-			continue
+			expired = append(expired, entry)
 		}
 
 		// Уже валидированные при добавлении
 		cache[domain.Path(entry.FullPath)] = entry.Hash
+	}
+
+	if len(expired) > 0 {
+		if err := r.db.Delete(&expired).Error; err != nil {
+			return nil, err
+		}
 	}
 
 	return cache, nil
