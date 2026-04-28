@@ -47,6 +47,11 @@ func (m *MockFileUseCase) GetFile(ctx context.Context, scopedPath domain.ScopedP
 	return args.Get(0).(io.ReadCloser), args.Error(1)
 }
 
+func (m *MockFileUseCase) CreateDir(ctx context.Context, scopedPath domain.ScopedPath) error {
+	args := m.Called(ctx, scopedPath)
+	return args.Error(0)
+}
+
 type ServerSuite struct {
 	suite.Suite
 	mockFileUseCase *MockFileUseCase
@@ -390,4 +395,19 @@ func Test_domainSnapshotToPb(t *testing.T) {
 	require.Len(t, result.Files, 1)
 	require.Equal(t, "file.txt", result.Files[0].RelativePath)
 	require.Equal(t, "h1", result.Files[0].Hash)
+}
+
+func (s *ServerSuite) TestServer_CreateDir_Success() {
+	ctx := context.Background()
+	rootName := domain.RootName("root")
+	relativePath := domain.Path("new_dir")
+	s.mockFileUseCase.On("CreateDir", mock.Anything, domain.ScopedPath{Root: rootName, Path: relativePath}).Return(nil).Once()
+	responce, err := s.pbClient.CreateDir(ctx, &insyncpb.CreateDirRequest{
+		RootName:     rootName.String(),
+		RelativePath: relativePath.String(),
+	})
+	s.Require().NoError(err)
+	s.Require().NotNil(responce)
+
+	s.mockFileUseCase.AssertExpectations(s.T())
 }
