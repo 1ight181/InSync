@@ -194,9 +194,7 @@ func (s *SyncerSuite) TestSync_WithConflicts_ResolvesSuccessfully() {
 	appliedChanges, conflicts, errors, userDecision, err := s.syncer.Sync(ctx, plan, rootName)
 	s.Require().NoError(err)
 
-	// Send decision
 	userDecision <- decision
-	close(userDecision)
 
 	var changeEvents []domain.ChangeEvent
 	var conflictList []domain.Conflict

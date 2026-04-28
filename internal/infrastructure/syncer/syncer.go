@@ -142,5 +142,5 @@ func (s *Syncer) resolveConflict(
 		}
 	}
 
-	return domain.SyncChange{}, nil
+	return requiredChange, nil
 }
