@@ -53,3 +53,17 @@ func (r *HashRepository) SetHashCache(fullPath domain.Path, hash string) error {
 
 	return nil
 }
+
+func (r *HashRepository) GetDirtyPaths() ([]domain.Path, error) {
+	var entries []HashCacheEntry
+	if err := r.db.Find(&entries).Error; err != nil {
+		return nil, err
+	}
+
+	dirtyPaths := make([]domain.Path, 0, len(entries))
+	for _, entry := range entries {
+		dirtyPaths = append(dirtyPaths, domain.Path(entry.FullPath))
+	}
+
+	return dirtyPaths, nil
+}
