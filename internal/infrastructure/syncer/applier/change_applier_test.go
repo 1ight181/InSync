@@ -93,6 +93,21 @@ func (s *ChangeApplierSuite) TestApplyLocal_CreateFile_Success() {
 	s.Require().NoError(err)
 }
 
+func (s *ChangeApplierSuite) TestApplyLocal_CreateDir_Success() {
+	ctx := context.Background()
+	rootName := domain.RootName("test")
+	change := domain.LocalChange{
+		NewRelativePath: mustPath(s.T(), "/folder"),
+		ChangeType:      domain.CreateDir,
+	}
+	scopedPath := mustScopedPath(s.T(), rootName, change.NewRelativePath)
+
+	s.mockFileManager.On("CreateDir", ctx, scopedPath).Return(nil)
+
+	err := s.changeApplier.ApplyLocal(ctx, rootName, change)
+	s.Require().NoError(err)
+}
+
 func (s *ChangeApplierSuite) TestApplyLocal_Delete_Success() {
 	ctx := context.Background()
 	rootName := domain.RootName("test")
@@ -115,6 +130,23 @@ func (s *ChangeApplierSuite) TestApplyLocal_Rename_Success() {
 		OldRelativePath: mustPath(s.T(), "/old.txt"),
 		NewRelativePath: mustPath(s.T(), "/new.txt"),
 		ChangeType:      domain.Rename,
+	}
+	oldScopedPath := mustScopedPath(s.T(), rootName, change.OldRelativePath)
+	newScopedPath := mustScopedPath(s.T(), rootName, change.NewRelativePath)
+
+	s.mockFileManager.On("RenameFile", ctx, oldScopedPath, newScopedPath).Return(nil)
+
+	err := s.changeApplier.ApplyLocal(ctx, rootName, change)
+	s.Require().NoError(err)
+}
+
+func (s *ChangeApplierSuite) TestApplyLocal_Move_Success() {
+	ctx := context.Background()
+	rootName := domain.RootName("test")
+	change := domain.LocalChange{
+		OldRelativePath: mustPath(s.T(), "/old.txt"),
+		NewRelativePath: mustPath(s.T(), "/new.txt"),
+		ChangeType:      domain.Move,
 	}
 	oldScopedPath := mustScopedPath(s.T(), rootName, change.OldRelativePath)
 	newScopedPath := mustScopedPath(s.T(), rootName, change.NewRelativePath)
@@ -150,6 +182,22 @@ func (s *ChangeApplierSuite) TestApplyRemote_CreateFile_Success() {
 	s.mockClientFactory.On("CurrentClient").Return(s.mockClient, nil)
 	s.mockFileManager.On("GetFile", ctx, scopedPath).Return(content, nil)
 	s.mockClient.On("PutFile", ctx, content, scopedPath).Return(nil)
+
+	err := s.changeApplier.ApplyRemote(ctx, rootName, change)
+	s.Require().NoError(err)
+}
+
+func (s *ChangeApplierSuite) TestApplyRemote_CreateDir_Success() {
+	ctx := context.Background()
+	rootName := domain.RootName("test")
+	change := domain.RemoteChange{
+		NewRelativePath: mustPath(s.T(), "/folder"),
+		ChangeType:      domain.CreateDir,
+	}
+	scopedPath := mustScopedPath(s.T(), rootName, change.NewRelativePath)
+
+	s.mockClientFactory.On("CurrentClient").Return(s.mockClient, nil)
+	s.mockClient.On("CreateDir", ctx, scopedPath).Return(nil)
 
 	err := s.changeApplier.ApplyRemote(ctx, rootName, change)
 	s.Require().NoError(err)
@@ -241,6 +289,11 @@ func (m *MockIFileManager) GetFile(ctx context.Context, scopedPath domain.Scoped
 	return args.Get(0).(io.ReadCloser), args.Error(1)
 }
 
+func (m *MockIFileManager) CreateDir(ctx context.Context, scopedPath domain.ScopedPath) error {
+	args := m.Called(ctx, scopedPath)
+	return args.Error(0)
+}
+
 type MockIClientFactory struct {
 	mock.Mock
 }
@@ -254,14 +307,19 @@ type MockIClient struct {
 	mock.Mock
 }
 
+func (m *MockIClient) GetFile(ctx context.Context, scopedPath domain.ScopedPath) (io.ReadCloser, error) {
+	args := m.Called(ctx, scopedPath)
+	return args.Get(0).(io.ReadCloser), args.Error(1)
+}
+
 func (m *MockIClient) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
 	args := m.Called(ctx, rootName)
 	return args.Get(0).(domain.Snapshot), args.Error(1)
 }
 
-func (m *MockIClient) GetFile(ctx context.Context, scopedPath domain.ScopedPath) (io.ReadCloser, error) {
-	args := m.Called(ctx, scopedPath)
-	return args.Get(0).(io.ReadCloser), args.Error(1)
+func (m *MockIClient) UpdateBaseSnapshot(ctx context.Context, rootName domain.RootName) error {
+	args := m.Called(ctx, rootName)
+	return args.Error(0)
 }
 
 func (m *MockIClient) PutFile(ctx context.Context, content io.Reader, scopedPath domain.ScopedPath) error {
