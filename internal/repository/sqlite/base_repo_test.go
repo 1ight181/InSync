@@ -4,6 +4,7 @@ import (
 	"context"
 	"insync/internal/domain"
 	baserepo "insync/internal/repository/sqlite/base"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -17,11 +18,12 @@ type BaseRepositorySuite struct {
 	db   *gorm.DB
 }
 
-func (s *BaseRepositorySuite) SetupSuite() {
+func (s *BaseRepositorySuite) SetupTest() {
 	migrator := NewAutoMigrator()
 	dbOpts := SqliteGormOptions{
 		Dsn:      ":memory:",
 		Migrator: migrator,
+		Logger:   slog.Default(),
 	}
 
 	db, err := NewGorm(dbOpts)

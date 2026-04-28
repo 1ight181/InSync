@@ -3,6 +3,7 @@ package sqlite
 import (
 	"insync/internal/domain"
 	hashrepo "insync/internal/repository/sqlite/hash"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -16,11 +17,12 @@ type HashRepositorySuite struct {
 	repo *hashrepo.HashRepository
 }
 
-func (s *HashRepositorySuite) SetupSuite() {
+func (s *HashRepositorySuite) SetupTest() {
 	migrator := NewAutoMigrator()
 	dbOpts := SqliteGormOptions{
 		Migrator: migrator,
 		Dsn:      ":memory:",
+		Logger:   slog.Default(),
 	}
 
 	db, err := NewGorm(dbOpts)

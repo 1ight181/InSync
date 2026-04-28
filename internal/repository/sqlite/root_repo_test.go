@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"insync/internal/domain"
+	"log/slog"
 	"testing"
 
 	root "insync/internal/repository/sqlite/root"
@@ -21,12 +22,13 @@ func TestRootRepositorySuite(t *testing.T) {
 	suite.Run(t, new(RootRepositorySuite))
 }
 
-func (s *RootRepositorySuite) SetupSuite() {
+func (s *RootRepositorySuite) SetupTest() {
 	migrator := NewAutoMigrator()
 
 	dbOpts := SqliteGormOptions{
 		Dsn:      ":memory:",
 		Migrator: migrator,
+		Logger:   slog.Default(),
 	}
 
 	db, err := NewGorm(dbOpts)
