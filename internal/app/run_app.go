@@ -350,11 +350,23 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать BaseSnapshotManager: %v", err))
 	}
 
+	localSnapshotProviderOpts := local.LocalSnapshotProviderOptions{
+		FileManager: fileManager,
+	}
+	localSnapshotProvider, err := local.NewLocalSnapshotProvider(localSnapshotProviderOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать LocalSnapshotProvider: %v", err))
+	}
+
 	baseUseCaseOpts := baseusecase.BaseSnapshotUseCaseOpts{
-		BaseSnapshotCreator: baseSnapshotManager,
+		BaseSnapshotCreator:   baseSnapshotManager,
+		LocalSnapshotProvider: localSnapshotProvider,
 	}
 
 	baseUseCase, err := baseusecase.NewBaseSnapshotUseCase(baseUseCaseOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать BaseSnapshotUseCase: %v", err))
+	}
 
 	serverLogger := logger.With(moduleAtrributeName, grpcServerModuleName)
 	serverConfig := config.ServerConfig
@@ -442,14 +454,6 @@ func RunApp() {
 	remoteSnapshotProvider, err := remote.NewRemoteSnapshotProvider(remoteSnapshotProviderOpts)
 	if err != nil {
 		panic(fmt.Sprintf("Не удалось создать RemoteSnapshotProvider: %v", err))
-	}
-
-	localSnapshotProviderOpts := local.LocalSnapshotProviderOptions{
-		FileManager: fileManager,
-	}
-	localSnapshotProvider, err := local.NewLocalSnapshotProvider(localSnapshotProviderOpts)
-	if err != nil {
-		panic(fmt.Sprintf("Не удалось создать LocalSnapshotProvider: %v", err))
 	}
 
 	planner := planner.NewChangesPlannerWithTreeSkip()
