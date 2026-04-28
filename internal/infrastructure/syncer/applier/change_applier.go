@@ -95,6 +95,12 @@ func (a *ChangeApplier) ApplyRemote(ctx context.Context, rootName domain.RootNam
 			return err
 		}
 		return client.PutFile(ctx, content, scopedPath)
+	case domain.CreateDir:
+		scopedPath, err := domain.NewScopedPath(rootName, change.NewRelativePath)
+		if err != nil {
+			return err
+		}
+		return client.CreateDir(ctx, scopedPath)
 	case domain.Delete:
 		scopedPath, err := domain.NewScopedPath(rootName, change.OldRelativePath)
 		if err != nil {
