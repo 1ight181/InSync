@@ -131,7 +131,8 @@ func (s *ServerSuite) TestServer_DeleteFile_Success() {
 	ctx := context.Background()
 	rootName := domain.RootName("root")
 	relativePath := domain.Path("file.txt")
-	s.mockFileUseCase.On("DeleteFile", mock.Anything, rootName, relativePath).Return(nil)
+	scopedPath := domain.ScopedPath{Root: rootName, Path: relativePath}
+	s.mockFileUseCase.On("DeleteFile", mock.Anything, scopedPath).Return(nil)
 	responce, err := s.pbClient.DeleteFile(ctx, &insyncpb.DeleteFileRequest{
 		RootName:     rootName.String(),
 		RelativePath: relativePath.String(),
@@ -147,7 +148,9 @@ func (s *ServerSuite) TestServer_RenameFile_Success() {
 	rootName := domain.RootName("root")
 	oldRelativePath := domain.Path("old_file.txt")
 	newRelativePath := domain.Path("new_file.txt")
-	s.mockFileUseCase.On("RenameFile", mock.Anything, rootName, oldRelativePath, newRelativePath).Return(nil)
+	oldScopedPath := domain.ScopedPath{Root: rootName, Path: oldRelativePath}
+	newScopedPath := domain.ScopedPath{Root: rootName, Path: newRelativePath}
+	s.mockFileUseCase.On("RenameFile", mock.Anything, oldScopedPath, newScopedPath).Return(nil)
 	responce, err := s.pbClient.RenameFile(ctx, &insyncpb.RenameFileRequest{
 		RootName:        rootName.String(),
 		OldRelativePath: oldRelativePath.String(),
@@ -163,8 +166,9 @@ func (s *ServerSuite) TestServer_GetFile_Success() {
 	ctx := context.Background()
 	rootName := domain.RootName("root")
 	relativePath := domain.Path("file.txt")
+	scopedPath := domain.ScopedPath{Root: rootName, Path: relativePath}
 	fileContent := "file content"
-	s.mockFileUseCase.On("GetFile", mock.Anything, rootName, relativePath).Return(io.NopCloser(strings.NewReader(fileContent)), nil)
+	s.mockFileUseCase.On("GetFile", mock.Anything, scopedPath).Return(io.NopCloser(strings.NewReader(fileContent)), nil)
 	stream, err := s.pbClient.GetFile(ctx, &insyncpb.GetFileRequest{
 		RootName:     rootName.String(),
 		RelativePath: relativePath.String(),
@@ -192,13 +196,14 @@ func (s *ServerSuite) TestServer_PutFile_Success() {
 	ctx := context.Background()
 	rootName := domain.RootName("root")
 	relativePath := domain.Path("file.txt")
+	scopedPath := domain.ScopedPath{Root: rootName, Path: relativePath}
 	fileContent := "file content"
 
 	done := make(chan struct{})
 
-	s.mockFileUseCase.On("PutFile", mock.Anything, rootName, relativePath, mock.AnythingOfType("*io.PipeReader")).
+	s.mockFileUseCase.On("PutFile", mock.Anything, scopedPath, mock.Anything).
 		Run(func(args mock.Arguments) {
-			reader := args.Get(3).(io.Reader)
+			reader := args.Get(2).(io.Reader)
 
 			go func() {
 				defer close(done)
