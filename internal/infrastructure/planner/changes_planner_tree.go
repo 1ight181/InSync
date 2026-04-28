@@ -114,11 +114,7 @@ func (s *ChangesPlannerWithTreeSkip) Plan(
 	remoteChanges = append(remoteChanges, appliedRemoteChanges...)
 	conflicts = append(conflicts, appliedConflicts...)
 
-	return domain.SyncPlan{
-		LocalChanges:  localChanges,
-		RemoteChanges: remoteChanges,
-		Conflicts:     conflicts,
-	}, nil
+	return domain.NewSyncPlan(localChanges, remoteChanges, conflicts), nil
 }
 
 func (s *ChangesPlannerWithTreeSkip) processEntry(

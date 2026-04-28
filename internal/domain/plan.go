@@ -1,5 +1,7 @@
 package domain
 
+import "sort"
+
 type SyncPlan struct {
 	LocalChanges  []LocalChange
 	RemoteChanges []RemoteChange
@@ -41,6 +43,10 @@ func (s SyncPlan) ConflictLength() int {
 	return s.conflictLength()
 }
 
+func (s SyncPlan) conflictLength() int {
+	return len(s.Conflicts)
+}
+
 func (s SyncPlan) localLength() int {
 	return len(s.LocalChanges)
 }
@@ -49,6 +55,23 @@ func (s SyncPlan) remoteLength() int {
 	return len(s.RemoteChanges)
 }
 
-func (s SyncPlan) conflictLength() int {
-	return len(s.Conflicts)
+// При создании плана сортируем по путям лексикографически
+func NewSyncPlan(localChanges []LocalChange, remoteChanges []RemoteChange, conflicts []Conflict) SyncPlan {
+	sort.Slice(localChanges, func(i, j int) bool {
+		return localChanges[i].ToSyncChange().SortPath().String() < localChanges[j].ToSyncChange().SortPath().String()
+	})
+
+	sort.Slice(remoteChanges, func(i, j int) bool {
+		return remoteChanges[i].ToSyncChange().SortPath().String() < remoteChanges[j].ToSyncChange().SortPath().String()
+	})
+
+	sort.Slice(conflicts, func(i, j int) bool {
+		return conflicts[i].LocalRelativePath.String() < conflicts[j].LocalRelativePath.String()
+	})
+
+	return SyncPlan{
+		LocalChanges:  localChanges,
+		RemoteChanges: remoteChanges,
+		Conflicts:     conflicts,
+	}
 }

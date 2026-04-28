@@ -26,6 +26,13 @@ func (c SyncChange) ToRemoteChange() RemoteChange {
 	return RemoteChange(c)
 }
 
+func (c SyncChange) SortPath() Path {
+	if c.ChangeType == Delete {
+		return c.OldRelativePath
+	}
+	return c.NewRelativePath
+}
+
 type SyncChangeType int
 
 const (
