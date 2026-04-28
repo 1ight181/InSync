@@ -14,4 +14,5 @@ type IClient interface {
 	PutFile(ctx context.Context, file io.Reader, scopedPath domain.ScopedPath) error
 	DeleteFile(ctx context.Context, scopedPath domain.ScopedPath) error
 	RenameFile(ctx context.Context, oldScopedPath domain.ScopedPath, newScopedPath domain.ScopedPath) error
+	CreateDir(ctx context.Context, scopedPath domain.ScopedPath) error
 }
