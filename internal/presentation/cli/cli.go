@@ -568,11 +568,9 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 		userDecision <- c.fromHumanReadableDecision(decision)
 	}
 
-	select {
-	case err := <-baseSnapshotSaveError:
+	if err := <-baseSnapshotSaveError; err != nil {
 		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Ошибка при сохранении базового снимка", slog.String("error", err.Error()))
 		return err
-	default:
 	}
 
 	if interruptCtx.Err() != nil {
