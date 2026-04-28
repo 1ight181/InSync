@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 	"unsafe"
 
 	cobraprompt "github.com/1ight181/comptplus-ctrl-c"
@@ -533,25 +534,26 @@ func (c *Cli) syncCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	var i int
 	go func() {
 		for changeEvent := range appliedChanges {
-
+			i++
 			changeEventErr := changeEvent.Err
 			if changeEventErr != nil {
 				c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось применить изменение", slog.String("error", changeEventErr.Error()))
 				fmt.Printf("Не удалось применить изменение: %s\n", changeEventErr)
 				continue
 			}
-			c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Применено изменение", slog.String("change", c.changeToHumanReadable(changeEvent.Change)))
-			fmt.Printf("Применено изменение: %s\n", c.changeToHumanReadable(changeEvent.Change))
+			c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Применено изменение", slog.String("change", c.changeToHumanReadable(i, changeEvent.Change)))
+			fmt.Printf("Применено изменение:\n%s\n", c.changeToHumanReadable(0, changeEvent.Change))
 		}
 	}()
 
 	for conflict := range conflicts {
 		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Обнаружен конфликт", slog.Any("conflict", conflict))
-		conflictLabel := c.conflictToHumanReadable(conflict)
+		fmt.Println(c.conflictToHumanReadable(conflict))
 		prompt := promptui.Select{
-			Label: conflictLabel,
+			Label: "Выберите решение для конфликта",
 			Items: []string{
 				c.decisionToHumanReadable(domain.LocalWin),
 				c.decisionToHumanReadable(domain.RemoteWin),
@@ -634,34 +636,35 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 	if plan.IsEmpty() {
 		c.logger.Debug("Нет изменений для синхронизации")
 		fmt.Print("Нет изменений для синхронизации\n")
+		return nil
 	}
 
 	changesHeader := c.getChangesHeader()
 
 	if plan.IsAnyLocalChange() {
 		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Найдены локальные изменения", slog.Int("count", plan.LocalLength()))
-		fmt.Printf("Всего локальных изменений: %d\n%s", plan.LocalLength(), changesHeader)
+		fmt.Printf("Всего локальных изменений: %d\n%s\n", plan.LocalLength(), changesHeader)
 		localChanges := plan.LocalChanges
 		for i, change := range localChanges {
-			fmt.Printf("%d. %s\n", i+1, c.changeToHumanReadable(change.ToSyncChange()))
+			fmt.Println(c.changeToHumanReadable(i+1, change.ToSyncChange()))
 		}
 	}
 
 	if plan.IsAnyRemoteChange() {
 		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Найдены удалённые изменения", slog.Int("count", plan.RemoteLength()))
-		fmt.Printf("Всего удалённых изменений: %d\n%s", plan.RemoteLength(), changesHeader)
+		fmt.Printf("Всего удалённых изменений: %d\n%s\n", plan.RemoteLength(), changesHeader)
 		remoteChanges := plan.RemoteChanges
 		for i, change := range remoteChanges {
-			fmt.Printf("%d. %s\n", i+1, c.changeToHumanReadable(change.ToSyncChange()))
+			fmt.Println(c.changeToHumanReadable(i+1, change.ToSyncChange()))
 		}
 	}
 
 	if plan.IsAnyConflict() {
 		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Найдены конфликты", slog.Int("count", plan.ConflictLength()))
-		fmt.Printf("Всего конфликтов: %d\n%s", plan.ConflictLength(), changesHeader)
+		fmt.Printf("Всего конфликтов: %d\n", plan.ConflictLength())
 		conflicts := plan.Conflicts
 		for i, conflict := range conflicts {
-			fmt.Printf("%d. %s\n", i+1, c.conflictToHumanReadable(conflict))
+			fmt.Printf("%d.%s\n", i+1, c.conflictToHumanReadable(conflict))
 		}
 	}
 
@@ -669,23 +672,67 @@ func (c *Cli) dryRunCmd(cmd *cobra.Command, args []string) error {
 }
 
 func (c *Cli) getChangesHeader() string {
-	return fmt.Sprintf("|%s|%s|%s|\n", "CHANGE TYPE", "OLD RELATIVE PATH", "NEW RELATIVE PATH")
+	return fmt.Sprintf("%-4s %-12s %-40s %-40s\n%s",
+		"#",
+		"TYPE",
+		"OLD PATH",
+		"NEW PATH",
+		strings.Repeat("-", 100),
+	)
 }
 
-func (c *Cli) changeToHumanReadable(s domain.SyncChange) string {
+func (c *Cli) changeToHumanReadable(index int, s domain.SyncChange) string {
+	rank := ""
+	if index > 0 {
+		rank = fmt.Sprintf("%d", index)
+	}
+
+	oldPath := c.pathOrDash(s.OldRelativePath)
+	newPath := c.pathOrDash(s.NewRelativePath)
+
 	switch s.ChangeType {
 	case domain.CreateFile, domain.CreateDir:
-		return fmt.Sprintf("|%s|%s|\n", changeTypeCreate, s.NewRelativePath)
+		return fmt.Sprintf("%-4s %-12s %-40s %-40s",
+			rank,
+			changeTypeCreate,
+			oldPath,
+			newPath,
+		)
 	case domain.Delete:
-		return fmt.Sprintf("|%s|%s|\n", changeTypeDelete, s.OldRelativePath)
+		return fmt.Sprintf("%-4s %-12s %-40s %-40s",
+			rank,
+			changeTypeDelete,
+			oldPath,
+			newPath,
+		)
 	case domain.Rename:
-		return fmt.Sprintf("|%s|%s|%s|\n", changeTypeRename, s.OldRelativePath, s.NewRelativePath)
+		return fmt.Sprintf("%-4s %-12s %-40s %-40s",
+			rank,
+			changeTypeRename,
+			oldPath,
+			newPath,
+		)
 	case domain.Move:
-		return fmt.Sprintf("|%s|%s|%s|\n", changeTypeMove, s.OldRelativePath, s.NewRelativePath)
+		return fmt.Sprintf("%-4s %-12s %-40s %-40s",
+			rank,
+			changeTypeMove,
+			oldPath,
+			newPath,
+		)
 	case domain.Modify:
-		return fmt.Sprintf("|%s|%s|%s|\n", changeTypeModify, s.OldRelativePath, s.NewRelativePath)
+		return fmt.Sprintf("%-4s %-12s %-40s %-40s",
+			rank,
+			changeTypeModify,
+			oldPath,
+			newPath,
+		)
 	default:
-		return changeTypeUnknown
+		return fmt.Sprintf("%-4s %-12s %-40s %-40s",
+			rank,
+			changeTypeUnknown,
+			oldPath,
+			newPath,
+		)
 	}
 }
 
@@ -716,21 +763,31 @@ func (c *Cli) conflictToHumanReadable(s domain.Conflict) string {
 	}
 
 	return fmt.Sprintf(
-		`Тип конфликта: %s
-		Файл на локальном узле: %s
-		Файл на удалённом узле: %s
-		Файл на базовом снимке: %s
-		Последний раз модифицирован на локальном узле: %d
-		Последний раз модифицирован на удалённом узле: %d
-		Последний раз модифицирован по базовому снимку: %d`,
-		conflictType,
-		s.LocalRelativePath,
-		s.RemoteRelativePath,
-		s.BaseRelativePath,
-		s.LocalModifiedUnix,
-		s.RemoteModifiedUnix,
-		s.BaseModifiedUnix,
+		"%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n",
+		strings.Repeat("=", 84),
+		fmt.Sprintf("  Конфликт:                             %s", conflictType),
+		fmt.Sprintf("  Локальный путь:                       %s", c.pathOrDash(s.LocalRelativePath)),
+		fmt.Sprintf("  Удалённый путь:                       %s", c.pathOrDash(s.RemoteRelativePath)),
+		fmt.Sprintf("  Базовый путь:                         %s", c.pathOrDash(s.BaseRelativePath)),
+		fmt.Sprintf("  Локально изменён:                     %s", c.formatConflictTimestamp(s.LocalModifiedUnix)),
+		fmt.Sprintf("  Удалённо изменён:                     %s", c.formatConflictTimestamp(s.RemoteModifiedUnix)),
+		fmt.Sprintf("  Время изменения по базовому снимку:   %s", c.formatConflictTimestamp(s.BaseModifiedUnix)),
+		strings.Repeat("=", 84),
 	)
+}
+
+func (c *Cli) pathOrDash(path domain.Path) string {
+	if path.IsEmpty() {
+		return "-"
+	}
+	return path.String()
+}
+
+func (c *Cli) formatConflictTimestamp(timestamp uint64) string {
+	if timestamp == 0 {
+		return "-"
+	}
+	return time.Unix(int64(timestamp), 0).Format("2006-01-02 15:04:05")
 }
 
 func (c *Cli) suggestionFunc(comand *cobra.Command, annotationValue string, document *prompt.Document) []prompt.Suggest {
