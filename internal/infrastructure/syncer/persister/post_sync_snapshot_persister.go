@@ -49,7 +49,7 @@ func (b *PostSyncBaseSnapshotPersister) UpdateBaseSnapshot(ctx context.Context, 
 }
 
 func (b *PostSyncBaseSnapshotPersister) updateBaseSnapshotLocaly(ctx context.Context, rootName domain.RootName) error {
-	newBaseSnapshot, err := b.localSnapshotProvider.GetSnapshot(ctx, rootName)
+	newBaseSnapshot, err := b.localSnapshotProvider.GetLocalSnapshot(ctx, rootName)
 	if err != nil {
 		return err
 	}

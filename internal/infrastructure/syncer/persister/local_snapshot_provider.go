@@ -6,5 +6,5 @@ import (
 )
 
 type ILocalSnapshotProvider interface {
-	GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error)
+	GetLocalSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error)
 }
