@@ -130,6 +130,15 @@ func (s *ClientSuite) TestClient_Rename_Success() {
 	s.Require().NoError(err)
 }
 
+func (s *ClientSuite) TestClient_CreateDir_Success() {
+	s.Require().NoError(s.client.Connect())
+
+	scopedPath, err := domain.NewScopedPath(domain.RootName("photos"), domain.Path("newdir"))
+	s.Require().NoError(err)
+	err = s.client.CreateDir(context.Background(), scopedPath)
+	s.Require().NoError(err)
+}
+
 func (s *ClientSuite) TestClient_Methods_WhenNotStarted_ReturnErrClientNotStarted() {
 	s.client.isStarted.Store(false)
 	_, err := s.client.GetSnapshot(context.Background(), domain.RootName("root"))
@@ -141,6 +150,15 @@ func (s *ClientSuite) TestClient_Methods_WhenNotStarted_ReturnErrClientNotStarte
 	s.Require().ErrorIs(err, ErrClientNotStarted)
 
 	err = s.client.PutFile(context.Background(), bytes.NewReader(nil), scopedPath)
+	s.Require().ErrorIs(err, ErrClientNotStarted)
+
+	err = s.client.DeleteFile(context.Background(), scopedPath)
+	s.Require().ErrorIs(err, ErrClientNotStarted)
+
+	err = s.client.RenameFile(context.Background(), scopedPath, scopedPath)
+	s.Require().ErrorIs(err, ErrClientNotStarted)
+
+	err = s.client.CreateDir(context.Background(), scopedPath)
 	s.Require().ErrorIs(err, ErrClientNotStarted)
 }
 
@@ -191,5 +209,9 @@ func (s *testClient_FileSyncServer) DeleteFile(context.Context, *insyncpb.Delete
 }
 
 func (s *testClient_FileSyncServer) RenameFile(context.Context, *insyncpb.RenameFileRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
+}
+
+func (s *testClient_FileSyncServer) CreateDir(context.Context, *insyncpb.CreateDirRequest) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, nil
 }
