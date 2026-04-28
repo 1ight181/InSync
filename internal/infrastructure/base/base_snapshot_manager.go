@@ -32,12 +32,13 @@ func NewBaseSnapshotManager(opts BaseSnapshotManagerOptions) (*BaseSnapshotManag
 }
 
 func (b *BaseSnapshotManager) GetBaseSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
-	remoteDeviceId, err := b.deviceIdProvider.GetCurrentRemoteDeviceId()
+
+	localDeviceId, err := b.deviceIdProvider.GetCurrentLocalDeviceId()
 	if err != nil {
 		return domain.Snapshot{}, err
 	}
 
-	localDeviceId, err := b.deviceIdProvider.GetCurrentLocalDeviceId()
+	remoteDeviceId, err := b.deviceIdProvider.GetCurrentRemoteDeviceId()
 	if err != nil {
 		return domain.Snapshot{}, err
 	}
@@ -50,12 +51,12 @@ func (b *BaseSnapshotManager) GetBaseSnapshot(ctx context.Context, rootName doma
 }
 
 func (b *BaseSnapshotManager) CreateBaseSnapshot(ctx context.Context, baseSnapshot domain.Snapshot, rootName domain.RootName) error {
-	remoteDeviceId, err := b.deviceIdProvider.GetCurrentRemoteDeviceId()
+	localDeviceId, err := b.deviceIdProvider.GetCurrentLocalDeviceId()
 	if err != nil {
 		return err
 	}
 
-	localDeviceId, err := b.deviceIdProvider.GetCurrentLocalDeviceId()
+	remoteDeviceId, err := b.deviceIdProvider.GetCurrentRemoteDeviceId()
 	if err != nil {
 		return err
 	}
