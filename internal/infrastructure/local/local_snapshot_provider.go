@@ -32,12 +32,19 @@ func NewLocalSnapshotProvider(opts LocalSnapshotProviderOptions) (*LocalSnapshot
 }
 
 func (p *LocalSnapshotProvider) GetLocalSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
-	baseSnapshot, err := p.baseSnapshotProvider.GetBaseSnapshot(ctx, rootName)
-	if err != nil {
+	var baseSnapshot *domain.Snapshot
+	rawBaseSnapshot, err := p.baseSnapshotProvider.GetBaseSnapshot(ctx, rootName)
+	if err != nil && !errors.Is(err, domain.ErrBaseSnapshotNotFound) {
 		return domain.Snapshot{}, err
 	}
 
-	snapshot, err := p.fileManager.GetSnapshot(ctx, rootName, &baseSnapshot)
+	if errors.Is(err, domain.ErrBaseSnapshotNotFound) {
+		baseSnapshot = nil
+	} else {
+		baseSnapshot = &rawBaseSnapshot
+	}
+
+	snapshot, err := p.fileManager.GetSnapshot(ctx, rootName, baseSnapshot)
 	if err != nil {
 		return domain.Snapshot{}, err
 	}

@@ -47,7 +47,7 @@ func (b *BaseSnapshotRepository) GetLastBaseSnapshotByDeviceIdAndRootName(
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return domain.Snapshot{}, ErrBaseSnapshotNotFound
+			return domain.Snapshot{}, domain.ErrBaseSnapshotNotFound
 		}
 
 		return domain.Snapshot{}, err

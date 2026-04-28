@@ -47,7 +47,7 @@ func (s *BaseRepositorySuite) TearDownSuite() {
 func (s *BaseRepositorySuite) TestBaseRepository_Get_Empty() {
 
 	snapshot, err := s.repo.GetLastBaseSnapshotByDeviceIdAndRootName(context.Background(), "", "", "")
-	s.Require().ErrorIs(err, baserepo.ErrBaseSnapshotNotFound)
+	s.Require().ErrorIs(err, domain.ErrBaseSnapshotNotFound)
 	s.Require().Equal(domain.Snapshot{}, snapshot)
 }
 
@@ -116,7 +116,7 @@ func (s *BaseRepositorySuite) TestGet_ReturnsDbError() {
 	)
 
 	s.Require().Error(err)
-	s.Require().NotErrorIs(err, baserepo.ErrBaseSnapshotNotFound)
+	s.Require().NotErrorIs(err, domain.ErrBaseSnapshotNotFound)
 }
 
 func (s *BaseRepositorySuite) TestNewRepository_InvalidOptions() {

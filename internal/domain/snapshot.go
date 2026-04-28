@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"slices"
 	"strings"
 )
@@ -17,3 +18,7 @@ func NewSnapshot(files []FileEntry) Snapshot {
 		Files: files,
 	}
 }
+
+var (
+	ErrBaseSnapshotNotFound = errors.New("base snapshot not found")
+)
