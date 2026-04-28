@@ -233,14 +233,14 @@ package scan
 // 	if local != nil && remote == nil {
 // 		return &sideChange{isLocal: false, remoteChange: domain.RemoteChange{
 // 			NewRelativePath: local.RelativePath,
-// 			ChangeType:      domain.Create,
+// 			ChangeType:      domain.CreateFile,
 // 			ModifiedUnix:    local.FileInfo.Metadata.ModifiedUnix,
 // 		}}
 // 	}
 // 	if remote != nil && local == nil {
 // 		return &sideChange{isLocal: true, localChange: domain.LocalChange{
 // 			NewRelativePath: remote.RelativePath,
-// 			ChangeType:      domain.Create,
+// 			ChangeType:      domain.CreateFile,
 // 			ModifiedUnix:    remote.FileInfo.Metadata.ModifiedUnix,
 // 		}}
 // 	}

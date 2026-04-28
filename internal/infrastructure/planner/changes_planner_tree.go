@@ -219,11 +219,11 @@ func (s *ChangesPlannerWithTreeSkip) handleCreation(
 		if localEntry.FileInfo.Metadata.IsDirectory {
 			return nil, &domain.RemoteChange{
 				NewRelativePath: localEntry.RelativePath,
-				ChangeType:      domain.Create,
+				ChangeType:      domain.CreateDir,
 			}, nil, nil, nil
 		}
 		return nil, nil, nil, &potentialChange{
-			Changetype: domain.Create,
+			Changetype: domain.CreateFile,
 			Hash:       localEntry.FileInfo.Hash,
 			Modify:     localEntry.FileInfo.Metadata.ModifiedUnix,
 			Path:       localEntry.RelativePath,
@@ -235,11 +235,11 @@ func (s *ChangesPlannerWithTreeSkip) handleCreation(
 		if remoteEntry.FileInfo.Metadata.IsDirectory {
 			return &domain.LocalChange{
 				NewRelativePath: remoteEntry.RelativePath,
-				ChangeType:      domain.Create,
+				ChangeType:      domain.CreateDir,
 			}, nil, nil, nil, nil
 		}
 		return nil, nil, &potentialChange{
-			Changetype: domain.Create,
+			Changetype: domain.CreateFile,
 			Hash:       remoteEntry.FileInfo.Hash,
 			Modify:     remoteEntry.FileInfo.Metadata.ModifiedUnix,
 			Path:       remoteEntry.RelativePath,
@@ -390,7 +390,7 @@ func (s *ChangesPlannerWithTreeSkip) extractCreateDeletePair(
 			if deleteChange == nil {
 				deleteChange = &changes[i]
 			}
-		case domain.Create:
+		case domain.CreateFile:
 			if createChange == nil {
 				createChange = &changes[i]
 			}
@@ -486,9 +486,9 @@ func (s *ChangesPlannerWithTreeSkip) appendRemainingRemoteChanges(
 	for _, changes := range remoteByHash {
 		for _, change := range changes {
 			switch change.Changetype {
-			case domain.Create:
+			case domain.CreateFile:
 				*target = append(*target, domain.RemoteChange{
-					ChangeType:      domain.Create,
+					ChangeType:      domain.CreateFile,
 					NewRelativePath: change.Path,
 				})
 			case domain.Delete:
@@ -508,9 +508,9 @@ func (s *ChangesPlannerWithTreeSkip) appendRemainingLocalChanges(
 	for _, changes := range localByHash {
 		for _, change := range changes {
 			switch change.Changetype {
-			case domain.Create:
+			case domain.CreateFile:
 				*target = append(*target, domain.LocalChange{
-					ChangeType:      domain.Create,
+					ChangeType:      domain.CreateFile,
 					NewRelativePath: change.Path,
 				})
 			case domain.Delete:

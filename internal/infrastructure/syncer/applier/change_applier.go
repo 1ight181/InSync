@@ -37,7 +37,7 @@ func NewChangeApplier(opts ChangeApplierOptions) (*ChangeApplier, error) {
 
 func (a *ChangeApplier) ApplyLocal(ctx context.Context, rootName domain.RootName, change domain.LocalChange) error {
 	switch change.ChangeType {
-	case domain.Create, domain.Modify:
+	case domain.CreateFile, domain.Modify:
 		scopedPath, err := domain.NewScopedPath(rootName, change.NewRelativePath)
 		if err != nil {
 			return err
@@ -85,7 +85,7 @@ func (a *ChangeApplier) ApplyRemote(ctx context.Context, rootName domain.RootNam
 	}
 
 	switch change.ChangeType {
-	case domain.Create, domain.Modify:
+	case domain.CreateFile, domain.Modify:
 		scopedPath, err := domain.NewScopedPath(rootName, change.NewRelativePath)
 		if err != nil {
 			return err

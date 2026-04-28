@@ -676,7 +676,7 @@ func (c *Cli) getChangesHeader() string {
 
 func (c *Cli) changeToHumanReadable(s domain.SyncChange) string {
 	switch s.ChangeType {
-	case domain.Create:
+	case domain.CreateFile, domain.CreateDir:
 		return fmt.Sprintf("|%s|%s|\n", changeTypeCreate, s.NewRelativePath)
 	case domain.Delete:
 		return fmt.Sprintf("|%s|%s|\n", changeTypeDelete, s.OldRelativePath)

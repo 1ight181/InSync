@@ -35,14 +35,14 @@ func (c *ConflictResolver) Resolve(conflict domain.Conflict, userDecision domain
 		}
 
 		return domain.SyncChange{
-			ChangeType:      domain.Create,
+			ChangeType:      domain.CreateFile,
 			NewRelativePath: conflict.RemoteRelativePath,
 		}, true, nil
 
 	case domain.ConflictRemoteDeletedLocalModified:
 		if userDecision.Equal(domain.LocalWin) {
 			return domain.SyncChange{
-				ChangeType:      domain.Create,
+				ChangeType:      domain.CreateFile,
 				NewRelativePath: conflict.LocalRelativePath,
 			}, false, nil
 		}

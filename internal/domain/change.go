@@ -36,7 +36,8 @@ func (c SyncChange) SortPath() Path {
 type SyncChangeType int
 
 const (
-	Create SyncChangeType = iota
+	CreateFile SyncChangeType = iota
+	CreateDir
 	Delete
 	Modify
 	Rename

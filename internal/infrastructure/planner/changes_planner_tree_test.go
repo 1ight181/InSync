@@ -71,7 +71,7 @@ func TestPlanner_NewFileOnLocal_CreateChangeOnRemote(t *testing.T) {
 	require.Len(t, plan.RemoteChanges, 1)
 	require.Len(t, plan.Conflicts, 0)
 
-	require.Equal(t, domain.Create, plan.RemoteChanges[0].ChangeType)
+	require.Equal(t, domain.CreateFile, plan.RemoteChanges[0].ChangeType)
 	require.Equal(t, mustPath(t, "/a/b/c"), plan.RemoteChanges[0].NewRelativePath)
 }
 
@@ -105,7 +105,7 @@ func TestPlanner_NewFileOnRemote_CreateChangeOnLocal(t *testing.T) {
 	require.Len(t, plan.RemoteChanges, 0)
 	require.Len(t, plan.Conflicts, 0)
 
-	require.Equal(t, domain.Create, plan.LocalChanges[0].ChangeType)
+	require.Equal(t, domain.CreateFile, plan.LocalChanges[0].ChangeType)
 	require.Equal(t, mustPath(t, "/a/b/c"), plan.LocalChanges[0].NewRelativePath)
 }
 
@@ -203,9 +203,9 @@ func TestPlanner_NewFileWithDifferentNameButSameContentOnRemoteAndLocal_CreateCh
 	require.Len(t, plan.LocalChanges, 1)
 	require.Len(t, plan.RemoteChanges, 1)
 
-	require.Equal(t, domain.Create, plan.LocalChanges[0].ChangeType)
+	require.Equal(t, domain.CreateFile, plan.LocalChanges[0].ChangeType)
 	require.Equal(t, mustPath(t, "/a/b/d"), plan.LocalChanges[0].NewRelativePath)
-	require.Equal(t, domain.Create, plan.RemoteChanges[0].ChangeType)
+	require.Equal(t, domain.CreateFile, plan.RemoteChanges[0].ChangeType)
 	require.Equal(t, mustPath(t, "/a/b/c"), plan.RemoteChanges[0].NewRelativePath)
 }
 
@@ -239,8 +239,8 @@ func TestPlanner_NewFileWithDifferentNameAndModButSameContentOnRemoteAndLocal_Cr
 	require.Len(t, plan.LocalChanges, 1)
 	require.Len(t, plan.RemoteChanges, 1)
 
-	require.Equal(t, domain.Create, plan.LocalChanges[0].ChangeType)
-	require.Equal(t, domain.Create, plan.RemoteChanges[0].ChangeType)
+	require.Equal(t, domain.CreateFile, plan.LocalChanges[0].ChangeType)
+	require.Equal(t, domain.CreateFile, plan.RemoteChanges[0].ChangeType)
 }
 
 func TestPlanner_ThreeNewFilesAndDirOnLocalOneFileOnRemote_CreateChangeOnRemote(t *testing.T) {
@@ -279,22 +279,22 @@ func TestPlanner_ThreeNewFilesAndDirOnLocalOneFileOnRemote_CreateChangeOnRemote(
 	expectedLocalChanges := []domain.LocalChange{
 		{
 			NewRelativePath: mustPath(t, "/a/b/f"),
-			ChangeType:      domain.Create,
+			ChangeType:      domain.CreateFile,
 		},
 	}
 
 	expectedRemoteChanges := []domain.RemoteChange{
 		{
 			NewRelativePath: mustPath(t, "/a/b/c"),
-			ChangeType:      domain.Create,
+			ChangeType:      domain.CreateFile,
 		},
 		{
 			NewRelativePath: mustPath(t, "/a/b/d"),
-			ChangeType:      domain.Create,
+			ChangeType:      domain.CreateFile,
 		},
 		{
 			NewRelativePath: mustPath(t, "/a/b/e"),
-			ChangeType:      domain.Create,
+			ChangeType:      domain.CreateFile,
 		},
 	}
 
