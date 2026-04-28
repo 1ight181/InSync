@@ -4,6 +4,7 @@ import (
 	"errors"
 	"insync/internal/domain"
 	"insync/internal/repository/sqlite/hash/dirty"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -35,6 +36,10 @@ func (r *HashRepository) GetHashCache() (map[domain.Path]string, error) {
 
 	cache := make(map[domain.Path]string, len(entries))
 	for _, entry := range entries {
+		if entry.Expires < time.Now().Unix() {
+			continue
+		}
+
 		// Уже валидированные при добавлении
 		cache[domain.Path(entry.FullPath)] = entry.Hash
 	}
@@ -50,6 +55,8 @@ func (r *HashRepository) SetHashCache(fullPath domain.Path, hash string) error {
 
 	hashCacheEntry.FullPath = fullPath.String()
 	hashCacheEntry.Hash = hash
+	// TODO: вынести в конфиг
+	hashCacheEntry.Expires = time.Now().Add(time.Hour * 24 * 14).Unix()
 
 	if err := r.db.Save(&hashCacheEntry).Error; err != nil {
 		return err
