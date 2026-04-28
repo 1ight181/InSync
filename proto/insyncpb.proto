@@ -43,13 +43,16 @@ message GetFileResponse {
     FileChunk chunk = 1;
 }
 
+message SetBaseSnapshotRequest {
+    Snapshot snapshot = 1;
+    string root_name = 2;
+}
+
 // Тип запроса для загрузки файла
 message PutFileInit {
     string root_name = 1;
     string relative_path = 2;
 }
-
-
 
 message PutFileRequest {
     oneof payload {
@@ -98,4 +101,6 @@ service FileSyncService {
     rpc RenameFile(RenameFileRequest) returns (google.protobuf.Empty);
     // Создать директорию
     rpc CreateDir(CreateDirRequest) returns (google.protobuf.Empty);
+    // Установить базовый снимок
+    rpc SetBaseSnapshot(SetBaseSnapshotRequest) returns (google.protobuf.Empty);
 }
