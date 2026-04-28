@@ -21,6 +21,7 @@ type GrpcServer struct {
 	insyncpb.UnimplementedFileSyncServiceServer
 
 	fileUseCase IFileUseCase
+	baseUseCase IBaseSnapshotUseCase
 
 	creds credentials.TransportCredentials
 
@@ -49,6 +50,7 @@ type GrpcServer struct {
 
 type GrpcServerOptions struct {
 	FileUseCase IFileUseCase
+	BaseUseCase IBaseSnapshotUseCase
 
 	Creds credentials.TransportCredentials
 
@@ -79,6 +81,7 @@ func NewGrpcServer(opts GrpcServerOptions) (*GrpcServer, error) {
 	}
 
 	if opts.FileUseCase == nil ||
+		opts.BaseUseCase == nil ||
 		opts.NetworkType == "" ||
 		opts.Address == "" ||
 		opts.ServiceName == "" ||
@@ -91,6 +94,7 @@ func NewGrpcServer(opts GrpcServerOptions) (*GrpcServer, error) {
 	loggerCtx := context.Background()
 	return &GrpcServer{
 		fileUseCase: opts.FileUseCase,
+		baseUseCase: opts.BaseUseCase,
 
 		certPath:   opts.CertPath,
 		keyPath:    opts.KeyPath,
