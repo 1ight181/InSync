@@ -346,28 +346,27 @@ func (x *GetFileResponse) GetChunk() *FileChunk {
 	return nil
 }
 
-type SetBaseSnapshotRequest struct {
+type UpdateBaseSnapshotRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Snapshot      *Snapshot              `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	RootName      string                 `protobuf:"bytes,2,opt,name=root_name,json=rootName,proto3" json:"root_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SetBaseSnapshotRequest) Reset() {
-	*x = SetBaseSnapshotRequest{}
+func (x *UpdateBaseSnapshotRequest) Reset() {
+	*x = UpdateBaseSnapshotRequest{}
 	mi := &file_proto_insyncpb_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SetBaseSnapshotRequest) String() string {
+func (x *UpdateBaseSnapshotRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SetBaseSnapshotRequest) ProtoMessage() {}
+func (*UpdateBaseSnapshotRequest) ProtoMessage() {}
 
-func (x *SetBaseSnapshotRequest) ProtoReflect() protoreflect.Message {
+func (x *UpdateBaseSnapshotRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_insyncpb_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -379,19 +378,12 @@ func (x *SetBaseSnapshotRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SetBaseSnapshotRequest.ProtoReflect.Descriptor instead.
-func (*SetBaseSnapshotRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateBaseSnapshotRequest.ProtoReflect.Descriptor instead.
+func (*UpdateBaseSnapshotRequest) Descriptor() ([]byte, []int) {
 	return file_proto_insyncpb_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *SetBaseSnapshotRequest) GetSnapshot() *Snapshot {
-	if x != nil {
-		return x.Snapshot
-	}
-	return nil
-}
-
-func (x *SetBaseSnapshotRequest) GetRootName() string {
+func (x *UpdateBaseSnapshotRequest) GetRootName() string {
 	if x != nil {
 		return x.RootName
 	}
@@ -777,9 +769,8 @@ const file_proto_insyncpb_proto_rawDesc = "" +
 	"\troot_name\x18\x01 \x01(\tR\brootName\x12#\n" +
 	"\rrelative_path\x18\x02 \x01(\tR\frelativePath\"<\n" +
 	"\x0fGetFileResponse\x12)\n" +
-	"\x05chunk\x18\x01 \x01(\v2\x13.insyncpb.FileChunkR\x05chunk\"e\n" +
-	"\x16SetBaseSnapshotRequest\x12.\n" +
-	"\bsnapshot\x18\x01 \x01(\v2\x12.insyncpb.SnapshotR\bsnapshot\x12\x1b\n" +
+	"\x05chunk\x18\x01 \x01(\v2\x13.insyncpb.FileChunkR\x05chunk\"8\n" +
+	"\x19UpdateBaseSnapshotRequest\x12\x1b\n" +
 	"\troot_name\x18\x02 \x01(\tR\brootName\"O\n" +
 	"\vPutFileInit\x12\x1b\n" +
 	"\troot_name\x18\x01 \x01(\tR\brootName\x12#\n" +
@@ -800,7 +791,7 @@ const file_proto_insyncpb_proto_rawDesc = "" +
 	"\x11new_relative_path\x18\x03 \x01(\tR\x0fnewRelativePath\"5\n" +
 	"\tFileChunk\x12\x14\n" +
 	"\x05index\x18\x01 \x01(\x04R\x05index\x12\x12\n" +
-	"\x04data\x18\x02 \x01(\fR\x04data2\xf2\x03\n" +
+	"\x04data\x18\x02 \x01(\fR\x04data2\xf8\x03\n" +
 	"\x0fFileSyncService\x12J\n" +
 	"\vGetSnapshot\x12\x1c.insyncpb.GetSnapshotRequest\x1a\x1d.insyncpb.GetSnapshotResponse\x12@\n" +
 	"\aGetFile\x12\x18.insyncpb.GetFileRequest\x1a\x19.insyncpb.GetFileResponse0\x01\x12=\n" +
@@ -809,8 +800,8 @@ const file_proto_insyncpb_proto_rawDesc = "" +
 	"DeleteFile\x12\x1b.insyncpb.DeleteFileRequest\x1a\x16.google.protobuf.Empty\x12A\n" +
 	"\n" +
 	"RenameFile\x12\x1b.insyncpb.RenameFileRequest\x1a\x16.google.protobuf.Empty\x12?\n" +
-	"\tCreateDir\x12\x1a.insyncpb.CreateDirRequest\x1a\x16.google.protobuf.Empty\x12K\n" +
-	"\x0fSetBaseSnapshot\x12 .insyncpb.SetBaseSnapshotRequest\x1a\x16.google.protobuf.EmptyB+Z)internal/transport/grpc/insyncpb;insyncpbb\x06proto3"
+	"\tCreateDir\x12\x1a.insyncpb.CreateDirRequest\x1a\x16.google.protobuf.Empty\x12Q\n" +
+	"\x12UpdateBaseSnapshot\x12#.insyncpb.UpdateBaseSnapshotRequest\x1a\x16.google.protobuf.EmptyB+Z)internal/transport/grpc/insyncpb;insyncpbb\x06proto3"
 
 var (
 	file_proto_insyncpb_proto_rawDescOnce sync.Once
@@ -826,47 +817,46 @@ func file_proto_insyncpb_proto_rawDescGZIP() []byte {
 
 var file_proto_insyncpb_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_proto_insyncpb_proto_goTypes = []any{
-	(*FileEntry)(nil),              // 0: insyncpb.FileEntry
-	(*Snapshot)(nil),               // 1: insyncpb.Snapshot
-	(*GetSnapshotRequest)(nil),     // 2: insyncpb.GetSnapshotRequest
-	(*GetSnapshotResponse)(nil),    // 3: insyncpb.GetSnapshotResponse
-	(*GetFileRequest)(nil),         // 4: insyncpb.GetFileRequest
-	(*GetFileResponse)(nil),        // 5: insyncpb.GetFileResponse
-	(*SetBaseSnapshotRequest)(nil), // 6: insyncpb.SetBaseSnapshotRequest
-	(*PutFileInit)(nil),            // 7: insyncpb.PutFileInit
-	(*PutFileRequest)(nil),         // 8: insyncpb.PutFileRequest
-	(*DeleteFileRequest)(nil),      // 9: insyncpb.DeleteFileRequest
-	(*CreateDirRequest)(nil),       // 10: insyncpb.CreateDirRequest
-	(*RenameFileRequest)(nil),      // 11: insyncpb.RenameFileRequest
-	(*FileChunk)(nil),              // 12: insyncpb.FileChunk
-	(*emptypb.Empty)(nil),          // 13: google.protobuf.Empty
+	(*FileEntry)(nil),                 // 0: insyncpb.FileEntry
+	(*Snapshot)(nil),                  // 1: insyncpb.Snapshot
+	(*GetSnapshotRequest)(nil),        // 2: insyncpb.GetSnapshotRequest
+	(*GetSnapshotResponse)(nil),       // 3: insyncpb.GetSnapshotResponse
+	(*GetFileRequest)(nil),            // 4: insyncpb.GetFileRequest
+	(*GetFileResponse)(nil),           // 5: insyncpb.GetFileResponse
+	(*UpdateBaseSnapshotRequest)(nil), // 6: insyncpb.UpdateBaseSnapshotRequest
+	(*PutFileInit)(nil),               // 7: insyncpb.PutFileInit
+	(*PutFileRequest)(nil),            // 8: insyncpb.PutFileRequest
+	(*DeleteFileRequest)(nil),         // 9: insyncpb.DeleteFileRequest
+	(*CreateDirRequest)(nil),          // 10: insyncpb.CreateDirRequest
+	(*RenameFileRequest)(nil),         // 11: insyncpb.RenameFileRequest
+	(*FileChunk)(nil),                 // 12: insyncpb.FileChunk
+	(*emptypb.Empty)(nil),             // 13: google.protobuf.Empty
 }
 var file_proto_insyncpb_proto_depIdxs = []int32{
 	0,  // 0: insyncpb.Snapshot.files:type_name -> insyncpb.FileEntry
 	1,  // 1: insyncpb.GetSnapshotResponse.snapshot:type_name -> insyncpb.Snapshot
 	12, // 2: insyncpb.GetFileResponse.chunk:type_name -> insyncpb.FileChunk
-	1,  // 3: insyncpb.SetBaseSnapshotRequest.snapshot:type_name -> insyncpb.Snapshot
-	7,  // 4: insyncpb.PutFileRequest.init:type_name -> insyncpb.PutFileInit
-	12, // 5: insyncpb.PutFileRequest.chunk:type_name -> insyncpb.FileChunk
-	2,  // 6: insyncpb.FileSyncService.GetSnapshot:input_type -> insyncpb.GetSnapshotRequest
-	4,  // 7: insyncpb.FileSyncService.GetFile:input_type -> insyncpb.GetFileRequest
-	8,  // 8: insyncpb.FileSyncService.PutFile:input_type -> insyncpb.PutFileRequest
-	9,  // 9: insyncpb.FileSyncService.DeleteFile:input_type -> insyncpb.DeleteFileRequest
-	11, // 10: insyncpb.FileSyncService.RenameFile:input_type -> insyncpb.RenameFileRequest
-	10, // 11: insyncpb.FileSyncService.CreateDir:input_type -> insyncpb.CreateDirRequest
-	6,  // 12: insyncpb.FileSyncService.SetBaseSnapshot:input_type -> insyncpb.SetBaseSnapshotRequest
-	3,  // 13: insyncpb.FileSyncService.GetSnapshot:output_type -> insyncpb.GetSnapshotResponse
-	5,  // 14: insyncpb.FileSyncService.GetFile:output_type -> insyncpb.GetFileResponse
-	13, // 15: insyncpb.FileSyncService.PutFile:output_type -> google.protobuf.Empty
-	13, // 16: insyncpb.FileSyncService.DeleteFile:output_type -> google.protobuf.Empty
-	13, // 17: insyncpb.FileSyncService.RenameFile:output_type -> google.protobuf.Empty
-	13, // 18: insyncpb.FileSyncService.CreateDir:output_type -> google.protobuf.Empty
-	13, // 19: insyncpb.FileSyncService.SetBaseSnapshot:output_type -> google.protobuf.Empty
-	13, // [13:20] is the sub-list for method output_type
-	6,  // [6:13] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	7,  // 3: insyncpb.PutFileRequest.init:type_name -> insyncpb.PutFileInit
+	12, // 4: insyncpb.PutFileRequest.chunk:type_name -> insyncpb.FileChunk
+	2,  // 5: insyncpb.FileSyncService.GetSnapshot:input_type -> insyncpb.GetSnapshotRequest
+	4,  // 6: insyncpb.FileSyncService.GetFile:input_type -> insyncpb.GetFileRequest
+	8,  // 7: insyncpb.FileSyncService.PutFile:input_type -> insyncpb.PutFileRequest
+	9,  // 8: insyncpb.FileSyncService.DeleteFile:input_type -> insyncpb.DeleteFileRequest
+	11, // 9: insyncpb.FileSyncService.RenameFile:input_type -> insyncpb.RenameFileRequest
+	10, // 10: insyncpb.FileSyncService.CreateDir:input_type -> insyncpb.CreateDirRequest
+	6,  // 11: insyncpb.FileSyncService.UpdateBaseSnapshot:input_type -> insyncpb.UpdateBaseSnapshotRequest
+	3,  // 12: insyncpb.FileSyncService.GetSnapshot:output_type -> insyncpb.GetSnapshotResponse
+	5,  // 13: insyncpb.FileSyncService.GetFile:output_type -> insyncpb.GetFileResponse
+	13, // 14: insyncpb.FileSyncService.PutFile:output_type -> google.protobuf.Empty
+	13, // 15: insyncpb.FileSyncService.DeleteFile:output_type -> google.protobuf.Empty
+	13, // 16: insyncpb.FileSyncService.RenameFile:output_type -> google.protobuf.Empty
+	13, // 17: insyncpb.FileSyncService.CreateDir:output_type -> google.protobuf.Empty
+	13, // 18: insyncpb.FileSyncService.UpdateBaseSnapshot:output_type -> google.protobuf.Empty
+	12, // [12:19] is the sub-list for method output_type
+	5,  // [5:12] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_proto_insyncpb_proto_init() }

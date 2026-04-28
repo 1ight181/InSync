@@ -20,13 +20,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	FileSyncService_GetSnapshot_FullMethodName     = "/insyncpb.FileSyncService/GetSnapshot"
-	FileSyncService_GetFile_FullMethodName         = "/insyncpb.FileSyncService/GetFile"
-	FileSyncService_PutFile_FullMethodName         = "/insyncpb.FileSyncService/PutFile"
-	FileSyncService_DeleteFile_FullMethodName      = "/insyncpb.FileSyncService/DeleteFile"
-	FileSyncService_RenameFile_FullMethodName      = "/insyncpb.FileSyncService/RenameFile"
-	FileSyncService_CreateDir_FullMethodName       = "/insyncpb.FileSyncService/CreateDir"
-	FileSyncService_SetBaseSnapshot_FullMethodName = "/insyncpb.FileSyncService/SetBaseSnapshot"
+	FileSyncService_GetSnapshot_FullMethodName        = "/insyncpb.FileSyncService/GetSnapshot"
+	FileSyncService_GetFile_FullMethodName            = "/insyncpb.FileSyncService/GetFile"
+	FileSyncService_PutFile_FullMethodName            = "/insyncpb.FileSyncService/PutFile"
+	FileSyncService_DeleteFile_FullMethodName         = "/insyncpb.FileSyncService/DeleteFile"
+	FileSyncService_RenameFile_FullMethodName         = "/insyncpb.FileSyncService/RenameFile"
+	FileSyncService_CreateDir_FullMethodName          = "/insyncpb.FileSyncService/CreateDir"
+	FileSyncService_UpdateBaseSnapshot_FullMethodName = "/insyncpb.FileSyncService/UpdateBaseSnapshot"
 )
 
 // FileSyncServiceClient is the client API for FileSyncService service.
@@ -48,7 +48,7 @@ type FileSyncServiceClient interface {
 	// Создать директорию
 	CreateDir(ctx context.Context, in *CreateDirRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Установить базовый снимок
-	SetBaseSnapshot(ctx context.Context, in *SetBaseSnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UpdateBaseSnapshot(ctx context.Context, in *UpdateBaseSnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type fileSyncServiceClient struct {
@@ -131,10 +131,10 @@ func (c *fileSyncServiceClient) CreateDir(ctx context.Context, in *CreateDirRequ
 	return out, nil
 }
 
-func (c *fileSyncServiceClient) SetBaseSnapshot(ctx context.Context, in *SetBaseSnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *fileSyncServiceClient) UpdateBaseSnapshot(ctx context.Context, in *UpdateBaseSnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, FileSyncService_SetBaseSnapshot_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, FileSyncService_UpdateBaseSnapshot_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ type FileSyncServiceServer interface {
 	// Создать директорию
 	CreateDir(context.Context, *CreateDirRequest) (*emptypb.Empty, error)
 	// Установить базовый снимок
-	SetBaseSnapshot(context.Context, *SetBaseSnapshotRequest) (*emptypb.Empty, error)
+	UpdateBaseSnapshot(context.Context, *UpdateBaseSnapshotRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedFileSyncServiceServer()
 }
 
@@ -189,8 +189,8 @@ func (UnimplementedFileSyncServiceServer) RenameFile(context.Context, *RenameFil
 func (UnimplementedFileSyncServiceServer) CreateDir(context.Context, *CreateDirRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateDir not implemented")
 }
-func (UnimplementedFileSyncServiceServer) SetBaseSnapshot(context.Context, *SetBaseSnapshotRequest) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method SetBaseSnapshot not implemented")
+func (UnimplementedFileSyncServiceServer) UpdateBaseSnapshot(context.Context, *UpdateBaseSnapshotRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateBaseSnapshot not implemented")
 }
 func (UnimplementedFileSyncServiceServer) mustEmbedUnimplementedFileSyncServiceServer() {}
 func (UnimplementedFileSyncServiceServer) testEmbeddedByValue()                         {}
@@ -303,20 +303,20 @@ func _FileSyncService_CreateDir_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _FileSyncService_SetBaseSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetBaseSnapshotRequest)
+func _FileSyncService_UpdateBaseSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateBaseSnapshotRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FileSyncServiceServer).SetBaseSnapshot(ctx, in)
+		return srv.(FileSyncServiceServer).UpdateBaseSnapshot(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: FileSyncService_SetBaseSnapshot_FullMethodName,
+		FullMethod: FileSyncService_UpdateBaseSnapshot_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FileSyncServiceServer).SetBaseSnapshot(ctx, req.(*SetBaseSnapshotRequest))
+		return srv.(FileSyncServiceServer).UpdateBaseSnapshot(ctx, req.(*UpdateBaseSnapshotRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -345,8 +345,8 @@ var FileSyncService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _FileSyncService_CreateDir_Handler,
 		},
 		{
-			MethodName: "SetBaseSnapshot",
-			Handler:    _FileSyncService_SetBaseSnapshot_Handler,
+			MethodName: "UpdateBaseSnapshot",
+			Handler:    _FileSyncService_UpdateBaseSnapshot_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

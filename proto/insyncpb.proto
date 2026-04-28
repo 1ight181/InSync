@@ -43,8 +43,7 @@ message GetFileResponse {
     FileChunk chunk = 1;
 }
 
-message SetBaseSnapshotRequest {
-    Snapshot snapshot = 1;
+message UpdateBaseSnapshotRequest {
     string root_name = 2;
 }
 
@@ -102,5 +101,5 @@ service FileSyncService {
     // Создать директорию
     rpc CreateDir(CreateDirRequest) returns (google.protobuf.Empty);
     // Установить базовый снимок
-    rpc SetBaseSnapshot(SetBaseSnapshotRequest) returns (google.protobuf.Empty);
+    rpc UpdateBaseSnapshot(UpdateBaseSnapshotRequest) returns (google.protobuf.Empty);
 }
