@@ -56,7 +56,7 @@ func (a *ChangeApplier) ApplyLocal(ctx context.Context, rootName domain.RootName
 		return a.fileManager.PutFile(ctx, scopedPath, content)
 
 	case domain.Modify:
-		scopedPath, err := domain.NewScopedPath(rootName, change.NewRelativePath)
+		scopedPath, err := domain.NewScopedPath(rootName, change.OldRelativePath)
 		if err != nil {
 			return err
 		}
