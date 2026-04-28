@@ -86,10 +86,16 @@ message FileChunk {
 
 // Сервис для синхронизации файлов
 service FileSyncService {
+    // Получить снимок (список всех файлов и директорий)
     rpc GetSnapshot(GetSnapshotRequest) returns (GetSnapshotResponse);
+    // Получить содержимое файла потоком
     rpc GetFile(GetFileRequest) returns (stream GetFileResponse);
+    // Загрузить файл потоком
     rpc PutFile(stream PutFileRequest) returns (google.protobuf.Empty);
+    // Удалить файл или директорию
     rpc DeleteFile(DeleteFileRequest) returns (google.protobuf.Empty);
+    // Переименовать файл или директорию
     rpc RenameFile(RenameFileRequest) returns (google.protobuf.Empty);
+    // Создать директорию
     rpc CreateDir(CreateDirRequest) returns (google.protobuf.Empty);
 }
