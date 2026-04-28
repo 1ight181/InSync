@@ -246,6 +246,10 @@ func (s *ChangesPlannerWithTreeSkip) handleCreation(
 		}, nil, nil
 	}
 
+	if localEntry.FileInfo.Metadata.IsDirectory && remoteEntry.FileInfo.Metadata.IsDirectory {
+		return nil, nil, nil, nil, nil
+	}
+
 	if localEntry != nil && remoteEntry != nil {
 		// Конфликт создания - оба создали файл с разным содержимым
 		if localEntry.FileInfo.Hash != remoteEntry.FileInfo.Hash {
@@ -267,6 +271,7 @@ func (s *ChangesPlannerWithTreeSkip) handleModification(
 	if local.FileInfo.Metadata.IsDirectory && remote.FileInfo.Metadata.IsDirectory {
 		return nil, nil, nil
 	}
+
 	if local.FileInfo.Metadata.ModifiedUnix > remote.FileInfo.Metadata.ModifiedUnix {
 		return nil, &domain.RemoteChange{
 			OldRelativePath: local.RelativePath,
@@ -281,6 +286,7 @@ func (s *ChangesPlannerWithTreeSkip) handleModification(
 			Conflict:           domain.ConflictBothModifiedAtSameTime,
 		}
 	}
+
 	return &domain.LocalChange{
 		OldRelativePath: remote.RelativePath,
 		ChangeType:      domain.Modify,
