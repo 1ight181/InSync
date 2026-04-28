@@ -9,13 +9,15 @@ import (
 type PostSyncBaseSnapshotPersister struct {
 	baseSnapshotRepository IBaseSnapshotRepositoryWriter
 	deviceIdProvider       IDeviceIdProvider
-	snapshotProvider       IBaseSnapshotProvider
+	localSnapshotProvider  ILocalSnapshotProvider
+	clientFactory          IClientFactory
 }
 
 type PostSyncBaseSnapshotPersisterOptions struct {
 	BaseSnapshotRepository IBaseSnapshotRepositoryWriter
 	DeviceIdProvider       IDeviceIdProvider
-	SnapshotProvider       IBaseSnapshotProvider
+	LocalSnapshotProvider  ILocalSnapshotProvider
+	ClientFactory          IClientFactory
 }
 
 var (
@@ -25,18 +27,29 @@ var (
 func NewPostSyncBaseSnapshotPersister(opts PostSyncBaseSnapshotPersisterOptions) (*PostSyncBaseSnapshotPersister, error) {
 	if opts.BaseSnapshotRepository == nil ||
 		opts.DeviceIdProvider == nil ||
-		opts.SnapshotProvider == nil {
+		opts.LocalSnapshotProvider == nil ||
+		opts.ClientFactory == nil {
 		return nil, ErrInvalidOpts
 	}
 	return &PostSyncBaseSnapshotPersister{
 		baseSnapshotRepository: opts.BaseSnapshotRepository,
 		deviceIdProvider:       opts.DeviceIdProvider,
-		snapshotProvider:       opts.SnapshotProvider,
+		localSnapshotProvider:  opts.LocalSnapshotProvider,
+		clientFactory:          opts.ClientFactory,
 	}, nil
 }
 
 func (b *PostSyncBaseSnapshotPersister) UpdateBaseSnapshot(ctx context.Context, rootName domain.RootName) error {
-	newBaseSnapshot, err := b.snapshotProvider.GetBaseSnapshot(ctx, rootName)
+	if err := b.updateBaseSnapshotLocaly(ctx, rootName); err != nil {
+		return err
+	}
+
+	return b.updateBaseSnapshotRemotly(ctx, rootName)
+
+}
+
+func (b *PostSyncBaseSnapshotPersister) updateBaseSnapshotLocaly(ctx context.Context, rootName domain.RootName) error {
+	newBaseSnapshot, err := b.localSnapshotProvider.GetSnapshot(ctx, rootName)
 	if err != nil {
 		return err
 	}
@@ -52,4 +65,13 @@ func (b *PostSyncBaseSnapshotPersister) UpdateBaseSnapshot(ctx context.Context, 
 	}
 
 	return b.baseSnapshotRepository.CreateBaseSnapshot(ctx, newBaseSnapshot, localDeviceId, remoteDeviceId, rootName)
+}
+
+func (b *PostSyncBaseSnapshotPersister) updateBaseSnapshotRemotly(ctx context.Context, rootName domain.RootName) error {
+	client, err := b.clientFactory.CurrentClient()
+	if err != nil {
+		return err
+	}
+
+	return client.UpdateBaseSnapshot(ctx, rootName)
 }
