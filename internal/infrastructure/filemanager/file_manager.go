@@ -97,6 +97,23 @@ func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName)
 	return snapshot, nil
 }
 
+func (f *FileManager) CreateDir(ctx context.Context, scopedPath domain.ScopedPath) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	resolvedPath, err := f.rootResolver.ResolveRoot(scopedPath)
+	if err != nil {
+		return err
+	}
+
+	if err := f.fileSystem.Mkdir(resolvedPath, 0755); err != nil {
+		return err
+	}
+
+	return f.pathTreeWriter.AddPath(scopedPath)
+}
+
 func (f *FileManager) RenameFile(ctx context.Context, oldScopedPath domain.ScopedPath, newScopedPath domain.ScopedPath) error {
 	if ctx.Err() != nil {
 		return ctx.Err()

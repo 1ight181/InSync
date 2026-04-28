@@ -15,4 +15,5 @@ type IFileSystem interface {
 	MkdirAll(path domain.Path, perm fs.FileMode) error
 	AtomicWrite(fullPath domain.Path, data io.Reader) error
 	Stat(fullPath domain.Path) (fs.FileInfo, error)
+	Mkdir(fullPath domain.Path, perm fs.FileMode) error
 }
