@@ -31,7 +31,7 @@ func NewBaseSnapshotUseCase(opts BaseSnapshotUseCaseOpts) (*BaseSnapshotUseCase,
 	}, nil
 }
 
-func (b *BaseSnapshotUseCase) UpdateBaseSnapshot(ctx context.Context, baseSnapshot domain.Snapshot, rootName domain.RootName) error {
+func (b *BaseSnapshotUseCase) UpdateBaseSnapshot(ctx context.Context, rootName domain.RootName) error {
 	localSnapshot, err := b.localSnapshotProvider.GetLocalSnapshot(ctx, rootName)
 	if err != nil {
 		return err
