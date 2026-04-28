@@ -11,4 +11,5 @@ type IFileManager interface {
 	DeleteFile(ctx context.Context, scopedPath domain.ScopedPath) error
 	PutFile(ctx context.Context, scopedPath domain.ScopedPath, content io.Reader) error
 	GetFile(ctx context.Context, scopedPath domain.ScopedPath) (io.ReadCloser, error)
+	CreateDir(ctx context.Context, scopedPath domain.ScopedPath) error
 }
