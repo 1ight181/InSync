@@ -33,12 +33,19 @@ func NewFileUseCase(opts FileUseCaseOptions) (*FileUseCase, error) {
 }
 
 func (f *FileUseCase) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
-	baseSnapshot, err := f.baseSnapshotProvider.GetBaseSnapshot(ctx, rootName)
-	if err != nil {
+	var baseSnapshot *domain.Snapshot
+	rawBaseSnapshot, err := f.baseSnapshotProvider.GetBaseSnapshot(ctx, rootName)
+	if err != nil && !errors.Is(err, domain.ErrBaseSnapshotNotFound) {
 		return domain.Snapshot{}, err
 	}
 
-	return f.fileManager.GetSnapshot(ctx, rootName, &baseSnapshot)
+	if errors.Is(err, domain.ErrBaseSnapshotNotFound) {
+		baseSnapshot = nil
+	} else {
+		baseSnapshot = &rawBaseSnapshot
+	}
+
+	return f.fileManager.GetSnapshot(ctx, rootName, baseSnapshot)
 }
 
 func (f *FileUseCase) DeleteFile(ctx context.Context, scopedPath domain.ScopedPath) error {
