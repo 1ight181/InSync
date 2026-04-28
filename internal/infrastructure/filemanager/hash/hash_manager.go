@@ -80,6 +80,29 @@ func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, rootName
 		)
 	}
 
+	return h.calcHash(resourceContent)
+}
+
+func (h *HashManager) ResolveWithForceRecalc(resourceContent cont.ResourceContent, rootName domain.RootName) (string, error) {
+	return h.calcHash(resourceContent)
+}
+
+func (h *HashManager) MarkDirty(scopedPath domain.ScopedPath) error {
+	h.dirtyPaths[scopedPath] = struct{}{}
+
+	parents, err := h.pathTreeReader.GetParents(scopedPath)
+	if err != nil {
+		return err
+	}
+
+	for _, parent := range parents {
+		h.dirtyPaths[parent] = struct{}{}
+	}
+
+	return nil
+}
+
+func (h *HashManager) calcHash(resourceContent cont.ResourceContent) (string, error) {
 	hash, err := h.hashCalculator.CalculateHash(resourceContent)
 	if err != nil {
 		return "", err
@@ -106,19 +129,4 @@ func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, rootName
 	)
 
 	return hash, nil
-}
-
-func (h *HashManager) MarkDirty(scopedPath domain.ScopedPath) error {
-	h.dirtyPaths[scopedPath] = struct{}{}
-
-	parents, err := h.pathTreeReader.GetParents(scopedPath)
-	if err != nil {
-		return err
-	}
-
-	for _, parent := range parents {
-		h.dirtyPaths[parent] = struct{}{}
-	}
-
-	return nil
 }
