@@ -78,6 +78,7 @@ func (b *MDnsNodeNamesBrowser) BrowseNodeNames(ctx context.Context) (chan domain
 
 	go func() {
 		defer close(nodeNamesChan)
+		b.seenNodeNames = make(map[domain.NodeName]struct{})
 		b.discoveryLoop(ctx, ifaces, nodeNamesChan)
 	}()
 
