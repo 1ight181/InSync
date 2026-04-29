@@ -6,12 +6,11 @@ import (
 )
 
 type AliasUseCase struct {
-	aliasRepository IAliasRepository
-	aliasCache      map[string]domain.NodeName
+	aliasProvider IAliasProvider
 }
 
 type AliasUseCaseOptions struct {
-	AliasRepository IAliasRepository
+	AliasProvider IAliasProvider
 }
 
 var (
@@ -19,44 +18,23 @@ var (
 )
 
 func NewAliasUseCase(opts AliasUseCaseOptions) (*AliasUseCase, error) {
-	if opts.AliasRepository == nil {
+	if opts.AliasProvider == nil {
 		return nil, ErrInvalidAliasUseCaseOptions
 	}
 
-	aliases, err := opts.AliasRepository.GetAliases()
-	if err != nil {
-		return nil, err
-	}
-
-	aliasCache := make(map[string]domain.NodeName, len(aliases))
-	for _, alias := range aliases {
-		aliasCache[alias] = domain.NodeName(alias)
-	}
-
 	return &AliasUseCase{
-		aliasRepository: opts.AliasRepository,
-		aliasCache:      aliasCache,
+		aliasProvider: opts.AliasProvider,
 	}, nil
 }
 
 func (a *AliasUseCase) SetAlias(newAlias string, nodeName domain.NodeName) error {
-	if err := a.aliasRepository.SetAlias(newAlias, nodeName); err != nil {
-		return err
-	}
-
-	a.aliasCache[newAlias] = nodeName
-	return nil
+	return a.aliasProvider.SetAlias(newAlias, nodeName)
 }
 
 func (a *AliasUseCase) RemoveAlias(aliasName string) error {
-	if err := a.aliasRepository.RemoveAlias(aliasName); err != nil {
-		return err
-	}
-
-	delete(a.aliasCache, aliasName)
-	return nil
+	return a.aliasProvider.RemoveAlias(aliasName)
 }
 
-func (a *AliasUseCase) GetAliases() map[string]domain.NodeName {
-	return a.aliasCache
+func (a *AliasUseCase) GetAliases() map[domain.NodeName]string {
+	return a.aliasProvider.GetAliases()
 }
