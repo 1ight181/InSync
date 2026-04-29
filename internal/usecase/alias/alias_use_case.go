@@ -6,12 +6,12 @@ import (
 )
 
 type AliasUseCase struct {
-	aliasRepo  IAliasRepository
-	aliasCache map[string]domain.NodeName
+	aliasRepository IAliasRepository
+	aliasCache      map[string]domain.NodeName
 }
 
 type AliasUseCaseOptions struct {
-	AliasRepo IAliasRepository
+	AliasRepository IAliasRepository
 }
 
 var (
@@ -19,11 +19,11 @@ var (
 )
 
 func NewAliasUseCase(opts AliasUseCaseOptions) (*AliasUseCase, error) {
-	if opts.AliasRepo == nil {
+	if opts.AliasRepository == nil {
 		return nil, ErrInvalidAliasUseCaseOptions
 	}
 
-	aliases, err := opts.AliasRepo.GetAliases()
+	aliases, err := opts.AliasRepository.GetAliases()
 	if err != nil {
 		return nil, err
 	}
@@ -34,19 +34,19 @@ func NewAliasUseCase(opts AliasUseCaseOptions) (*AliasUseCase, error) {
 	}
 
 	return &AliasUseCase{
-		aliasRepo:  opts.AliasRepo,
-		aliasCache: aliasCache,
+		aliasRepository: opts.AliasRepository,
+		aliasCache:      aliasCache,
 	}, nil
 }
 
 func (a *AliasUseCase) SetAlias(newAlias string, nodeName domain.NodeName) error {
-	return a.aliasRepo.SetAlias(newAlias, nodeName)
+	return a.aliasRepository.SetAlias(newAlias, nodeName)
 }
 
 func (a *AliasUseCase) RemoveAlias(aliasName string) error {
-	return a.aliasRepo.RemoveAlias(aliasName)
+	return a.aliasRepository.RemoveAlias(aliasName)
 }
 
 func (a *AliasUseCase) GetAliases() ([]string, error) {
-	return a.aliasRepo.GetAliases()
+	return a.aliasRepository.GetAliases()
 }

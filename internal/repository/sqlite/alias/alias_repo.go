@@ -2,6 +2,7 @@ package alias
 
 import (
 	"errors"
+	"insync/internal/domain"
 
 	"gorm.io/gorm"
 )
@@ -41,7 +42,7 @@ func (a *AliasRepository) GetAliases() ([]string, error) {
 	return aliasStrings, nil
 }
 
-func (a *AliasRepository) SetAlias(newAlias string, nodeName string) error {
+func (a *AliasRepository) SetAlias(newAlias string, nodeName domain.NodeName) error {
 	var alias Alias
 	if err := a.db.First(&alias, "node_name = ?", nodeName).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
