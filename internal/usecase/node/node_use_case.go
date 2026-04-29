@@ -35,7 +35,8 @@ func NewNodeUseCase(opts NodeUseCaseOptions) (*NodeUseCase, error) {
 	}, nil
 }
 
-func (c *NodeUseCase) ShowNodeNames(ctx context.Context) (chan domain.NodeName, error) {
+// Возвращает канал с мапой имя узла - алиас
+func (c *NodeUseCase) ShowNodeNames(ctx context.Context) (chan domain.NodeNameWithAlias, error) {
 	rawNodeNamesChan, err := c.nodeNamesBrowser.BrowseNodeNames(ctx)
 	if err != nil {
 		return nil, err
@@ -46,7 +47,7 @@ func (c *NodeUseCase) ShowNodeNames(ctx context.Context) (chan domain.NodeName, 
 		return nil, err
 	}
 
-	validNodeNamesChan := make(chan domain.NodeName, 10)
+	validNodeNamesChan := make(chan domain.NodeNameWithAlias, 10)
 	selfNodeName, err := domain.NewNodeName(localDeviceId.String())
 	if err != nil {
 		return nil, err
@@ -62,11 +63,10 @@ func (c *NodeUseCase) ShowNodeNames(ctx context.Context) (chan domain.NodeName, 
 			validNodeName := rawNodeName
 
 			alias := c.aliasProvider.GetAlias(rawNodeName)
-			if alias != "" {
-				validNodeName = domain.NodeName(alias)
+			validNodeNamesChan <- domain.NodeNameWithAlias{
+				NodeName: validNodeName,
+				Alias:    alias,
 			}
-
-			validNodeNamesChan <- validNodeName
 		}
 	}()
 

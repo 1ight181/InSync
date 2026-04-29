@@ -4,6 +4,11 @@ import "errors"
 
 type NodeName string
 
+type NodeNameWithAlias struct {
+	NodeName NodeName
+	Alias    string
+}
+
 var ErrEmptyNodeName = errors.New("NodeName не может быть пустым")
 
 func NewNodeName(name string) (NodeName, error) {

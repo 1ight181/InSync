@@ -6,5 +6,5 @@ import (
 )
 
 type INodeUseCase interface {
-	ShowNodeNames(ctx context.Context) (nodeNamesChan chan domain.NodeName, err error)
+	ShowNodeNames(ctx context.Context) (nodeNamesChan chan domain.NodeNameWithAlias, err error)
 }

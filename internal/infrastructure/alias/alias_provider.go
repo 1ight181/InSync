@@ -52,7 +52,12 @@ func (a *AliasProvider) RemoveAlias(aliasName string) error {
 		return err
 	}
 
-	delete(a.aliasesCache, domain.NodeName(aliasName))
+	for nodeName := range a.aliasesCache {
+		if a.aliasesCache[nodeName] == aliasName {
+			delete(a.aliasesCache, nodeName)
+		}
+	}
+
 	return nil
 }
 

@@ -78,8 +78,9 @@ type Cli struct {
 	loggerCtx context.Context
 
 	shouldUseCache *bool
-	nodeNameCache  map[domain.NodeName]struct{}
-	exitCtxCancel  context.CancelFunc
+	// nodeName -> alias
+	nodeNameCache []domain.NodeNameWithAlias
+	exitCtxCancel context.CancelFunc
 }
 
 type CliOptions struct {
@@ -120,9 +121,8 @@ func NewCli(opts CliOptions) (*Cli, error) {
 		initUseCase:    opts.InitUseCase,
 		aliasUseCase:   opts.AliasUseCase,
 
-		logger:        opts.Logger,
-		loggerCtx:     loggerCtx,
-		nodeNameCache: make(map[domain.NodeName]struct{}),
+		logger:    opts.Logger,
+		loggerCtx: loggerCtx,
 	}, nil
 }
 
@@ -428,14 +428,23 @@ func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("Доступные узлы (динамический список, нажмите Ctrl+C для завершения):")
 
-	newNodeNamesCache := make(map[domain.NodeName]struct{})
+	var newNodeNamesCache []domain.NodeNameWithAlias
 
 	for i := 1; ; i++ {
 		select {
-		case nodeName, ok := <-nodeNamesChan:
+		case nodeNameWithAlias, ok := <-nodeNamesChan:
 			if ok {
-				fmt.Printf("%d. %s\n", i, nodeName)
-				newNodeNamesCache[nodeName] = struct{}{}
+				nodeName := nodeNameWithAlias.NodeName
+				alias := nodeNameWithAlias.Alias
+				fmt.Printf("%d. %s", i, nodeName)
+
+				if alias != "" {
+					alias = fmt.Sprintf("(%s)", alias)
+				}
+
+				fmt.Println(alias)
+
+				newNodeNamesCache = append(newNodeNamesCache, nodeNameWithAlias)
 				c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Доступный узел", slog.String("name", nodeName.String()))
 			}
 		case <-interruptCtx.Done():
@@ -925,8 +934,9 @@ func (c *Cli) setAliasSuggestionFunc(prefix string) []prompt.Suggest {
 
 	switch length {
 	case 2:
-		nodeNames := c.nodeNameCache
-		for nodeName := range nodeNames {
+		nodeNamesWithAlias := c.nodeNameCache
+		for _, nodeNameWithAlias := range nodeNamesWithAlias {
+			nodeName := nodeNameWithAlias.NodeName
 			if strings.HasPrefix(nodeName.String(), parts[1]) {
 				suggestions = append(suggestions, prompt.Suggest{
 					Text: nodeName.String(),
@@ -942,7 +952,7 @@ func (c *Cli) setAliasSuggestionFunc(prefix string) []prompt.Suggest {
 
 func (c *Cli) removeAliasSuggestionFunc(prefix string) []prompt.Suggest {
 	suggestions := make([]prompt.Suggest, 0)
-	aliases := c.aliasUseCase.GetAliases()
+	nodeNamesWithAlias := c.nodeNameCache
 
 	parts := strings.Fields(prefix)
 
@@ -956,7 +966,9 @@ func (c *Cli) removeAliasSuggestionFunc(prefix string) []prompt.Suggest {
 		return nil
 	}
 
-	for nodeName, alias := range aliases {
+	for _, nodeNamesWithAlias := range nodeNamesWithAlias {
+		alias := nodeNamesWithAlias.Alias
+		nodeName := nodeNamesWithAlias.NodeName
 		if strings.HasPrefix(alias, parts[1]) {
 			suggestions = append(suggestions, prompt.Suggest{
 				Text:        alias,
@@ -981,8 +993,11 @@ func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
 		return nil
 	}
 
+	nodeNamesWithAlias := c.nodeNameCache
+
 	suggestions := make([]prompt.Suggest, 0)
-	for nodeName := range c.nodeNameCache {
+	for _, nodeNameWithAlias := range nodeNamesWithAlias {
+		nodeName := nodeNameWithAlias.NodeName
 		if strings.HasPrefix(nodeName.String(), parts[1]) {
 			suggestions = append(suggestions, prompt.Suggest{
 				Text: nodeName.String(),
