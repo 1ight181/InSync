@@ -73,7 +73,7 @@ func (r *HashRepository) SetHashCache(fullPath domain.Path, hash string) error {
 
 func (r *HashRepository) GetDirtyPaths() (map[domain.ScopedPath]struct{}, error) {
 	var dirtyPathEntries []dirty.DirtyPath
-	if err := r.db.Find(&dirtyPathEntries).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := r.db.Find(&dirtyPathEntries).Error; err != nil {
 		return nil, err
 	}
 
