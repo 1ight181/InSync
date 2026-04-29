@@ -953,7 +953,7 @@ func (c *Cli) removeAliasSuggestionFunc(prefix string) []prompt.Suggest {
 		return nil
 	}
 
-	for alias, nodeName := range aliases {
+	for nodeName, alias := range aliases {
 		if strings.HasPrefix(alias, parts[1]) {
 			suggestions = append(suggestions, prompt.Suggest{
 				Text:        alias,
