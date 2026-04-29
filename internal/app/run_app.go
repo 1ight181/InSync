@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"insync/internal/domain"
+	aliasprov "insync/internal/infrastructure/alias"
 	base "insync/internal/infrastructure/base"
 	clt "insync/internal/infrastructure/client"
 	mdnsresolver "insync/internal/infrastructure/client/resolver"
@@ -422,9 +423,28 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать ConnectUseCase: %v", err))
 	}
 
+	aliasRepositoryOpts := aliasrepo.AliasRepositoryOptions{
+		Db: db,
+	}
+
+	aliasRepository, err := aliasrepo.NewAliasRepository(aliasRepositoryOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать AliasRepository: %v", err))
+	}
+
+	aliasProviderOpts := aliasprov.AliasProviderOptions{
+		AliasRepository: aliasRepository,
+	}
+
+	aliasProvider, err := aliasprov.NewAliasProvider(aliasProviderOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать AliasProvider: %v", err))
+	}
+
 	nodeUseCaseOpts := nodeusecase.NodeUseCaseOptions{
 		NodeNamesBrowser:      mDnsNodeNamesBrowser,
 		LocalDeviceIdResolver: localIdDeviceResolver,
+		AliasProvider:         aliasProvider,
 	}
 
 	nodeUseCase, err := nodeusecase.NewNodeUseCase(nodeUseCaseOpts)
@@ -549,17 +569,8 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать InitUseCase: %v", err))
 	}
 
-	aliasRepositoryOpts := aliasrepo.AliasRepositoryOptions{
-		Db: db,
-	}
-
-	aliasRepository, err := aliasrepo.NewAliasRepository(aliasRepositoryOpts)
-	if err != nil {
-		panic(fmt.Sprintf("Не удалось создать AliasRepository: %v", err))
-	}
-
 	aliasUseCaseOpts := aliasusecase.AliasUseCaseOptions{
-		AliasRepository: aliasRepository,
+		AliasProvider: aliasProvider,
 	}
 
 	aliasUseCase, err := aliasusecase.NewAliasUseCase(aliasUseCaseOpts)
