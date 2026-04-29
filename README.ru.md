@@ -256,6 +256,5 @@ insync> set-alias nodeNameExample aliasExample
 ## Сообщество и поддержка
 
 Нашли баг? - [GitHub Issues](https://github.com/1ight181/InSync/issues)
-Email: danil.odinzov181@gmail.com
 
-## English
+Email: danil.odinzov181@gmail.com

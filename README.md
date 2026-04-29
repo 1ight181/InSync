@@ -256,4 +256,5 @@ The alias is displayed next to the node name and makes working in the REPL easie
 ## Community & support
 
 Found a bug?  - [GitHub Issues](https://github.com/1ight181/InSync/issues)
+
 Email: danil.odinzov181@gmail.com
