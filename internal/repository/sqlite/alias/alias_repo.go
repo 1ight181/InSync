@@ -53,6 +53,7 @@ func (a *AliasRepository) SetAlias(newAlias string, nodeName domain.NodeName) er
 	}
 
 	alias.Name = newAlias
+	alias.NodeName = nodeName.String()
 
 	return a.db.Save(&alias).Error
 }
