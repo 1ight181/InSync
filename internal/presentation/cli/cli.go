@@ -230,7 +230,7 @@ func (c *Cli) createSetAliasCmd() *cobra.Command {
 		Long: `Установить псевдоним для nodeName
 		node-name - имя узла
 		alias-name - имя псевдонима`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(2),
 		Annotations: map[string]string{
 			cobraprompt.DynamicSuggestionsAnnotation: setAliasCmdName,
 		},
@@ -306,6 +306,9 @@ func (c *Cli) createRemoveRootCmd() *cobra.Command {
 		root-name - имя корневого каталога`,
 		RunE: c.removeRootCmd,
 		Args: cobra.ExactArgs(1),
+		Annotations: map[string]string{
+			cobraprompt.DynamicSuggestionsAnnotation: removeRootCmdName,
+		},
 	}
 }
 
@@ -886,25 +889,21 @@ func (c *Cli) formatConflictTimestamp(timestamp uint64) string {
 }
 
 func (c *Cli) suggestionFunc(comand *cobra.Command, annotationValue string, document *prompt.Document) []prompt.Suggest {
-	typedPrefix := strings.Split(document.TextBeforeCursor(), " ")
-
-	if len(typedPrefix) <= 1 {
-		return nil
-	}
-
-	typedPrefixWithoutCommand := typedPrefix[1]
+	typedPrefix := document.TextBeforeCursor()
 
 	switch annotationValue {
 	case connectCmdName:
-		return c.nodeNameSuggestionFunc(typedPrefixWithoutCommand)
+		return c.nodeNameSuggestionFunc(typedPrefix)
 	case dryRunCmdName, syncCmdName:
-		return c.rootNameSuggestionFunc(typedPrefixWithoutCommand)
+		return c.rootNameSuggestionFunc(typedPrefix)
 	case initCmdName:
-		return c.initNameSuggestionFunc(typedPrefixWithoutCommand)
+		return c.initNameSuggestionFunc(typedPrefix)
 	case setAliasCmdName:
-		return c.setAliasSuggestionFunc(typedPrefixWithoutCommand)
+		return c.setAliasSuggestionFunc(typedPrefix)
 	case removeAliasCmdName:
-		return c.removeAliasSuggestionFunc(typedPrefixWithoutCommand)
+		return c.removeAliasSuggestionFunc(typedPrefix)
+	case removeRootCmdName:
+		return c.rootNameSuggestionFunc(typedPrefix)
 	default:
 		return nil
 	}
@@ -912,14 +911,27 @@ func (c *Cli) suggestionFunc(comand *cobra.Command, annotationValue string, docu
 
 func (c *Cli) setAliasSuggestionFunc(prefix string) []prompt.Suggest {
 	suggestions := make([]prompt.Suggest, 0)
-	nodeNames := c.nodeNameCache
 
-	for nodeName := range nodeNames {
-		if strings.HasPrefix(nodeName.String(), prefix) {
-			suggestions = append(suggestions, prompt.Suggest{
-				Text: nodeName.String(),
-			})
+	parts := strings.Fields(prefix)
+
+	if strings.HasSuffix(prefix, " ") {
+		parts = append(parts, "")
+	}
+
+	length := len(parts)
+
+	switch length {
+	case 2:
+		nodeNames := c.nodeNameCache
+		for nodeName := range nodeNames {
+			if strings.HasPrefix(nodeName.String(), parts[1]) {
+				suggestions = append(suggestions, prompt.Suggest{
+					Text: nodeName.String(),
+				})
+			}
 		}
+	case 3:
+		return nil
 	}
 
 	return suggestions
@@ -927,14 +939,25 @@ func (c *Cli) setAliasSuggestionFunc(prefix string) []prompt.Suggest {
 
 func (c *Cli) removeAliasSuggestionFunc(prefix string) []prompt.Suggest {
 	suggestions := make([]prompt.Suggest, 0)
-	aliases, err := c.aliasUseCase.GetAliases()
-	if err != nil {
+	aliases := c.aliasUseCase.GetAliases()
+
+	parts := strings.Fields(prefix)
+
+	if strings.HasSuffix(prefix, " ") {
+		parts = append(parts, "")
+	}
+
+	length := len(parts)
+
+	if length < 2 {
 		return nil
 	}
-	for _, alias := range aliases {
-		if strings.HasPrefix(alias, prefix) {
+
+	for alias, nodeName := range aliases {
+		if strings.HasPrefix(alias, parts[1]) {
 			suggestions = append(suggestions, prompt.Suggest{
-				Text: alias,
+				Text:        alias,
+				Description: nodeName.String(),
 			})
 		}
 	}
@@ -943,9 +966,21 @@ func (c *Cli) removeAliasSuggestionFunc(prefix string) []prompt.Suggest {
 }
 
 func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
+	parts := strings.Fields(prefix)
+
+	if strings.HasSuffix(prefix, " ") {
+		parts = append(parts, "")
+	}
+
+	length := len(parts)
+
+	if length < 2 {
+		return nil
+	}
+
 	suggestions := make([]prompt.Suggest, 0)
 	for nodeName := range c.nodeNameCache {
-		if strings.HasPrefix(nodeName.String(), prefix) {
+		if strings.HasPrefix(nodeName.String(), parts[1]) {
 			suggestions = append(suggestions, prompt.Suggest{
 				Text: nodeName.String(),
 			})
@@ -958,7 +993,20 @@ func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
 
 func (c *Cli) initNameSuggestionFunc(prefix string) []prompt.Suggest {
 	suggestions := make([]prompt.Suggest, 0)
-	if !strings.Contains(prefix, "remote") && !strings.Contains(prefix, "local") {
+
+	parts := strings.Fields(prefix)
+
+	if strings.HasSuffix(prefix, " ") {
+		parts = append(parts, "")
+	}
+
+	length := len(parts)
+
+	if length < 2 {
+		return nil
+	}
+
+	if !strings.Contains(parts[1], "remote") && !strings.Contains(parts[1], "local") {
 		suggestions = append(suggestions, prompt.Suggest{
 			Text: "local",
 		})
@@ -975,13 +1023,25 @@ func (c *Cli) initNameSuggestionFunc(prefix string) []prompt.Suggest {
 func (c *Cli) rootNameSuggestionFunc(prefix string) []prompt.Suggest {
 	suggestions := make([]prompt.Suggest, 0)
 
+	parts := strings.Fields(prefix)
+
+	if strings.HasSuffix(prefix, " ") {
+		parts = append(parts, "")
+	}
+
+	length := len(parts)
+
+	if length < 2 {
+		return nil
+	}
+
 	rootNames, err := c.rootUseCase.GetRoots()
 	if err != nil {
 		return suggestions
 	}
 
 	for rootName, path := range rootNames {
-		if strings.HasPrefix(rootName.String(), prefix) {
+		if strings.HasPrefix(rootName.String(), parts[1]) {
 			suggestions = append(suggestions, prompt.Suggest{
 				Text:        rootName.String(),
 				Description: path.String(),

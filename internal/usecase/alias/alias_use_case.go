@@ -40,13 +40,23 @@ func NewAliasUseCase(opts AliasUseCaseOptions) (*AliasUseCase, error) {
 }
 
 func (a *AliasUseCase) SetAlias(newAlias string, nodeName domain.NodeName) error {
-	return a.aliasRepository.SetAlias(newAlias, nodeName)
+	if err := a.aliasRepository.SetAlias(newAlias, nodeName); err != nil {
+		return err
+	}
+
+	a.aliasCache[newAlias] = nodeName
+	return nil
 }
 
 func (a *AliasUseCase) RemoveAlias(aliasName string) error {
-	return a.aliasRepository.RemoveAlias(aliasName)
+	if err := a.aliasRepository.RemoveAlias(aliasName); err != nil {
+		return err
+	}
+
+	delete(a.aliasCache, aliasName)
+	return nil
 }
 
-func (a *AliasUseCase) GetAliases() ([]string, error) {
-	return a.aliasRepository.GetAliases()
+func (a *AliasUseCase) GetAliases() map[string]domain.NodeName {
+	return a.aliasCache
 }
