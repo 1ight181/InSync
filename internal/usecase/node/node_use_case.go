@@ -9,11 +9,13 @@ import (
 type NodeUseCase struct {
 	nodeNamesBrowser      INodeNamesBrowser
 	localDeviceIdResolver ILocalDeviceIdResolver
+	aliasProvider         IAliasProvider
 }
 
 type NodeUseCaseOptions struct {
 	NodeNamesBrowser      INodeNamesBrowser
 	LocalDeviceIdResolver ILocalDeviceIdResolver
+	AliasProvider         IAliasProvider
 }
 
 var (
@@ -22,12 +24,14 @@ var (
 
 func NewNodeUseCase(opts NodeUseCaseOptions) (*NodeUseCase, error) {
 	if opts.NodeNamesBrowser == nil ||
-		opts.LocalDeviceIdResolver == nil {
+		opts.LocalDeviceIdResolver == nil ||
+		opts.AliasProvider == nil {
 		return nil, ErrInvalidNodeUseCaseOptions
 	}
 	return &NodeUseCase{
 		nodeNamesBrowser:      opts.NodeNamesBrowser,
 		localDeviceIdResolver: opts.LocalDeviceIdResolver,
+		aliasProvider:         opts.AliasProvider,
 	}, nil
 }
 
@@ -54,7 +58,15 @@ func (c *NodeUseCase) ShowNodeNames(ctx context.Context) (chan domain.NodeName, 
 			if rawNodeName == selfNodeName {
 				continue
 			}
-			validNodeNamesChan <- rawNodeName
+
+			validNodeName := rawNodeName
+
+			alias := c.aliasProvider.GetAlias(rawNodeName)
+			if alias != "" {
+				validNodeName = domain.NodeName(alias)
+			}
+
+			validNodeNamesChan <- validNodeName
 		}
 	}()
 
