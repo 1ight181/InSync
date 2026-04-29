@@ -31,6 +31,8 @@ const (
 	dryRunCmdName      = "dry-run"
 	syncCmdName        = "sync"
 	initCmdName        = "init"
+	setAliasCmdName    = "set-alias"
+	removeAliasCmdName = "remove-alias"
 )
 
 const (
@@ -70,6 +72,7 @@ type Cli struct {
 	connectUseCase IConnectUseCase
 	rootUseCase    IRootUseCase
 	initUseCase    IInitUseCase
+	aliasUseCase   IAliasUseCase
 
 	logger    *slog.Logger
 	loggerCtx context.Context
@@ -86,6 +89,7 @@ type CliOptions struct {
 	ConnectUseCase IConnectUseCase
 	RootUseCase    IRootUseCase
 	InitUseCase    IInitUseCase
+	AliasUseCase   IAliasUseCase
 
 	Logger *slog.Logger
 }
@@ -102,6 +106,7 @@ func NewCli(opts CliOptions) (*Cli, error) {
 		opts.ConnectUseCase == nil ||
 		opts.RootUseCase == nil ||
 		opts.InitUseCase == nil ||
+		opts.AliasUseCase == nil ||
 		opts.Logger == nil {
 		return nil, ErrInvalidCliOptions
 	}
@@ -113,6 +118,7 @@ func NewCli(opts CliOptions) (*Cli, error) {
 		connectUseCase: opts.ConnectUseCase,
 		rootUseCase:    opts.RootUseCase,
 		initUseCase:    opts.InitUseCase,
+		aliasUseCase:   opts.AliasUseCase,
 
 		logger:        opts.Logger,
 		loggerCtx:     loggerCtx,
@@ -129,6 +135,9 @@ func (c *Cli) Start() {
 	connectCmd := c.createConnectCmd()
 	currentNodeCmd := c.createCurrentNodeCmd()
 
+	setAliasCmd := c.createSetAliasCmd()
+	removeAliasCmd := c.createRemoveAliasCmd()
+
 	addRootCmd := c.createAddRootCmd()
 	removeRootCmd := c.createRemoveRootCmd()
 	getRootsCmd := c.createRootsCmd()
@@ -144,6 +153,9 @@ func (c *Cli) Start() {
 	rootCmd.AddCommand(addRootCmd)
 	rootCmd.AddCommand(removeRootCmd)
 	rootCmd.AddCommand(getRootsCmd)
+
+	rootCmd.AddCommand(setAliasCmd)
+	rootCmd.AddCommand(removeAliasCmd)
 
 	rootCmd.AddCommand(connectCmd)
 
@@ -207,6 +219,35 @@ func (c *Cli) createRootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Short:         "InSync - инструмент для синхронизации файлов между различными хранилищами",
+	}
+}
+
+func (c *Cli) createSetAliasCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   fmt.Sprintf("%s node-name alias-name", setAliasCmdName),
+		Short: "Установить псевдоним для nodeName",
+		RunE:  c.setAliasCmd,
+		Long: `Установить псевдоним для nodeName
+		node-name - имя узла
+		alias-name - имя псевдонима`,
+		Args: cobra.ExactArgs(1),
+		Annotations: map[string]string{
+			cobraprompt.DynamicSuggestionsAnnotation: setAliasCmdName,
+		},
+	}
+}
+
+func (c *Cli) createRemoveAliasCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   fmt.Sprintf("%s alias-name", removeAliasCmdName),
+		Short: "Удалить псевдоним",
+		RunE:  c.removeAliasCmd,
+		Long: `Удалить псевдоним. 
+		alias-name - имя псевдонима`,
+		Args: cobra.ExactArgs(1),
+		Annotations: map[string]string{
+			cobraprompt.DynamicSuggestionsAnnotation: removeAliasCmdName,
+		},
 	}
 }
 
@@ -488,6 +529,50 @@ func (c *Cli) rootsCmd(cmd *cobra.Command, args []string) {
 		i++
 		fmt.Printf("%d. %s = %s\n", i, root, path)
 	}
+}
+func (c *Cli) setAliasCmd(cmd *cobra.Command, args []string) error {
+	c.logger.Debug("Выполнение команды set-alias")
+
+	nodeName, err := domain.NewNodeName(args[0])
+	if err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось установить псевдоним", slog.String("error", err.Error()))
+		fmt.Println("Не удалось установить псевдоним")
+		return err
+	}
+
+	alias := args[1]
+
+	if alias == "" {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось установить псевдоним", slog.String("error", "псевдоним не может быть пустым"))
+		fmt.Println("Не удалось установить псевдоним")
+		return fmt.Errorf("псевдоним не может быть пустым")
+	}
+
+	if err := c.aliasUseCase.SetAlias(alias, nodeName); err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось установить псевдоним", slog.String("error", err.Error()))
+		fmt.Println("Не удалось установить псевдоним")
+		return err
+	}
+
+	c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Псевдоним установлен", slog.String("alias", alias), slog.String("node", nodeName.String()))
+	fmt.Printf("Псевдоним %s установлен\n", alias)
+	return nil
+}
+
+func (c *Cli) removeAliasCmd(cmd *cobra.Command, args []string) error {
+	c.logger.Debug("Выполнение команды remove-alias")
+
+	alias := args[0]
+
+	if err := c.aliasUseCase.RemoveAlias(alias); err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось удалить псевдоним", slog.String("error", err.Error()))
+		fmt.Println("Не удалось удалить псевдоним")
+		return err
+	}
+
+	c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Псевдоним удален", slog.String("alias", alias))
+	fmt.Printf("Псевдоним %s удален\n", alias)
+	return nil
 }
 
 func (c *Cli) connectCmd(cmd *cobra.Command, args []string) error {
@@ -816,9 +901,45 @@ func (c *Cli) suggestionFunc(comand *cobra.Command, annotationValue string, docu
 		return c.rootNameSuggestionFunc(typedPrefixWithoutCommand)
 	case initCmdName:
 		return c.initNameSuggestionFunc(typedPrefixWithoutCommand)
+	case setAliasCmdName:
+		return c.setAliasSuggestionFunc(typedPrefixWithoutCommand)
+	case removeAliasCmdName:
+		return c.removeAliasSuggestionFunc(typedPrefixWithoutCommand)
 	default:
 		return nil
 	}
+}
+
+func (c *Cli) setAliasSuggestionFunc(prefix string) []prompt.Suggest {
+	suggestions := make([]prompt.Suggest, 0)
+	nodeNames := c.nodeNameCache
+
+	for nodeName := range nodeNames {
+		if strings.HasPrefix(nodeName.String(), prefix) {
+			suggestions = append(suggestions, prompt.Suggest{
+				Text: nodeName.String(),
+			})
+		}
+	}
+
+	return suggestions
+}
+
+func (c *Cli) removeAliasSuggestionFunc(prefix string) []prompt.Suggest {
+	suggestions := make([]prompt.Suggest, 0)
+	aliases, err := c.aliasUseCase.GetAliases()
+	if err != nil {
+		return nil
+	}
+	for _, alias := range aliases {
+		if strings.HasPrefix(alias, prefix) {
+			suggestions = append(suggestions, prompt.Suggest{
+				Text: alias,
+			})
+		}
+	}
+
+	return suggestions
 }
 
 func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
