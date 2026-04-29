@@ -39,7 +39,7 @@ func NewAliasUseCase(opts AliasUseCaseOptions) (*AliasUseCase, error) {
 	}, nil
 }
 
-func (a *AliasUseCase) SetAlias(newAlias string, nodeName string) error {
+func (a *AliasUseCase) SetAlias(newAlias string, nodeName domain.NodeName) error {
 	return a.aliasRepo.SetAlias(newAlias, nodeName)
 }
 

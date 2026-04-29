@@ -28,10 +28,12 @@ import (
 	persister "insync/internal/infrastructure/syncer/persister"
 	cli "insync/internal/presentation/cli"
 	repo "insync/internal/repository/sqlite"
+	aliasrepo "insync/internal/repository/sqlite/alias"
 	baserepo "insync/internal/repository/sqlite/base"
 	hashrepo "insync/internal/repository/sqlite/hash"
 	rootrepo "insync/internal/repository/sqlite/root"
 	server "insync/internal/transport/grpc/server"
+	aliasusecase "insync/internal/usecase/alias"
 	baseusecase "insync/internal/usecase/base"
 	connusecase "insync/internal/usecase/connect"
 	fileusecase "insync/internal/usecase/file"
@@ -547,6 +549,24 @@ func RunApp() {
 		panic(fmt.Sprintf("Не удалось создать InitUseCase: %v", err))
 	}
 
+	aliasRepositoryOpts := aliasrepo.AliasRepositoryOptions{
+		Db: db,
+	}
+
+	aliasRepository, err := aliasrepo.NewAliasRepository(aliasRepositoryOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать AliasRepository: %v", err))
+	}
+
+	aliasUseCaseOpts := aliasusecase.AliasUseCaseOptions{
+		AliasRepository: aliasRepository,
+	}
+
+	aliasUseCase, err := aliasusecase.NewAliasUseCase(aliasUseCaseOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать AliasUseCase: %v", err))
+	}
+
 	cliInstanceOpts := cli.CliOptions{
 		SyncUseCase:    syncUseCase,
 		ScanUseCase:    scanUseCase,
@@ -554,6 +574,7 @@ func RunApp() {
 		ConnectUseCase: connectUseCase,
 		RootUseCase:    rootUseCase,
 		InitUseCase:    initUseCase,
+		AliasUseCase:   aliasUseCase,
 
 		Logger: cliLogger,
 	}
