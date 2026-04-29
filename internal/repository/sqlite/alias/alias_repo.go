@@ -27,19 +27,19 @@ func NewAliasRepository(opts AliasRepositoryOptions) (*AliasRepository, error) {
 	return &AliasRepository{db: opts.Db}, nil
 }
 
-func (a *AliasRepository) GetAliases() ([]string, error) {
+func (a *AliasRepository) GetAliases() (map[domain.NodeName]string, error) {
 	var aliases []Alias
 	err := a.db.Find(&aliases).Error
 	if err != nil {
 		return nil, err
 	}
 
-	var aliasStrings []string
+	aliasMap := make(map[domain.NodeName]string, len(aliases))
 	for _, alias := range aliases {
-		aliasStrings = append(aliasStrings, alias.Name)
+		aliasMap[domain.NodeName(alias.NodeName)] = alias.Name
 	}
 
-	return aliasStrings, nil
+	return aliasMap, nil
 }
 
 func (a *AliasRepository) SetAlias(newAlias string, nodeName domain.NodeName) error {
