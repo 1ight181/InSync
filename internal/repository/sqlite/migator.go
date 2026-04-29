@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"insync/internal/repository/sqlite/alias"
 	snap "insync/internal/repository/sqlite/base"
 	hash "insync/internal/repository/sqlite/hash"
 	dirty "insync/internal/repository/sqlite/hash/dirty"
@@ -28,6 +29,7 @@ func (a *AutoMigrator) Migrate(db *gorm.DB) error {
 		&snap.FileMetadata{},
 		&root.Root{},
 		&dirty.DirtyPath{},
+		&alias.Alias{},
 	)
 	if err != nil {
 		return err
