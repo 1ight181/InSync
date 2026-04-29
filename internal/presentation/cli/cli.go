@@ -428,15 +428,18 @@ func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("Доступные узлы (динамический список, нажмите Ctrl+C для завершения):")
 
+	newNodeNamesCache := make(map[domain.NodeName]struct{})
+
 	for i := 1; ; i++ {
 		select {
 		case nodeName, ok := <-nodeNamesChan:
 			if ok {
 				fmt.Printf("%d. %s\n", i, nodeName)
-				c.nodeNameCache[nodeName] = struct{}{}
+				newNodeNamesCache[nodeName] = struct{}{}
 				c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Доступный узел", slog.String("name", nodeName.String()))
 			}
 		case <-interruptCtx.Done():
+			c.nodeNameCache = newNodeNamesCache
 			c.logger.Debug("Вызывано прерывание во время выполнения команды nodes")
 			return nil
 		}
