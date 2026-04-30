@@ -9,20 +9,16 @@ type ConnectUseCase struct {
 	connectionManager IConnectionManager
 }
 
-type ConnectUseCaseOptions struct {
-	ConnectionManager IConnectionManager
-}
-
 var (
 	ErrInvalidConnectUseCaseOptions = errors.New("Все поля ConnectUseCaseOptions должны быть заполнены")
 )
 
-func NewConnectUseCase(opts ConnectUseCaseOptions) (*ConnectUseCase, error) {
-	if opts.ConnectionManager == nil {
+func NewConnectUseCase(connectionManager IConnectionManager) (*ConnectUseCase, error) {
+	if connectionManager == nil {
 		return nil, ErrInvalidConnectUseCaseOptions
 	}
 	return &ConnectUseCase{
-		connectionManager: opts.ConnectionManager,
+		connectionManager: connectionManager,
 	}, nil
 }
 

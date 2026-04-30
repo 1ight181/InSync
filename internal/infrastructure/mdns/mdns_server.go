@@ -40,14 +40,18 @@ type MDnsServerOptions struct {
 	Logger       *slog.Logger
 }
 
-func NewMDnsServer(opts MDnsServerOptions) *MDnsServer {
+var (
+	ErrInvalidMDnsServerOpts = fmt.Errorf("все поля mDNS сервера должны быть заполнены")
+)
+
+func NewMDnsServer(opts MDnsServerOptions) (*MDnsServer, error) {
 	if opts.InstanceName == "" ||
 		opts.ServiceType == "" ||
 		opts.Domain == "" ||
 		opts.Port == 0 ||
 		opts.Interfaces == nil ||
 		opts.Logger == nil {
-		panic("Все поля MDnsServerOptions должны быть заполнены")
+		return nil, ErrInvalidMDnsServerOpts
 	}
 
 	return &MDnsServer{
@@ -58,7 +62,7 @@ func NewMDnsServer(opts MDnsServerOptions) *MDnsServer {
 		interfaces:   opts.Interfaces,
 		logger:       opts.Logger,
 		loggerCtx:    context.Background(),
-	}
+	}, nil
 }
 
 func (ms *MDnsServer) Start() error {

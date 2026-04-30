@@ -10,20 +10,16 @@ type ScanUseCase struct {
 	planResolver IPlanResolver
 }
 
-type ScanUseCaseOptions struct {
-	PlanResolver IPlanResolver
-}
-
 var (
-	ErrInvalidScanUseCaseOptions = errors.New("Все поля ScanUseCaseOptions должны быть заполнены")
+	ErrInvalidScanUseCaseOptions = errors.New("Все поля ScanUseCaseOptions не должны nil")
 )
 
-func NewScanUseCase(opts ScanUseCaseOptions) (*ScanUseCase, error) {
-	if opts.PlanResolver == nil {
+func NewScanUseCase(planResolver IPlanResolver) (*ScanUseCase, error) {
+	if planResolver == nil {
 		return nil, ErrInvalidScanUseCaseOptions
 	}
 	return &ScanUseCase{
-		planResolver: opts.PlanResolver,
+		planResolver: planResolver,
 	}, nil
 }
 

@@ -13,21 +13,17 @@ type HashCache struct {
 	hashCacheRepository IHashCacheRepository
 }
 
-type HashCacheOptions struct {
-	HashCacheRepository IHashCacheRepository
-}
-
 var (
 	ErrInvalidOpts = errors.New("Все поля HashCacheOptions должны быть заполнены")
 )
 
-func NewHashCache(opts HashCacheOptions) (*HashCache, error) {
-	if opts.HashCacheRepository == nil {
+func NewHashCache(hashCacheRepository IHashCacheRepository) (*HashCache, error) {
+	if hashCacheRepository == nil {
 		return nil, ErrInvalidOpts
 	}
 
 	hashCache := &HashCache{
-		hashCacheRepository: opts.HashCacheRepository,
+		hashCacheRepository: hashCacheRepository,
 		cache:               make(map[domain.Path]string),
 	}
 

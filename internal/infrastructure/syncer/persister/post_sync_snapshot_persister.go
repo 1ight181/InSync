@@ -7,35 +7,31 @@ import (
 )
 
 type PostSyncBaseSnapshotPersister struct {
-	baseSnapshotRepository IBaseSnapshotRepositoryWriter
-	deviceIdProvider       IDeviceIdProvider
-	localSnapshotProvider  ILocalSnapshotProvider
-	clientFactory          IClientFactory
+	baseSnapshotManager   IBaseSnapshotManager
+	localSnapshotProvider ILocalSnapshotProvider
+	clientFactory         IClientFactory
 }
 
 type PostSyncBaseSnapshotPersisterOptions struct {
-	BaseSnapshotRepository IBaseSnapshotRepositoryWriter
-	DeviceIdProvider       IDeviceIdProvider
-	LocalSnapshotProvider  ILocalSnapshotProvider
-	ClientFactory          IClientFactory
+	BaseSnapshotManager   IBaseSnapshotManager
+	LocalSnapshotProvider ILocalSnapshotProvider
+	ClientFactory         IClientFactory
 }
 
 var (
-	ErrInvalidOpts = errors.New("Все поля PostSyncBaseSnapshotPersister должны быть заполнены")
+	ErrInvalidOpts = errors.New("Все поля PostSyncBaseSnapshotPersister не должны быть nil")
 )
 
 func NewPostSyncBaseSnapshotPersister(opts PostSyncBaseSnapshotPersisterOptions) (*PostSyncBaseSnapshotPersister, error) {
-	if opts.BaseSnapshotRepository == nil ||
-		opts.DeviceIdProvider == nil ||
+	if opts.BaseSnapshotManager == nil ||
 		opts.LocalSnapshotProvider == nil ||
 		opts.ClientFactory == nil {
 		return nil, ErrInvalidOpts
 	}
 	return &PostSyncBaseSnapshotPersister{
-		baseSnapshotRepository: opts.BaseSnapshotRepository,
-		deviceIdProvider:       opts.DeviceIdProvider,
-		localSnapshotProvider:  opts.LocalSnapshotProvider,
-		clientFactory:          opts.ClientFactory,
+		baseSnapshotManager:   opts.BaseSnapshotManager,
+		localSnapshotProvider: opts.LocalSnapshotProvider,
+		clientFactory:         opts.ClientFactory,
 	}, nil
 }
 
@@ -49,22 +45,16 @@ func (b *PostSyncBaseSnapshotPersister) UpdateBaseSnapshot(ctx context.Context, 
 }
 
 func (b *PostSyncBaseSnapshotPersister) updateBaseSnapshotLocaly(ctx context.Context, rootName domain.RootName) error {
-	newBaseSnapshot, err := b.localSnapshotProvider.GetLocalSnapshot(ctx, rootName)
+	currentBaseSnapshot, err := b.baseSnapshotManager.GetBaseSnapshot(ctx, rootName)
+	if err != nil {
+		return err
+	}
+	newBaseSnapshot, err := b.localSnapshotProvider.GetLocalSnapshot(ctx, rootName, &currentBaseSnapshot)
 	if err != nil {
 		return err
 	}
 
-	remoteDeviceId, err := b.deviceIdProvider.GetCurrentRemoteDeviceId()
-	if err != nil {
-		return err
-	}
-
-	localDeviceId, err := b.deviceIdProvider.GetCurrentLocalDeviceId()
-	if err != nil {
-		return err
-	}
-
-	return b.baseSnapshotRepository.CreateBaseSnapshot(ctx, newBaseSnapshot, localDeviceId, remoteDeviceId, rootName)
+	return b.baseSnapshotManager.CreateBaseSnapshot(ctx, newBaseSnapshot, rootName)
 }
 
 func (b *PostSyncBaseSnapshotPersister) updateBaseSnapshotRemotly(ctx context.Context, rootName domain.RootName) error {

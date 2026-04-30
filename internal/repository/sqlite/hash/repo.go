@@ -13,19 +13,15 @@ type HashRepository struct {
 	db *gorm.DB
 }
 
-type HashRepositoryOptions struct {
-	Db *gorm.DB
-}
-
 var (
 	ErrInvalidHashRepositoryOptions = errors.New("Все поля HashRepositoryOptions должны быть заполнены")
 )
 
-func NewHashRepository(opts HashRepositoryOptions) (*HashRepository, error) {
-	if opts.Db == nil {
+func NewHashRepository(db *gorm.DB) (*HashRepository, error) {
+	if db == nil {
 		return nil, ErrInvalidHashRepositoryOptions
 	}
-	return &HashRepository{db: opts.Db}, nil
+	return &HashRepository{db: db}, nil
 }
 
 func (r *HashRepository) GetHashCache() (map[domain.Path]string, error) {

@@ -12,19 +12,15 @@ type BaseSnapshotRepository struct {
 	db *gorm.DB
 }
 
-type BaseSnapshotRepositoryOptions struct {
-	Db *gorm.DB
-}
-
 var (
 	ErrInvalidBaseSnapshotRepositoryOptions = errors.New("Все поля BaseSnapshotRepositoryOptions должны быть заполнены")
 )
 
-func NewBaseSnapshotRepository(opts BaseSnapshotRepositoryOptions) (*BaseSnapshotRepository, error) {
-	if opts.Db == nil {
+func NewBaseSnapshotRepository(db *gorm.DB) (*BaseSnapshotRepository, error) {
+	if db == nil {
 		return nil, ErrInvalidBaseSnapshotRepositoryOptions
 	}
-	return &BaseSnapshotRepository{db: opts.Db}, nil
+	return &BaseSnapshotRepository{db: db}, nil
 }
 
 func (b *BaseSnapshotRepository) GetLastBaseSnapshotByDeviceIdAndRootName(

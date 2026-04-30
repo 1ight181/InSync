@@ -57,7 +57,7 @@ func (p *PlanResolver) Resolve(ctx context.Context, rootName domain.RootName, sh
 	if err != nil {
 		return domain.SyncPlan{}, err
 	}
-	localSnapshot, err := p.localSnapshotProvider.GetLocalSnapshot(ctx, rootName)
+	localSnapshot, err := p.localSnapshotProvider.GetLocalSnapshot(ctx, rootName, &baseSnapshot)
 	if err != nil {
 		return domain.SyncPlan{}, err
 	}

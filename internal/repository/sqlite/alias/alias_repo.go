@@ -11,20 +11,16 @@ type AliasRepository struct {
 	db *gorm.DB
 }
 
-type AliasRepositoryOptions struct {
-	Db *gorm.DB
-}
-
 var (
 	ErrInvalidAliasRepositoryOptions = errors.New("все поля AliasRepositoryOptions должны быть заполнены")
 )
 
-func NewAliasRepository(opts AliasRepositoryOptions) (*AliasRepository, error) {
-	if opts.Db == nil {
+func NewAliasRepository(db *gorm.DB) (*AliasRepository, error) {
+	if db == nil {
 		return nil, ErrInvalidAliasRepositoryOptions
 	}
 
-	return &AliasRepository{db: opts.Db}, nil
+	return &AliasRepository{db: db}, nil
 }
 
 func (a *AliasRepository) GetAliases() (map[domain.NodeName]string, error) {

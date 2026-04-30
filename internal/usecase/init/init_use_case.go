@@ -7,13 +7,13 @@ import (
 )
 
 type InitUseCase struct {
-	baseSnapshotCreator    IBaseSnapshotCreator
+	baseSnapshotManager    IBaseSnapshotManager
 	remoteSnapshotProvider IRemoteSnapshotProvider
 	localSnapshotProvider  ILocalSnapshotProvider
 }
 
 type InitUseCaseOptions struct {
-	BaseSnapshotCreator    IBaseSnapshotCreator
+	BaseSnapshotManager    IBaseSnapshotManager
 	RemoteSnapshotProvider IRemoteSnapshotProvider
 	LocalSnapshotProvider  ILocalSnapshotProvider
 }
@@ -23,26 +23,31 @@ var (
 )
 
 func NewInitUseCase(opts InitUseCaseOptions) (*InitUseCase, error) {
-	if opts.BaseSnapshotCreator == nil ||
+	if opts.BaseSnapshotManager == nil ||
 		opts.RemoteSnapshotProvider == nil ||
 		opts.LocalSnapshotProvider == nil {
 		return nil, ErrInvalidInitUseCaseOptions
 	}
 
 	return &InitUseCase{
-		baseSnapshotCreator:    opts.BaseSnapshotCreator,
+		baseSnapshotManager:    opts.BaseSnapshotManager,
 		remoteSnapshotProvider: opts.RemoteSnapshotProvider,
 		localSnapshotProvider:  opts.LocalSnapshotProvider,
 	}, nil
 }
 
 func (i *InitUseCase) InitFromLocal(ctx context.Context, rootName domain.RootName) error {
-	localBase, err := i.localSnapshotProvider.GetLocalSnapshot(ctx, rootName)
+	currentBaseSnapshot, err := i.baseSnapshotManager.GetBaseSnapshot(ctx, rootName)
 	if err != nil {
 		return err
 	}
 
-	return i.baseSnapshotCreator.CreateBaseSnapshot(ctx, localBase, rootName)
+	localBase, err := i.localSnapshotProvider.GetLocalSnapshot(ctx, rootName, &currentBaseSnapshot)
+	if err != nil {
+		return err
+	}
+
+	return i.baseSnapshotManager.CreateBaseSnapshot(ctx, localBase, rootName)
 }
 
 func (i *InitUseCase) InitFromRemote(ctx context.Context, rootName domain.RootName) error {
@@ -51,5 +56,5 @@ func (i *InitUseCase) InitFromRemote(ctx context.Context, rootName domain.RootNa
 		return err
 	}
 
-	return i.baseSnapshotCreator.CreateBaseSnapshot(ctx, remoteBase, rootName)
+	return i.baseSnapshotManager.CreateBaseSnapshot(ctx, remoteBase, rootName)
 }

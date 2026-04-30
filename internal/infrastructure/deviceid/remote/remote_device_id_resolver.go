@@ -14,20 +14,16 @@ type RemoteDeviceIdResolver struct {
 	nodeNameProvider INodeNameProvider
 }
 
-type RemoteDeviceIdResolverOptions struct {
-	NodeNameProvider INodeNameProvider
-}
-
 var (
 	ErrRemoteDeviceIdResolverInvalidOpts = errors.New("Все поля RemoteDeviceIdResolverOptions должны быть заполнены")
 )
 
-func NewRemoteDeviceIdResolver(opts RemoteDeviceIdResolverOptions) (*RemoteDeviceIdResolver, error) {
-	if opts.NodeNameProvider == nil {
+func NewRemoteDeviceIdResolver(nodeNameProvider INodeNameProvider) (*RemoteDeviceIdResolver, error) {
+	if nodeNameProvider == nil {
 		return nil, ErrRemoteDeviceIdResolverInvalidOpts
 	}
 	return &RemoteDeviceIdResolver{
-		nodeNameProvider: opts.NodeNameProvider,
+		nodeNameProvider: nodeNameProvider,
 	}, nil
 }
 

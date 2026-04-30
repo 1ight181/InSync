@@ -30,7 +30,7 @@ func (s *BaseRepositorySuite) SetupTest() {
 	s.Require().NoError(err)
 	s.db = db
 
-	repo, err := baserepo.NewBaseSnapshotRepository(baserepo.BaseSnapshotRepositoryOptions{Db: db})
+	repo, err := baserepo.NewBaseSnapshotRepository(db)
 	s.Require().NoError(err)
 	s.repo = repo
 }
@@ -117,12 +117,6 @@ func (s *BaseRepositorySuite) TestGet_ReturnsDbError() {
 
 	s.Require().Error(err)
 	s.Require().NotErrorIs(err, domain.ErrBaseSnapshotNotFound)
-}
-
-func (s *BaseRepositorySuite) TestNewRepository_InvalidOptions() {
-	repo, err := baserepo.NewBaseSnapshotRepository(baserepo.BaseSnapshotRepositoryOptions{})
-	s.Require().ErrorIs(err, baserepo.ErrInvalidBaseSnapshotRepositoryOptions)
-	s.Require().Nil(repo)
 }
 
 func (s *BaseRepositorySuite) getDefaultSnapshot() domain.Snapshot {

@@ -29,7 +29,7 @@ func (s *HashRepositorySuite) SetupTest() {
 	s.Require().NoError(err)
 	s.db = db
 
-	repo, err := hashrepo.NewHashRepository(hashrepo.HashRepositoryOptions{Db: db})
+	repo, err := hashrepo.NewHashRepository(db)
 	s.Require().NoError(err)
 	s.repo = repo
 }
@@ -41,12 +41,6 @@ func (s *HashRepositorySuite) TearDownSuite() {
 
 func TestHashRepositorySuite(t *testing.T) {
 	suite.Run(t, new(HashRepositorySuite))
-}
-
-func (s *HashRepositorySuite) TestNewRepository_InvalidOptions_Error() {
-	repo, err := hashrepo.NewHashRepository(hashrepo.HashRepositoryOptions{})
-	s.Require().ErrorIs(err, hashrepo.ErrInvalidHashRepositoryOptions)
-	s.Require().Nil(repo)
 }
 
 func (s *HashRepositorySuite) TestHashRepositorySuite_Get_Empty() {

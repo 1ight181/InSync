@@ -1,18 +1,23 @@
 package app
 
 import (
+	"fmt"
+	config "insync/internal/infrastructure/config/models"
 	loghandler "insync/internal/infrastructure/logger"
 	"log/slog"
 	"os"
 )
 
 func createLogger(
-	shouldLogToFile bool,
-	logFilePath string,
-	logLevel string,
+	loggerConfig config.LoggerConfig,
 ) (*slog.Logger, error) {
+	logDir := loggerConfig.LogFileDirectory
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		panic(fmt.Sprintf("Не удалось создать директорию для логов: %v", err))
+	}
+
 	var slogLogLevel slog.Level
-	switch logLevel {
+	switch loggerConfig.LogLevel {
 	case "DEBUG":
 		slogLogLevel = slog.LevelDebug
 	case "INFO":
@@ -32,8 +37,8 @@ func createLogger(
 
 	logHandlers = append(logHandlers, terminalOutputHandler)
 
-	if shouldLogToFile {
-		logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if loggerConfig.ShouldLogToFile {
+		logFile, err := os.OpenFile(loggerConfig.GetLogFilePath(), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			return nil, err
 		}

@@ -10,19 +10,15 @@ type LocalDeviceIdResolver struct {
 	currentDeviceId      domain.DeviceId
 }
 
-type LocalDeviceIdResolverOptions struct {
-	LocalDeviceIdCreator ILocalDeviceIdCreator
-}
-
 var (
 	ErrInvalidOpts = errors.New("Все поля LocalDeviceIdResolverOptions должны быть заполнены")
 )
 
-func NewLocalDeviceIdResolver(opts LocalDeviceIdResolverOptions) (*LocalDeviceIdResolver, error) {
-	if opts.LocalDeviceIdCreator == nil {
+func NewLocalDeviceIdResolver(localDeviceIdCreator ILocalDeviceIdCreator) (*LocalDeviceIdResolver, error) {
+	if localDeviceIdCreator == nil {
 		return nil, ErrInvalidOpts
 	}
-	return &LocalDeviceIdResolver{localDeviceIdCreator: opts.LocalDeviceIdCreator}, nil
+	return &LocalDeviceIdResolver{localDeviceIdCreator: localDeviceIdCreator}, nil
 }
 
 func (r *LocalDeviceIdResolver) Resolve() (domain.DeviceId, error) {

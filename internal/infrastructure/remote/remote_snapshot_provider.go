@@ -10,19 +10,15 @@ type RemoteSnapshotProvider struct {
 	clientFactory IClientFactory
 }
 
-type RemoteSnapshotProviderOptions struct {
-	ClientFactory IClientFactory
-}
-
 var (
-	ErrInvalidOpts = errors.New("Все поля RemoteSnapshotProviderOptions должны быть заполнены")
+	ErrInvalidOpts = errors.New("Все поля RemoteSnapshotProvider не должны быть nil")
 )
 
-func NewRemoteSnapshotProvider(options RemoteSnapshotProviderOptions) (*RemoteSnapshotProvider, error) {
-	if options.ClientFactory == nil {
+func NewRemoteSnapshotProvider(clientFactory IClientFactory) (*RemoteSnapshotProvider, error) {
+	if clientFactory == nil {
 		return nil, ErrInvalidOpts
 	}
-	return &RemoteSnapshotProvider{clientFactory: options.ClientFactory}, nil
+	return &RemoteSnapshotProvider{clientFactory: clientFactory}, nil
 }
 
 func (p *RemoteSnapshotProvider) GetRemoteSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {

@@ -9,19 +9,15 @@ type RootUseCase struct {
 	rootRegistrar IRootRegistrar
 }
 
-type RootUseCaseOptions struct {
-	RootRegistrar IRootRegistrar
-}
-
 var (
 	ErrInvalidRootUseCaseOptions = errors.New("Все поля RootUseCase должны быть заполнены")
 )
 
-func NewRootUseCase(opts RootUseCaseOptions) (*RootUseCase, error) {
-	if opts.RootRegistrar == nil {
+func NewRootUseCase(rootRegistrar IRootRegistrar) (*RootUseCase, error) {
+	if rootRegistrar == nil {
 		return nil, ErrInvalidRootUseCaseOptions
 	}
-	return &RootUseCase{rootRegistrar: opts.RootRegistrar}, nil
+	return &RootUseCase{rootRegistrar: rootRegistrar}, nil
 }
 
 func (r *RootUseCase) AddRoot(rootName domain.RootName, rootPath domain.Path) error {

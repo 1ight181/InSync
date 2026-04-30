@@ -6,30 +6,26 @@ import (
 )
 
 type AliasProvider struct {
-	AliasRepository IAliasRepository
+	aliasRepository IAliasRepository
 	aliasesCache    map[domain.NodeName]string
 }
 
-type AliasProviderOptions struct {
-	AliasRepository IAliasRepository
-}
-
 var (
-	ErrInvalidAliasProviderOptions = errors.New("Все поля AliasProviderOptions должны быть заполнены")
+	ErrInvalidAliasProviderOptions = errors.New("Все поля AliasProvider не должны быть nil")
 )
 
-func NewAliasProvider(opts AliasProviderOptions) (*AliasProvider, error) {
-	if opts.AliasRepository == nil {
+func NewAliasProvider(aliasRepository IAliasRepository) (*AliasProvider, error) {
+	if aliasRepository == nil {
 		return nil, ErrInvalidAliasProviderOptions
 	}
 
-	aliases, err := opts.AliasRepository.GetAliases()
+	aliases, err := aliasRepository.GetAliases()
 	if err != nil {
 		return nil, err
 	}
 
 	return &AliasProvider{
-		AliasRepository: opts.AliasRepository,
+		aliasRepository: aliasRepository,
 		aliasesCache:    aliases,
 	}, nil
 }
@@ -39,7 +35,7 @@ func (a *AliasProvider) GetAliases() map[domain.NodeName]string {
 }
 
 func (a *AliasProvider) SetAlias(newAlias string, nodeName domain.NodeName) error {
-	if err := a.AliasRepository.SetAlias(newAlias, nodeName); err != nil {
+	if err := a.aliasRepository.SetAlias(newAlias, nodeName); err != nil {
 		return err
 	}
 
@@ -48,7 +44,7 @@ func (a *AliasProvider) SetAlias(newAlias string, nodeName domain.NodeName) erro
 }
 
 func (a *AliasProvider) RemoveAlias(aliasName string) error {
-	if err := a.AliasRepository.RemoveAlias(aliasName); err != nil {
+	if err := a.aliasRepository.RemoveAlias(aliasName); err != nil {
 		return err
 	}
 

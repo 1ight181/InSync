@@ -7,43 +7,27 @@ import (
 )
 
 type LocalSnapshotProvider struct {
-	fileManager          IFileManager
-	baseSnapshotProvider IBaseSnapshotProvider
+	fileManager IFileManager
 }
 
 type LocalSnapshotProviderOptions struct {
-	FileManager          IFileManager
-	BaseSnapshotProvider IBaseSnapshotProvider
+	FileManager IFileManager
 }
 
 var (
 	ErrInvalidOpts = errors.New("Все поля LocalSnapshotProviderOptions должны быть заполнены")
 )
 
-func NewLocalSnapshotProvider(opts LocalSnapshotProviderOptions) (*LocalSnapshotProvider, error) {
-	if opts.FileManager == nil ||
-		opts.BaseSnapshotProvider == nil {
+func NewLocalSnapshotProvider(fileManager IFileManager) (*LocalSnapshotProvider, error) {
+	if fileManager == nil {
 		return nil, ErrInvalidOpts
 	}
 	return &LocalSnapshotProvider{
-		fileManager:          opts.FileManager,
-		baseSnapshotProvider: opts.BaseSnapshotProvider,
+		fileManager: fileManager,
 	}, nil
 }
 
-func (p *LocalSnapshotProvider) GetLocalSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
-	var baseSnapshot *domain.Snapshot
-	rawBaseSnapshot, err := p.baseSnapshotProvider.GetBaseSnapshot(ctx, rootName)
-	if err != nil && !errors.Is(err, domain.ErrBaseSnapshotNotFound) {
-		return domain.Snapshot{}, err
-	}
-
-	if errors.Is(err, domain.ErrBaseSnapshotNotFound) {
-		baseSnapshot = nil
-	} else {
-		baseSnapshot = &rawBaseSnapshot
-	}
-
+func (p *LocalSnapshotProvider) GetLocalSnapshot(ctx context.Context, rootName domain.RootName, baseSnapshot *domain.Snapshot) (domain.Snapshot, error) {
 	snapshot, err := p.fileManager.GetSnapshot(ctx, rootName, baseSnapshot)
 	if err != nil {
 		return domain.Snapshot{}, err

@@ -8,12 +8,12 @@ import (
 
 type BaseSnapshotUseCase struct {
 	localSnapshotProvider ILocalSnapshotProvider
-	baseSnapshotCreator   IBaseSnapshotCreator
+	baseSnapshotManager   IBaseSnapshotManager
 }
 
 type BaseSnapshotUseCaseOpts struct {
 	LocalSnapshotProvider ILocalSnapshotProvider
-	BaseSnapshotCreator   IBaseSnapshotCreator
+	BaseSnapshotManager   IBaseSnapshotManager
 }
 
 var (
@@ -22,20 +22,25 @@ var (
 
 func NewBaseSnapshotUseCase(opts BaseSnapshotUseCaseOpts) (*BaseSnapshotUseCase, error) {
 	if opts.LocalSnapshotProvider == nil ||
-		opts.BaseSnapshotCreator == nil {
+		opts.BaseSnapshotManager == nil {
 		return nil, ErrInvalidOpts
 	}
 	return &BaseSnapshotUseCase{
 		localSnapshotProvider: opts.LocalSnapshotProvider,
-		baseSnapshotCreator:   opts.BaseSnapshotCreator,
+		baseSnapshotManager:   opts.BaseSnapshotManager,
 	}, nil
 }
 
 func (b *BaseSnapshotUseCase) UpdateBaseSnapshot(ctx context.Context, rootName domain.RootName) error {
-	localSnapshot, err := b.localSnapshotProvider.GetLocalSnapshot(ctx, rootName)
+	currentBaseSnapshot, err := b.baseSnapshotManager.GetBaseSnapshot(ctx, rootName)
 	if err != nil {
 		return err
 	}
 
-	return b.baseSnapshotCreator.CreateBaseSnapshot(ctx, localSnapshot, rootName)
+	localSnapshot, err := b.localSnapshotProvider.GetLocalSnapshot(ctx, rootName, &currentBaseSnapshot)
+	if err != nil {
+		return err
+	}
+
+	return b.baseSnapshotManager.CreateBaseSnapshot(ctx, localSnapshot, rootName)
 }

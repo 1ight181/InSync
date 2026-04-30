@@ -8,13 +8,13 @@ import (
 
 type NodeUseCase struct {
 	nodeNamesBrowser      INodeNamesBrowser
-	localDeviceIdResolver ILocalDeviceIdResolver
+	localDeviceIdResolver ILocalDeviceIdProvider
 	aliasProvider         IAliasProvider
 }
 
 type NodeUseCaseOptions struct {
 	NodeNamesBrowser      INodeNamesBrowser
-	LocalDeviceIdResolver ILocalDeviceIdResolver
+	LocalDeviceIdResolver ILocalDeviceIdProvider
 	AliasProvider         IAliasProvider
 }
 
@@ -42,7 +42,7 @@ func (c *NodeUseCase) ShowNodeNames(ctx context.Context) (chan domain.NodeNameWi
 		return nil, err
 	}
 
-	localDeviceId, err := c.localDeviceIdResolver.Resolve()
+	localDeviceId, err := c.localDeviceIdResolver.GetCurrentLocalDeviceId()
 	if err != nil {
 		return nil, err
 	}
