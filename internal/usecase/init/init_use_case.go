@@ -37,12 +37,7 @@ func NewInitUseCase(opts InitUseCaseOptions) (*InitUseCase, error) {
 }
 
 func (i *InitUseCase) InitFromLocal(ctx context.Context, rootName domain.RootName) error {
-	currentBaseSnapshot, err := i.baseSnapshotManager.GetBaseSnapshot(ctx, rootName)
-	if err != nil {
-		return err
-	}
-
-	localBase, err := i.localSnapshotProvider.GetLocalSnapshot(ctx, rootName, &currentBaseSnapshot)
+	localBase, err := i.localSnapshotProvider.GetLocalSnapshot(ctx, rootName, nil)
 	if err != nil {
 		return err
 	}
