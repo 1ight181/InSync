@@ -348,6 +348,7 @@ func (s *ChangesPlannerWithTreeSkip) handleModification(
 		ChangeType:      domain.Modify,
 	}, nil, nil
 }
+
 func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 	ctx context.Context,
 	potentialLocalChanges, potentialRemoteChanges []potentialChange,
@@ -362,9 +363,7 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 	remoteChanges := make([]domain.RemoteChange, 0, len(potentialRemoteChanges))
 	conflicts := make([]domain.Conflict, 0)
 
-	// hash -> изменения, которые нужно применить на local
 	localByHash := make(map[string][]potentialChange)
-	// hash -> изменения, которые нужно применить на remote
 	remoteByHash := make(map[string][]potentialChange)
 
 	for _, change := range potentialLocalChanges {
@@ -374,17 +373,17 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 		remoteByHash[change.Hash] = append(remoteByHash[change.Hash], change)
 	}
 
-	baseByHash := make(map[string]domain.FileEntry, len(baseFiles))
+	baseByHash := make(map[string][]domain.FileEntry)
 	for _, entry := range baseFiles {
-		baseByHash[entry.FileInfo.Hash] = entry
+		baseByHash[entry.FileInfo.Hash] = append(baseByHash[entry.FileInfo.Hash], entry)
 	}
 
-	processedHashes := make(map[string]struct{}, len(localByHash)+len(remoteByHash))
-	for hash := range localByHash {
-		processedHashes[hash] = struct{}{}
+	processedHashes := make(map[string]struct{})
+	for h := range localByHash {
+		processedHashes[h] = struct{}{}
 	}
-	for hash := range remoteByHash {
-		processedHashes[hash] = struct{}{}
+	for h := range remoteByHash {
+		processedHashes[h] = struct{}{}
 	}
 
 	for hash := range processedHashes {
@@ -392,42 +391,55 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 			return nil, nil, nil, ctxErr
 		}
 
-		baseEntry, hasBase := baseByHash[hash]
-		if !hasBase {
+		baseEntries := baseByHash[hash]
+		if len(baseEntries) != 1 {
+
 			continue
 		}
+		baseEntry := baseEntries[0]
 
-		_, localCreate := s.extractCreateDeletePair(localByHash[hash])
-		_, remoteCreate := s.extractCreateDeletePair(remoteByHash[hash])
+		localDeletes, localCreates := s.splitChanges(localByHash[hash])
+		remoteDeletes, remoteCreates := s.splitChanges(remoteByHash[hash])
 
-		switch {
-		case localCreate != nil && remoteCreate != nil:
+		if len(localCreates) == 1 && len(remoteCreates) == 1 &&
+			len(localDeletes) == 1 && len(remoteDeletes) == 1 {
 
-			// обе стороны создали новый путь, но одинаковый - изменения не требуются
-			if localCreate.Path.String() == remoteCreate.Path.String() {
+			if localCreates[0].Path.String() == remoteCreates[0].Path.String() {
 				delete(localByHash, hash)
 				delete(remoteByHash, hash)
 				continue
 			}
 
-			// обе стороны создали новый путь для одного hash - конфликт rename vs rename
-			conflicts = append(conflicts, s.buildRenameMoveConflict(baseEntry, localCreate, remoteCreate))
+			conflicts = append(conflicts,
+				s.buildRenameMoveConflict(baseEntry, &localCreates[0], &remoteCreates[0]),
+			)
+
 			delete(localByHash, hash)
 			delete(remoteByHash, hash)
+			continue
+		}
 
-		case localCreate != nil:
-			// изменение произошло на remote - требуется применить на local
+		// --- rename on one side only ---
+		if len(localCreates) == 1 && len(localDeletes) == 1 &&
+			len(remoteCreates) == 0 && len(remoteDeletes) == 0 {
+
 			localChanges = append(localChanges,
-				s.buildLocalRenameOrMove(baseEntry, localCreate.Path),
+				s.buildLocalRenameOrMove(baseEntry, localCreates[0].Path),
 			)
-			delete(localByHash, hash)
 
-		case remoteCreate != nil:
-			// изменение произошло на local - требуется применить на remote
+			delete(localByHash, hash)
+			continue
+		}
+
+		if len(remoteCreates) == 1 && len(remoteDeletes) == 1 &&
+			len(localCreates) == 0 && len(localDeletes) == 0 {
+
 			remoteChanges = append(remoteChanges,
-				s.buildRemoteRenameOrMove(baseEntry, remoteCreate.Path),
+				s.buildRemoteRenameOrMove(baseEntry, remoteCreates[0].Path),
 			)
+
 			delete(remoteByHash, hash)
+			continue
 		}
 	}
 
@@ -435,30 +447,25 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 		return nil, nil, nil, ctxErr
 	}
 
-	// Остатки без пары — стребуется create/delete на соответствующей стороне
 	s.appendRemainingRemoteChanges(remoteByHash, &remoteChanges)
 	s.appendRemainingLocalChanges(localByHash, &localChanges)
 
 	return localChanges, remoteChanges, conflicts, nil
 }
 
-func (s *ChangesPlannerWithTreeSkip) extractCreateDeletePair(
+func (s *ChangesPlannerWithTreeSkip) splitChanges(
 	changes []potentialChange,
-) (deleteChange, createChange *potentialChange) {
+) (deletes []potentialChange, creates []potentialChange) {
 
 	for i := range changes {
 		switch changes[i].Changetype {
 		case domain.Delete:
-			if deleteChange == nil {
-				deleteChange = &changes[i]
-			}
+			deletes = append(deletes, changes[i])
 		case domain.CreateFile:
-			if createChange == nil {
-				createChange = &changes[i]
-			}
+			creates = append(creates, changes[i])
 		}
 	}
-	return deleteChange, createChange
+	return
 }
 
 func (s *ChangesPlannerWithTreeSkip) buildLocalRenameOrMove(
