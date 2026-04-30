@@ -1020,7 +1020,7 @@ func (c *Cli) initNameSuggestionFunc(prefix string) []prompt.Suggest {
 
 	length := len(parts)
 
-	if length < 2 {
+	if length < 2 || length > 3 {
 		return nil
 	}
 
@@ -1035,7 +1035,30 @@ func (c *Cli) initNameSuggestionFunc(prefix string) []prompt.Suggest {
 		return suggestions
 	}
 
-	return c.rootNameSuggestionFunc(prefix)
+	rootNames, err := c.rootUseCase.GetRoots()
+	if err != nil {
+		return suggestions
+	}
+
+	for rootName, path := range rootNames {
+		if strings.HasPrefix(rootName.String(), parts[1]) {
+			suggestions = append(suggestions, prompt.Suggest{
+				Text:        rootName.String(),
+				Description: path.String(),
+			})
+		}
+	}
+
+	if len(suggestions) == 0 {
+		for rootName, path := range rootNames {
+			suggestions = append(suggestions, prompt.Suggest{
+				Text:        rootName.String(),
+				Description: path.String(),
+			})
+		}
+	}
+
+	return suggestions
 }
 
 func (c *Cli) rootNameSuggestionFunc(prefix string) []prompt.Suggest {
@@ -1049,7 +1072,7 @@ func (c *Cli) rootNameSuggestionFunc(prefix string) []prompt.Suggest {
 
 	length := len(parts)
 
-	if length < 2 {
+	if length != 2 {
 		return nil
 	}
 
