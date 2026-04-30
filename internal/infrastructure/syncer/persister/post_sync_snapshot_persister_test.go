@@ -81,9 +81,10 @@ func (s *PostSyncBaseSnapshotPersisterSuite) TestUpdateBaseSnapshot_Success() {
 	ctx := context.Background()
 	rootName := domain.RootName("test")
 	snapshot := domain.Snapshot{Files: []domain.FileEntry{}}
+	baseSnapshot := domain.BaseSnapshot{Snapshot: snapshot, IsInitial: false}
 
-	s.mockBaseSnapshotManager.On("GetBaseSnapshot", ctx, rootName).Return(snapshot, nil)
-	s.mockBaseSnapshotManager.On("CreateBaseSnapshot", ctx, snapshot, rootName).Return(nil)
+	s.mockBaseSnapshotManager.On("GetBaseSnapshot", ctx, rootName).Return(baseSnapshot, nil)
+	s.mockBaseSnapshotManager.On("CreateBaseSnapshot", ctx, snapshot, rootName, false).Return(nil)
 	s.mockLocalSnapshotProvider.On("GetLocalSnapshot", ctx, rootName, mock.Anything).Return(snapshot, nil)
 	mockClient := &MockIClient{}
 	mockClient.On("UpdateBaseSnapshot", ctx, rootName).Return(nil)
@@ -99,8 +100,9 @@ func (s *PostSyncBaseSnapshotPersisterSuite) TestUpdateBaseSnapshot_GetBaseSnaps
 
 	expectedErr := errors.New("get snapshot error")
 	snapshot := domain.Snapshot{Files: []domain.FileEntry{}}
+	baseSnapshot := domain.BaseSnapshot{Snapshot: snapshot, IsInitial: false}
 
-	s.mockBaseSnapshotManager.On("GetBaseSnapshot", ctx, rootName).Return(snapshot, nil)
+	s.mockBaseSnapshotManager.On("GetBaseSnapshot", ctx, rootName).Return(baseSnapshot, nil)
 	s.mockLocalSnapshotProvider.On("GetLocalSnapshot", ctx, rootName, mock.Anything).Return(domain.Snapshot{}, expectedErr)
 
 	err := s.persister.UpdateBaseSnapshot(ctx, rootName)
@@ -110,11 +112,12 @@ func (s *PostSyncBaseSnapshotPersisterSuite) TestUpdateBaseSnapshot_CreateBaseSn
 	ctx := context.Background()
 	rootName := domain.RootName("test")
 	snapshot := domain.Snapshot{}
+	baseSnapshot := domain.BaseSnapshot{Snapshot: snapshot, IsInitial: false}
 
-	s.mockBaseSnapshotManager.On("GetBaseSnapshot", ctx, rootName).Return(snapshot, nil)
+	s.mockBaseSnapshotManager.On("GetBaseSnapshot", ctx, rootName).Return(baseSnapshot, nil)
 	s.mockLocalSnapshotProvider.On("GetLocalSnapshot", ctx, rootName, mock.Anything).Return(snapshot, nil)
 	expectedErr := errors.New("create snapshot error")
-	s.mockBaseSnapshotManager.On("CreateBaseSnapshot", ctx, snapshot, rootName).Return(expectedErr)
+	s.mockBaseSnapshotManager.On("CreateBaseSnapshot", ctx, snapshot, rootName, false).Return(expectedErr)
 
 	err := s.persister.UpdateBaseSnapshot(ctx, rootName)
 	s.Require().ErrorIs(err, expectedErr)
@@ -124,10 +127,11 @@ func (s *PostSyncBaseSnapshotPersisterSuite) TestUpdateBaseSnapshot_CurrentClien
 	ctx := context.Background()
 	rootName := domain.RootName("test")
 	snapshot := domain.Snapshot{}
+	baseSnapshot := domain.BaseSnapshot{Snapshot: snapshot, IsInitial: false}
 
-	s.mockBaseSnapshotManager.On("GetBaseSnapshot", ctx, rootName).Return(snapshot, nil)
+	s.mockBaseSnapshotManager.On("GetBaseSnapshot", ctx, rootName).Return(baseSnapshot, nil)
 	s.mockLocalSnapshotProvider.On("GetLocalSnapshot", ctx, rootName, mock.Anything).Return(snapshot, nil)
-	s.mockBaseSnapshotManager.On("CreateBaseSnapshot", ctx, snapshot, rootName).Return(nil)
+	s.mockBaseSnapshotManager.On("CreateBaseSnapshot", ctx, snapshot, rootName, false).Return(nil)
 
 	expectedErr := errors.New("current client error")
 	s.mockClientFactory.On("CurrentClient").Return(interfaces.IClient(nil), expectedErr)
@@ -140,10 +144,11 @@ func (s *PostSyncBaseSnapshotPersisterSuite) TestUpdateBaseSnapshot_RemoteUpdate
 	ctx := context.Background()
 	rootName := domain.RootName("test")
 	snapshot := domain.Snapshot{}
+	baseSnapshot := domain.BaseSnapshot{Snapshot: snapshot, IsInitial: false}
 
-	s.mockBaseSnapshotManager.On("GetBaseSnapshot", ctx, rootName).Return(snapshot, nil)
+	s.mockBaseSnapshotManager.On("GetBaseSnapshot", ctx, rootName).Return(baseSnapshot, nil)
 	s.mockLocalSnapshotProvider.On("GetLocalSnapshot", ctx, rootName, mock.Anything).Return(snapshot, nil)
-	s.mockBaseSnapshotManager.On("CreateBaseSnapshot", ctx, snapshot, rootName).Return(nil)
+	s.mockBaseSnapshotManager.On("CreateBaseSnapshot", ctx, snapshot, rootName, false).Return(nil)
 
 	mockClient := &MockIClient{}
 	expectedErr := errors.New("remote update error")
@@ -159,14 +164,14 @@ type MockIBaseSnapshotManager struct {
 	mock.Mock
 }
 
-func (m *MockIBaseSnapshotManager) CreateBaseSnapshot(ctx context.Context, snapshot domain.Snapshot, rootName domain.RootName) error {
-	args := m.Called(ctx, snapshot, rootName)
+func (m *MockIBaseSnapshotManager) CreateBaseSnapshot(ctx context.Context, snapshot domain.Snapshot, rootName domain.RootName, isInitial bool) error {
+	args := m.Called(ctx, snapshot, rootName, isInitial)
 	return args.Error(0)
 }
 
-func (m *MockIBaseSnapshotManager) GetBaseSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
+func (m *MockIBaseSnapshotManager) GetBaseSnapshot(ctx context.Context, rootName domain.RootName) (domain.BaseSnapshot, error) {
 	args := m.Called(ctx, rootName)
-	return args.Get(0).(domain.Snapshot), args.Error(1)
+	return args.Get(0).(domain.BaseSnapshot), args.Error(1)
 }
 
 type MockIDeviceIdProvider struct {
@@ -187,7 +192,7 @@ type MockILocalSnapshotProvider struct {
 	mock.Mock
 }
 
-func (m *MockILocalSnapshotProvider) GetLocalSnapshot(ctx context.Context, rootName domain.RootName, baseSnapshot *domain.Snapshot) (domain.Snapshot, error) {
+func (m *MockILocalSnapshotProvider) GetLocalSnapshot(ctx context.Context, rootName domain.RootName, baseSnapshot *domain.BaseSnapshot) (domain.Snapshot, error) {
 	args := m.Called(ctx, rootName, baseSnapshot)
 	return args.Get(0).(domain.Snapshot), args.Error(1)
 }
@@ -247,7 +252,7 @@ type MockIBaseSnapshotProvider struct {
 	mock.Mock
 }
 
-func (m *MockIBaseSnapshotProvider) GetBaseSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
+func (m *MockIBaseSnapshotProvider) GetBaseSnapshot(ctx context.Context, rootName domain.RootName) (domain.BaseSnapshot, error) {
 	args := m.Called(ctx, rootName)
-	return args.Get(0).(domain.Snapshot), args.Error(1)
+	return args.Get(0).(domain.BaseSnapshot), args.Error(1)
 }

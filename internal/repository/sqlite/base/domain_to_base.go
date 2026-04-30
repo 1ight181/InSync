@@ -4,9 +4,10 @@ import (
 	"insync/internal/domain"
 )
 
-func ToBaseSnapshot(snapshot domain.Snapshot, localDeviceId, remoteDeviceId domain.DeviceId, rootName domain.RootName) BaseSnapshot {
+func ToBaseSnapshot(snapshot domain.Snapshot, isInitial bool, localDeviceId, remoteDeviceId domain.DeviceId, rootName domain.RootName) BaseSnapshot {
 	baseSnap := BaseSnapshot{
 		RootName:       rootName.String(),
+		IsInitial:      isInitial,
 		LocalDeviceId:  localDeviceId.String(),
 		RemoteDeviceId: remoteDeviceId.String(),
 		Files:          make([]FileEntry, len(snapshot.Files)),

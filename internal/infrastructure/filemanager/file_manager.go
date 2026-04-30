@@ -77,7 +77,7 @@ func NewFileManager(opts FileManagerOptions) (*FileManager, error) {
 	}, nil
 }
 
-func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName, baseSnapshot *domain.Snapshot) (domain.Snapshot, error) {
+func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName, baseSnapshot *domain.BaseSnapshot) (domain.Snapshot, error) {
 	scopedPath, err := domain.NewScopedPath(rootName, ".")
 	if err != nil {
 		return domain.Snapshot{}, err

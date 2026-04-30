@@ -28,7 +28,7 @@ func (b *BaseSnapshotRepository) GetLastBaseSnapshotByDeviceIdAndRootName(
 	localDeviceId, remoteDeviceId domain.DeviceId,
 	rootName domain.RootName,
 ) (
-	domain.Snapshot, error,
+	domain.BaseSnapshot, error,
 ) {
 	var baseSnapshot BaseSnapshot
 
@@ -43,22 +43,22 @@ func (b *BaseSnapshotRepository) GetLastBaseSnapshotByDeviceIdAndRootName(
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return domain.Snapshot{}, domain.ErrBaseSnapshotNotFound
+			return domain.BaseSnapshot{}, domain.ErrBaseSnapshotNotFound
 		}
 
-		return domain.Snapshot{}, err
+		return domain.BaseSnapshot{}, err
 	}
 
-	domainBaseSnapshot := ToDomainSnapshot(baseSnapshot)
+	domainBaseSnapshot := ToDomainBaseSnapshot(baseSnapshot)
 
 	return domainBaseSnapshot, nil
 }
 
 func (b *BaseSnapshotRepository) CreateBaseSnapshot(ctx context.Context,
-	baseSnapshot domain.Snapshot,
+	baseSnapshot domain.Snapshot, isInitial bool,
 	localDeviceId, remoteDeviceId domain.DeviceId,
 	rootName domain.RootName,
 ) error {
-	baseSnapshotModel := ToBaseSnapshot(baseSnapshot, localDeviceId, remoteDeviceId, rootName)
+	baseSnapshotModel := ToBaseSnapshot(baseSnapshot, isInitial, localDeviceId, remoteDeviceId, rootName)
 	return b.db.WithContext(ctx).Create(&baseSnapshotModel).Error
 }

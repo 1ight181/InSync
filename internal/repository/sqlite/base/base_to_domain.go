@@ -2,14 +2,19 @@ package base
 
 import "insync/internal/domain"
 
-func ToDomainSnapshot(bs BaseSnapshot) domain.Snapshot {
+func ToDomainBaseSnapshot(bs BaseSnapshot) domain.BaseSnapshot {
 	files := make([]domain.FileEntry, len(bs.Files))
 
 	for i, f := range bs.Files {
 		files[i] = toDomainFileEntry(f)
 	}
 
-	return domain.NewSnapshot(files)
+	snapshot := domain.NewSnapshot(files)
+
+	return domain.BaseSnapshot{
+		Snapshot:  snapshot,
+		IsInitial: bs.IsInitial,
+	}
 }
 
 func toDomainFileEntry(f FileEntry) domain.FileEntry {

@@ -31,15 +31,15 @@ func NewBaseSnapshotManager(opts BaseSnapshotManagerOptions) (*BaseSnapshotManag
 	}, nil
 }
 
-func (b *BaseSnapshotManager) GetBaseSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
+func (b *BaseSnapshotManager) GetBaseSnapshot(ctx context.Context, rootName domain.RootName) (domain.BaseSnapshot, error) {
 	localDeviceId, err := b.deviceIdProvider.GetCurrentLocalDeviceId()
 	if err != nil {
-		return domain.Snapshot{}, err
+		return domain.BaseSnapshot{}, err
 	}
 
 	remoteDeviceId, err := b.deviceIdProvider.GetCurrentRemoteDeviceId()
 	if err != nil {
-		return domain.Snapshot{}, err
+		return domain.BaseSnapshot{}, err
 	}
 
 	return b.baseSnapshotRepository.GetLastBaseSnapshotByDeviceIdAndRootName(
@@ -49,7 +49,7 @@ func (b *BaseSnapshotManager) GetBaseSnapshot(ctx context.Context, rootName doma
 	)
 }
 
-func (b *BaseSnapshotManager) CreateBaseSnapshot(ctx context.Context, baseSnapshot domain.Snapshot, rootName domain.RootName) error {
+func (b *BaseSnapshotManager) CreateBaseSnapshot(ctx context.Context, newBaseSnapshot domain.Snapshot, rootName domain.RootName, isInitial bool) error {
 	localDeviceId, err := b.deviceIdProvider.GetCurrentLocalDeviceId()
 	if err != nil {
 		return err
@@ -60,5 +60,5 @@ func (b *BaseSnapshotManager) CreateBaseSnapshot(ctx context.Context, baseSnapsh
 		return err
 	}
 
-	return b.baseSnapshotRepository.CreateBaseSnapshot(ctx, baseSnapshot, localDeviceId, remoteDeviceId, rootName)
+	return b.baseSnapshotRepository.CreateBaseSnapshot(ctx, newBaseSnapshot, isInitial, localDeviceId, remoteDeviceId, rootName)
 }

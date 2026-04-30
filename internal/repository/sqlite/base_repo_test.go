@@ -48,62 +48,64 @@ func (s *BaseRepositorySuite) TestBaseRepository_Get_Empty() {
 
 	snapshot, err := s.repo.GetLastBaseSnapshotByDeviceIdAndRootName(context.Background(), "", "", "")
 	s.Require().ErrorIs(err, domain.ErrBaseSnapshotNotFound)
-	s.Require().Equal(domain.Snapshot{}, snapshot)
+	s.Require().Equal(domain.BaseSnapshot{}, snapshot)
 }
 
 func (s *BaseRepositorySuite) TestBaseRepository_Create() {
 	ctx := context.Background()
-	baseSnapshot := s.getDefaultSnapshot()
+	baseSnapshot := s.getDefaultBaseSnapshot()
+	snaphot := s.getDefaultSnapshot()
 	localDeviceId := domain.DeviceId("device1")
 	remoteDeviceId := domain.DeviceId("device2")
 	rootName := domain.RootName("root")
-	err := s.repo.CreateBaseSnapshot(ctx, baseSnapshot, localDeviceId, remoteDeviceId, rootName)
+	err := s.repo.CreateBaseSnapshot(ctx, snaphot, false, localDeviceId, remoteDeviceId, rootName)
 	s.Require().NoError(err)
 
-	snapshot, err := s.repo.GetLastBaseSnapshotByDeviceIdAndRootName(ctx, localDeviceId, remoteDeviceId, rootName)
+	receivedSnapshot, err := s.repo.GetLastBaseSnapshotByDeviceIdAndRootName(ctx, localDeviceId, remoteDeviceId, rootName)
 	s.Require().NoError(err)
-	s.Require().Equal(baseSnapshot, snapshot)
+	s.Require().Equal(baseSnapshot, receivedSnapshot)
 }
 
 func (s *BaseRepositorySuite) TestBaseRepository_Get_GetLastFromMany() {
 	ctx := context.Background()
-	baseSnapshot1 := s.getDefaultSnapshot()
+	snapshot1 := s.getDefaultSnapshot()
 	localDeviceId1 := domain.DeviceId("device1")
 	remoteDeviceId1 := domain.DeviceId("device2")
 	rootName1 := domain.RootName("root")
-	err := s.repo.CreateBaseSnapshot(ctx, baseSnapshot1, localDeviceId1, remoteDeviceId1, rootName1)
+	err := s.repo.CreateBaseSnapshot(ctx, snapshot1, false, localDeviceId1, remoteDeviceId1, rootName1)
 	s.Require().NoError(err)
 
 	time.Sleep(time.Millisecond)
 
-	baseSnapshot2 := s.getDefaultSnapshot()
+	snapshot2 := s.getDefaultSnapshot()
 	localDeviceId2 := domain.DeviceId("device3")
 	remoteDeviceId2 := domain.DeviceId("device4")
 	rootName2 := domain.RootName("root")
-	err = s.repo.CreateBaseSnapshot(ctx, baseSnapshot2, localDeviceId2, remoteDeviceId2, rootName2)
+	err = s.repo.CreateBaseSnapshot(ctx, snapshot2, false, localDeviceId2, remoteDeviceId2, rootName2)
 	s.Require().NoError(err)
 
 	time.Sleep(time.Millisecond)
 
-	baseSnapshot3 := s.getDefaultSnapshot()
+	snapshot3 := s.getDefaultSnapshot()
 	localDeviceId3 := domain.DeviceId("device1")
 	remoteDeviceId3 := domain.DeviceId("device2")
 	rootName3 := domain.RootName("lab")
-	err = s.repo.CreateBaseSnapshot(ctx, baseSnapshot3, localDeviceId3, remoteDeviceId3, rootName3)
+	err = s.repo.CreateBaseSnapshot(ctx, snapshot3, false, localDeviceId3, remoteDeviceId3, rootName3)
 	s.Require().NoError(err)
 
 	time.Sleep(time.Millisecond)
 
-	baseSnapshot4 := s.getDefaultSnapshot()
+	baseSnapshot4 := s.getDefaultBaseSnapshot()
+	snapshot4 := s.getDefaultSnapshot()
 	localDeviceId4 := domain.DeviceId("device1")
 	remoteDeviceId4 := domain.DeviceId("device2")
 	rootName4 := domain.RootName("root")
-	err = s.repo.CreateBaseSnapshot(ctx, baseSnapshot4, localDeviceId4, remoteDeviceId4, rootName4)
+	err = s.repo.CreateBaseSnapshot(ctx, snapshot4, false, localDeviceId4, remoteDeviceId4, rootName4)
 	s.Require().NoError(err)
 
-	snapshot, err := s.repo.GetLastBaseSnapshotByDeviceIdAndRootName(ctx, localDeviceId1, remoteDeviceId1, rootName1)
+	receivedSnapshot, err := s.repo.GetLastBaseSnapshotByDeviceIdAndRootName(ctx, localDeviceId1, remoteDeviceId1, rootName1)
 	s.Require().NoError(err)
-	s.Require().Equal(baseSnapshot4, snapshot)
+	s.Require().Equal(baseSnapshot4, receivedSnapshot)
 }
 
 func (s *BaseRepositorySuite) TestGet_ReturnsDbError() {
@@ -117,6 +119,19 @@ func (s *BaseRepositorySuite) TestGet_ReturnsDbError() {
 
 	s.Require().Error(err)
 	s.Require().NotErrorIs(err, domain.ErrBaseSnapshotNotFound)
+}
+
+func (s *BaseRepositorySuite) getDefaultBaseSnapshot() domain.BaseSnapshot {
+	s.T().Helper()
+
+	snap := domain.Snapshot{
+		Files: s.getDefaultFileEntries(),
+	}
+
+	return domain.BaseSnapshot{
+		Snapshot:  snap,
+		IsInitial: false,
+	}
 }
 
 func (s *BaseRepositorySuite) getDefaultSnapshot() domain.Snapshot {

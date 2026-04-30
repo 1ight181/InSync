@@ -6,5 +6,5 @@ import (
 )
 
 type IBaseSnapshotProvider interface {
-	GetBaseSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error)
+	GetBaseSnapshot(ctx context.Context, rootName domain.RootName) (domain.BaseSnapshot, error)
 }

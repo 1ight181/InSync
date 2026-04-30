@@ -6,5 +6,5 @@ import (
 )
 
 type IChangesPlanner interface {
-	Plan(ctx context.Context, baseSnapshot, localSnapshot, remoteSnapshot domain.Snapshot) (domain.SyncPlan, error)
+	Plan(ctx context.Context, baseSnapshot domain.BaseSnapshot, localSnapshot, remoteSnapshot domain.Snapshot) (domain.SyncPlan, error)
 }

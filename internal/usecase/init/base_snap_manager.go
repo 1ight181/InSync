@@ -1,4 +1,4 @@
-package base
+package init
 
 import (
 	"context"
@@ -7,5 +7,4 @@ import (
 
 type IBaseSnapshotManager interface {
 	CreateBaseSnapshot(ctx context.Context, baseSnapshot domain.Snapshot, rootName domain.RootName, isInitial bool) error
-	GetBaseSnapshot(ctx context.Context, rootName domain.RootName) (domain.BaseSnapshot, error)
 }

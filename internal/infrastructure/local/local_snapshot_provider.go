@@ -27,7 +27,7 @@ func NewLocalSnapshotProvider(fileManager IFileManager) (*LocalSnapshotProvider,
 	}, nil
 }
 
-func (p *LocalSnapshotProvider) GetLocalSnapshot(ctx context.Context, rootName domain.RootName, baseSnapshot *domain.Snapshot) (domain.Snapshot, error) {
+func (p *LocalSnapshotProvider) GetLocalSnapshot(ctx context.Context, rootName domain.RootName, baseSnapshot *domain.BaseSnapshot) (domain.Snapshot, error) {
 	snapshot, err := p.fileManager.GetSnapshot(ctx, rootName, baseSnapshot)
 	if err != nil {
 		return domain.Snapshot{}, err

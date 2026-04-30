@@ -42,7 +42,7 @@ func (i *InitUseCase) InitFromLocal(ctx context.Context, rootName domain.RootNam
 		return err
 	}
 
-	return i.baseSnapshotManager.CreateBaseSnapshot(ctx, localBase, rootName)
+	return i.baseSnapshotManager.CreateBaseSnapshot(ctx, localBase, rootName, true)
 }
 
 func (i *InitUseCase) InitFromRemote(ctx context.Context, rootName domain.RootName) error {
@@ -51,5 +51,5 @@ func (i *InitUseCase) InitFromRemote(ctx context.Context, rootName domain.RootNa
 		return err
 	}
 
-	return i.baseSnapshotManager.CreateBaseSnapshot(ctx, remoteBase, rootName)
+	return i.baseSnapshotManager.CreateBaseSnapshot(ctx, remoteBase, rootName, true)
 }

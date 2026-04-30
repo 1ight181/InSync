@@ -42,5 +42,5 @@ func (b *BaseSnapshotUseCase) UpdateBaseSnapshot(ctx context.Context, rootName d
 		return err
 	}
 
-	return b.baseSnapshotManager.CreateBaseSnapshot(ctx, localSnapshot, rootName)
+	return b.baseSnapshotManager.CreateBaseSnapshot(ctx, localSnapshot, rootName, false)
 }

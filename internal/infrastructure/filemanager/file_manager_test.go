@@ -175,14 +175,18 @@ func (s *FileManagerSuite) TestGetSnapshot_UsesResolveWithForceRecalc_WhenMetada
 	s.Require().NoError(err)
 	baseEntry, err := domain.NewFileEntry(scopedPath.Path, 1, baseFileInfo)
 	s.Require().NoError(err)
-	baseSnapshot := domain.NewSnapshot([]domain.FileEntry{baseEntry})
+	snapshot := domain.NewSnapshot([]domain.FileEntry{baseEntry})
+	baseSnapshot := domain.BaseSnapshot{
+		Snapshot:  snapshot,
+		IsInitial: false,
+	}
 
 	s.mockRootResolver.On("ResolveRoot", scopedPath).Return(rootPath, nil)
 	s.mockFileSystem.On("ReadDir", rootPath).Return([]fs.DirEntry{}, nil)
 	s.mockFileSystem.On("Stat", rootPath).Return(mockFileInfo{size: 0, modTime: time.Unix(2, 0), isDir: true}, nil)
 	s.mockHashManager.On("ResolveWithForceRecalc", mock.Anything, rootName).Return("recalc-hash", nil)
 
-	snapshot, err := s.fileManager.GetSnapshot(ctx, rootName, &baseSnapshot)
+	snapshot, err = s.fileManager.GetSnapshot(ctx, rootName, &baseSnapshot)
 	s.Require().NoError(err)
 	s.Require().Len(snapshot.Files, 1)
 	s.Equal("recalc-hash", snapshot.Files[0].FileInfo.Hash)
@@ -203,14 +207,18 @@ func (s *FileManagerSuite) TestGetSnapshot_UsesResolveHash_WhenMetadataMatches()
 	s.Require().NoError(err)
 	baseEntry, err := domain.NewFileEntry(scopedPath.Path, 1, baseFileInfo)
 	s.Require().NoError(err)
-	baseSnapshot := domain.NewSnapshot([]domain.FileEntry{baseEntry})
+	snapshot := domain.NewSnapshot([]domain.FileEntry{baseEntry})
+	baseSnapshot := domain.BaseSnapshot{
+		Snapshot:  snapshot,
+		IsInitial: false,
+	}
 
 	s.mockRootResolver.On("ResolveRoot", scopedPath).Return(rootPath, nil)
 	s.mockFileSystem.On("ReadDir", rootPath).Return([]fs.DirEntry{}, nil)
 	s.mockFileSystem.On("Stat", rootPath).Return(mockFileInfo{size: 0, modTime: time.Unix(int64(baseMetadata.ModifiedUnix), 0), isDir: true}, nil)
 	s.mockHashManager.On("ResolveHash", mock.Anything, rootName).Return("cached-hash", nil)
 
-	snapshot, err := s.fileManager.GetSnapshot(ctx, rootName, &baseSnapshot)
+	snapshot, err = s.fileManager.GetSnapshot(ctx, rootName, &baseSnapshot)
 	s.Require().NoError(err)
 	s.Require().Len(snapshot.Files, 1)
 	s.Equal("cached-hash", snapshot.Files[0].FileInfo.Hash)

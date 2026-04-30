@@ -2,6 +2,7 @@ package scan
 
 import (
 	"context"
+	"fmt"
 	"insync/internal/domain"
 	"path/filepath"
 )
@@ -27,7 +28,7 @@ type potentialChange struct {
 // Единственная возвращаемая ошибка - ошибка по контексту.
 func (s *ChangesPlannerWithTreeSkip) Plan(
 	ctx context.Context,
-	baseSnapshot, localSnapshot, remoteSnapshot domain.Snapshot,
+	baseSnapshot domain.BaseSnapshot, localSnapshot, remoteSnapshot domain.Snapshot,
 ) (domain.SyncPlan, error) {
 
 	if ctxErr := ctx.Err(); ctxErr != nil {
@@ -77,7 +78,7 @@ func (s *ChangesPlannerWithTreeSkip) Plan(
 		}
 
 		localChange, remoteChange, conflict, potentialLocalChange, potentialRemoteChange := s.processEntry(
-			baseEntry, localEntry, remoteEntry,
+			baseEntry, localEntry, remoteEntry, baseSnapshot.IsInitial,
 		)
 
 		switch {
@@ -118,7 +119,7 @@ func (s *ChangesPlannerWithTreeSkip) Plan(
 }
 
 func (s *ChangesPlannerWithTreeSkip) processEntry(
-	baseEntry, localEntry, remoteEntry *domain.FileEntry,
+	baseEntry, localEntry, remoteEntry *domain.FileEntry, isInitial bool,
 ) (
 	*domain.LocalChange,
 	*domain.RemoteChange,
@@ -127,6 +128,10 @@ func (s *ChangesPlannerWithTreeSkip) processEntry(
 	*potentialChange,
 ) {
 	switch {
+	case s.shouldBeInitialMerge(baseEntry, localEntry, remoteEntry, isInitial):
+		localChange, remoteChange := s.handleInitialMerge(localEntry, remoteEntry)
+		return localChange, remoteChange, nil, nil, nil
+
 	case s.isModified(baseEntry, localEntry, remoteEntry):
 		localChange, remoteChange, conflict := s.handleModification(localEntry, remoteEntry)
 		return localChange, remoteChange, conflict, nil, nil
@@ -154,6 +159,7 @@ func (s *ChangesPlannerWithTreeSkip) handleDeletion(
 ) {
 
 	if localEntry == nil && remoteEntry != nil {
+
 		if remoteEntry.FileInfo.Metadata.IsDirectory {
 			return nil, &domain.RemoteChange{
 				OldRelativePath: remoteEntry.RelativePath,
@@ -263,6 +269,56 @@ func (s *ChangesPlannerWithTreeSkip) handleCreation(
 		}
 	}
 	return nil, nil, nil, nil, nil
+}
+
+func (s *ChangesPlannerWithTreeSkip) handleInitialMerge(
+	localEntry, remoteEntry *domain.FileEntry,
+) (*domain.LocalChange, *domain.RemoteChange) {
+	if localEntry == nil && remoteEntry != nil {
+		if remoteEntry.FileInfo.Metadata.IsDirectory {
+			return &domain.LocalChange{
+				NewRelativePath: remoteEntry.RelativePath,
+				ChangeType:      domain.CreateDir,
+			}, nil
+		}
+
+		return &domain.LocalChange{
+			NewRelativePath: remoteEntry.RelativePath,
+			ChangeType:      domain.CreateFile,
+		}, nil
+	}
+
+	if localEntry != nil && remoteEntry == nil {
+		if localEntry.FileInfo.Metadata.IsDirectory {
+			return nil, &domain.RemoteChange{
+				NewRelativePath: localEntry.RelativePath,
+				ChangeType:      domain.CreateDir,
+			}
+		}
+
+		return nil, &domain.RemoteChange{
+			NewRelativePath: localEntry.RelativePath,
+			ChangeType:      domain.CreateFile,
+		}
+	}
+
+	if localEntry.FileInfo.Metadata.IsDirectory && remoteEntry.FileInfo.Metadata.IsDirectory {
+		return nil, nil
+	}
+
+	if localEntry.FileInfo.Hash != remoteEntry.FileInfo.Hash {
+		mergedName := domain.Path(fmt.Sprintf("%s-merged", localEntry.RelativePath))
+
+		return &domain.LocalChange{
+				NewRelativePath: mergedName,
+				ChangeType:      domain.CreateFile,
+			}, &domain.RemoteChange{
+				NewRelativePath: mergedName,
+				ChangeType:      domain.CreateFile,
+			}
+	}
+
+	return nil, nil
 }
 
 func (s *ChangesPlannerWithTreeSkip) handleModification(
@@ -590,4 +646,8 @@ func (s *ChangesPlannerWithTreeSkip) isNewFile(base, local, remote *domain.FileE
 
 func (s *ChangesPlannerWithTreeSkip) isModified(base, local, remote *domain.FileEntry) bool {
 	return base != nil && local != nil && remote != nil && local.FileInfo.Hash != remote.FileInfo.Hash
+}
+
+func (s *ChangesPlannerWithTreeSkip) shouldBeInitialMerge(base, local, remote *domain.FileEntry, isInitial bool) bool {
+	return isInitial && (s.isDeleted(base, local, remote) || s.isNewFile(base, local, remote) || s.isModified(base, local, remote))
 }

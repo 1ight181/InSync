@@ -7,6 +7,7 @@ import (
 
 type BaseSnapshot struct {
 	Id             string `gorm:"primaryKey;type:uuid"`
+	IsInitial      bool
 	RootName       string `gorm:"type:uuid;not null;index:idx_base_snapshot_root_name_local_device_id_remote_device_id"`
 	LocalDeviceId  string `gorm:"type:uuid;not null;index:idx_base_snapshot_root_name_local_device_id_remote_device_id"`
 	RemoteDeviceId string `gorm:"type:uuid;not null;index:idx_base_snapshot_root_name_local_device_id_remote_device_id"`

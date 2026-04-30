@@ -33,7 +33,7 @@ func NewFileUseCase(opts FileUseCaseOptions) (*FileUseCase, error) {
 }
 
 func (f *FileUseCase) GetSnapshot(ctx context.Context, rootName domain.RootName) (domain.Snapshot, error) {
-	var baseSnapshot *domain.Snapshot
+	var baseSnapshot *domain.BaseSnapshot
 	rawBaseSnapshot, err := f.baseSnapshotProvider.GetBaseSnapshot(ctx, rootName)
 	if err != nil && !errors.Is(err, domain.ErrBaseSnapshotNotFound) {
 		return domain.Snapshot{}, err

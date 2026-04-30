@@ -12,7 +12,7 @@ func TestPlanner_EmptySnapshots_EmptyPlan(t *testing.T) {
 	planner := NewChangesPlannerWithTreeSkip()
 	ctx := context.Background()
 
-	emptyBaseSnap := createSnapshot(t, nil)
+	emptyBaseSnap := createBaseSnapshot(t, nil)
 	emptyLocalSnap := createSnapshot(t, nil)
 	emptyRemoteSnap := createSnapshot(t, nil)
 
@@ -32,7 +32,7 @@ func TestPlanner_SameSnapshots_EmptyPlan(t *testing.T) {
 		createRegularFileEntry(t, "/a/b/d", "file-d-v1", 1, 130, 17),
 	}
 
-	baseSnap := createSnapshot(t, sameFiles)
+	baseSnap := createBaseSnapshot(t, sameFiles)
 	localSnap := createSnapshot(t, sameFiles)
 	remoteSnap := createSnapshot(t, sameFiles)
 
@@ -61,7 +61,7 @@ func TestPlanner_NewFileOnLocal_CreateChangeOnRemote(t *testing.T) {
 		createDirectoryEntry(t, "/a/b", "dir-a-b-base", 1, 110, 0),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -95,7 +95,7 @@ func TestPlanner_NewFileOnRemote_CreateChangeOnLocal(t *testing.T) {
 		createRegularFileEntry(t, "/a/b/c", "file-c-v1", 1, 120, 31),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -130,7 +130,7 @@ func TestPlanner_NewSameFileOnRemoteAndLocal_EmptyPlan(t *testing.T) {
 		createRegularFileEntry(t, "/a/b/c", "file-c-v1", 1, 120, 31),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -160,7 +160,7 @@ func TestPlanner_NewFileWithDifferentContentButSameNameOnRemoteAndLocal_CreateCh
 		createRegularFileEntry(t, "/a/b/c", "file-c-remote", 1, 121, 31),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -194,7 +194,7 @@ func TestPlanner_NewFileWithDifferentNameButSameContentOnRemoteAndLocal_CreateCh
 		createRegularFileEntry(t, "/a/b/d", "file-c-v1", 1, 121, 31),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -230,7 +230,7 @@ func TestPlanner_NewFileWithDifferentNameAndModButSameContentOnRemoteAndLocal_Cr
 		createRegularFileEntry(t, "/a/b/d", "file-c-v1", 1, 150, 31),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -266,7 +266,7 @@ func TestPlanner_ThreeNewFilesAndDirOnLocalOneFileOnRemote_CreateChangeOnRemote(
 		createRegularFileEntry(t, "/a/b/f", "file-f-v1", 1, 140, 33),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -319,7 +319,7 @@ func TestPlanner_DeleteFileOnLocal_DeleteChangeOnRemote(t *testing.T) {
 		createDirectoryEntry(t, "/a/b", "dir-a-b-base", 1, 110, 0),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -356,7 +356,7 @@ func TestPlanner_DeleteFileOnRemoteAndLocalNewFileOnLocalWithOldNameDifferentHas
 		createDirectoryEntry(t, "/a", "dir-a-base", 1, 100, 0),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -384,7 +384,7 @@ func TestPlanner_ContextCanceled_ReturnsError(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	baseSnap := createSnapshot(t, nil)
+	baseSnap := createBaseSnapshot(t, nil)
 	localSnap := createSnapshot(t, nil)
 	remoteSnap := createSnapshot(t, nil)
 
@@ -410,7 +410,7 @@ func TestPlanner_FileModifiedOnLocal_RemoteGetsModifyChange(t *testing.T) {
 		createRegularFileEntry(t, "/a", "hash-remote", 1, 10, 100),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -440,7 +440,7 @@ func TestPlanner_FileModifiedOnRemote_LocalGetsModifyChange(t *testing.T) {
 		createRegularFileEntry(t, "/a", "hash-remote", 1, 20, 140),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -470,7 +470,7 @@ func TestPlanner_BothModifiedAtSameTime_ReturnsConflict(t *testing.T) {
 		createFileEntryWithMetadata(t, "/a", "hash-remote", 1, sameModifiedMetadata),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -502,7 +502,7 @@ func TestPlanner_FileRenamedOnLocal_RenameChangeOnRemote(t *testing.T) {
 		createRegularFileEntry(t, "/docs/report.txt", "hash-1", 1, 10, 100),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -542,7 +542,7 @@ func TestPlanner_FileMovedOnLocal_MoveChangeOnRemote(t *testing.T) {
 		createRegularFileEntry(t, "/docs/report.txt", "hash-1", 1, 10, 100),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -581,7 +581,7 @@ func TestPlanner_FileRenamedOnRemote_RenameChangeOnLocal(t *testing.T) {
 		createRegularFileEntry(t, "/docs/final.txt", "hash-1", 1, 20, 100),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -620,7 +620,7 @@ func TestPlanner_BothRenamedDifferently_ReturnsConflict(t *testing.T) {
 		createRegularFileEntry(t, "/docs/remote.txt", "hash-1", 1, 30, 100),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -650,7 +650,7 @@ func TestPlanner_NewDirectoryOnLocal_CreateDirChangeOnRemote(t *testing.T) {
 		createDirectoryEntry(t, "/a", "dir-a-base", 1, 100, 0),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -681,7 +681,7 @@ func TestPlanner_NewDirectoryOnRemote_CreateDirChangeOnLocal(t *testing.T) {
 		createDirectoryEntry(t, "/a/b", "dir-a-b-remote", 1, 110, 0),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -713,7 +713,7 @@ func TestPlanner_DeletedDirectoryOnLocal_DeleteChangeOnRemote(t *testing.T) {
 		createDirectoryEntry(t, "/a/b", "dir-a-b-base", 1, 110, 0),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -745,7 +745,7 @@ func TestPlanner_DeletedDirectoryOnRemote_DeleteChangeOnLocal(t *testing.T) {
 		createDirectoryEntry(t, "/a", "dir-a-remote", 1, 100, 0),
 	}
 
-	baseSnap := createSnapshot(t, baseFiles)
+	baseSnap := createBaseSnapshot(t, baseFiles)
 	localSnap := createSnapshot(t, localFiles)
 	remoteSnap := createSnapshot(t, remoteFiles)
 
@@ -769,6 +769,18 @@ func createSnapshot(t *testing.T, fileEntries []domain.FileEntry) domain.Snapsho
 	}
 
 	return domain.Snapshot{}
+}
+
+func createBaseSnapshot(t *testing.T, fileEntries []domain.FileEntry) domain.BaseSnapshot {
+	t.Helper()
+	if len(fileEntries) > 0 {
+		return domain.BaseSnapshot{
+			Snapshot:  createSnapshot(t, fileEntries),
+			IsInitial: false,
+		}
+	}
+
+	return domain.BaseSnapshot{}
 }
 
 func createRegularFileEntry(

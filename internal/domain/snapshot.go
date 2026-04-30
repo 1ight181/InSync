@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+type BaseSnapshot struct {
+	Snapshot
+	IsInitial bool
+}
+
 type Snapshot struct {
 	Files []FileEntry
 }
