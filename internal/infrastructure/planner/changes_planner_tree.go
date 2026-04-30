@@ -373,9 +373,9 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 		remoteByHash[change.Hash] = append(remoteByHash[change.Hash], change)
 	}
 
-	baseByHash := make(map[string][]domain.FileEntry)
+	baseByPath := make(map[string]domain.FileEntry, len(baseFiles))
 	for _, entry := range baseFiles {
-		baseByHash[entry.FileInfo.Hash] = append(baseByHash[entry.FileInfo.Hash], entry)
+		baseByPath[entry.RelativePath.String()] = entry
 	}
 
 	processedHashes := make(map[string]struct{})
@@ -391,18 +391,63 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 			return nil, nil, nil, ctxErr
 		}
 
-		baseEntries := baseByHash[hash]
-		if len(baseEntries) != 1 {
-
-			continue
-		}
-		baseEntry := baseEntries[0]
-
 		localDeletes, localCreates := s.splitChanges(localByHash[hash])
 		remoteDeletes, remoteCreates := s.splitChanges(remoteByHash[hash])
 
-		if len(localCreates) == 1 && len(remoteCreates) == 1 &&
-			len(localDeletes) == 1 && len(remoteDeletes) == 1 {
+		// простой rename/move на local
+		if len(localCreates) == 1 && len(localDeletes) == 1 &&
+			len(remoteCreates) == 0 && len(remoteDeletes) == 0 {
+
+			baseEntry, ok := s.findBaseEntryByPathAndHash(baseByPath, localDeletes[0].Path, hash)
+			if !ok {
+				continue
+			}
+
+			if localCreates[0].Path.String() == localDeletes[0].Path.String() {
+				delete(localByHash, hash)
+				continue
+			}
+
+			localChanges = append(localChanges,
+				s.buildLocalRenameOrMove(*baseEntry, localCreates[0].Path),
+			)
+			delete(localByHash, hash)
+			continue
+		}
+
+		// простой rename/move на remote
+		if len(remoteCreates) == 1 && len(remoteDeletes) == 1 &&
+			len(localCreates) == 0 && len(localDeletes) == 0 {
+
+			baseEntry, ok := s.findBaseEntryByPathAndHash(baseByPath, remoteDeletes[0].Path, hash)
+			if !ok {
+				continue
+			}
+
+			if remoteCreates[0].Path.String() == remoteDeletes[0].Path.String() {
+				delete(remoteByHash, hash)
+				continue
+			}
+
+			remoteChanges = append(remoteChanges,
+				s.buildRemoteRenameOrMove(*baseEntry, remoteCreates[0].Path),
+			)
+			delete(remoteByHash, hash)
+			continue
+		}
+
+		// rename vs rename / move vs move — только если оба удаляют один и тот же base-путь
+		if len(localCreates) == 1 && len(localDeletes) == 1 &&
+			len(remoteCreates) == 1 && len(remoteDeletes) == 1 {
+
+			if localDeletes[0].Path.String() != remoteDeletes[0].Path.String() {
+				continue
+			}
+
+			baseEntry, ok := s.findBaseEntryByPathAndHash(baseByPath, localDeletes[0].Path, hash)
+			if !ok {
+				continue
+			}
 
 			if localCreates[0].Path.String() == remoteCreates[0].Path.String() {
 				delete(localByHash, hash)
@@ -411,33 +456,9 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 			}
 
 			conflicts = append(conflicts,
-				s.buildRenameMoveConflict(baseEntry, &localCreates[0], &remoteCreates[0]),
+				s.buildRenameMoveConflict(*baseEntry, &localCreates[0], &remoteCreates[0]),
 			)
-
 			delete(localByHash, hash)
-			delete(remoteByHash, hash)
-			continue
-		}
-
-		// --- rename on one side only ---
-		if len(localCreates) == 1 && len(localDeletes) == 1 &&
-			len(remoteCreates) == 0 && len(remoteDeletes) == 0 {
-
-			localChanges = append(localChanges,
-				s.buildLocalRenameOrMove(baseEntry, localCreates[0].Path),
-			)
-
-			delete(localByHash, hash)
-			continue
-		}
-
-		if len(remoteCreates) == 1 && len(remoteDeletes) == 1 &&
-			len(localCreates) == 0 && len(localDeletes) == 0 {
-
-			remoteChanges = append(remoteChanges,
-				s.buildRemoteRenameOrMove(baseEntry, remoteCreates[0].Path),
-			)
-
 			delete(remoteByHash, hash)
 			continue
 		}
@@ -447,10 +468,26 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 		return nil, nil, nil, ctxErr
 	}
 
+	// оставшиеся изменения
 	s.appendRemainingRemoteChanges(remoteByHash, &remoteChanges)
 	s.appendRemainingLocalChanges(localByHash, &localChanges)
 
 	return localChanges, remoteChanges, conflicts, nil
+}
+
+func (s *ChangesPlannerWithTreeSkip) findBaseEntryByPathAndHash(
+	baseByPath map[string]domain.FileEntry,
+	path domain.Path,
+	hash string,
+) (*domain.FileEntry, bool) {
+	entry, ok := baseByPath[path.String()]
+	if !ok {
+		return nil, false
+	}
+	if entry.FileInfo.Hash != hash {
+		return nil, false
+	}
+	return &entry, true
 }
 
 func (s *ChangesPlannerWithTreeSkip) splitChanges(

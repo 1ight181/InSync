@@ -6,6 +6,7 @@ import (
 	"errors"
 	"insync/internal/domain"
 	cont "insync/internal/infrastructure/filemanager/content"
+	pathtree "insync/internal/infrastructure/filemanager/pathtree"
 	"sort"
 
 	"io"
@@ -165,7 +166,7 @@ func (f *FileManager) DeleteFile(ctx context.Context, scopedPath domain.ScopedPa
 		return err
 	}
 
-	if err := f.pathTreeWriter.RemovePath(scopedPath); err != nil {
+	if err := f.pathTreeWriter.RemovePath(scopedPath); err != nil && !errors.Is(err, pathtree.ErrNotFound) {
 		return err
 	}
 
