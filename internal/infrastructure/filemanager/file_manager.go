@@ -99,7 +99,7 @@ func (f *FileManager) GetSnapshot(ctx context.Context, rootName domain.RootName,
 		}
 	}
 
-	shouldRecalculateHash := f.shouldRecalculateHash(ctx, baseMetadataByPath)
+	shouldRecalculateHash := f.shouldRecalculateHash(ctx, baseMetadataByPath, rootName)
 	if ctx.Err() != nil {
 		return domain.Snapshot{}, ctx.Err()
 	}
@@ -532,13 +532,17 @@ func (f *FileManager) createFileEntryForDirectory(
 	return domain.NewFileEntry(relativePath, subtreeSize, fileInfo)
 }
 
-func (f *FileManager) shouldRecalculateHash(ctx context.Context, baseMetadataByPath map[domain.Path]domain.FileMetadata) bool {
+func (f *FileManager) shouldRecalculateHash(ctx context.Context, baseMetadataByPath map[domain.Path]domain.FileMetadata, root domain.RootName) bool {
 	if ctx.Err() != nil {
 		return false
 	}
 
 	for path, metadata := range baseMetadataByPath {
-		actualInfo, err := f.fileSystem.Stat(path)
+		fullPath, err := f.rootResolver.ResolveRoot(domain.ScopedPath{Root: root, Path: path})
+		if err != nil {
+			return true
+		}
+		actualInfo, err := f.fileSystem.Stat(fullPath)
 		if err != nil {
 			return true
 		}
