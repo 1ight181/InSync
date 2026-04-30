@@ -8,6 +8,11 @@ var (
 	ErrServerNetworkTypeIsEmpty = errors.New("Тип сети сервера не может быть пустым")
 )
 
+// Ошибки валидации конфигурации хеша
+var (
+	ErrInvalidHashCacheEntryExpireUnixTime = errors.New("Время жизни хеша в секундах должно быть положительным целым числом")
+)
+
 // Ошибки валидации конфигурации клиента
 var (
 	ErrInvalidOptsForMdnsScheme    = errors.New("Неверные опции для схемы mDNS")

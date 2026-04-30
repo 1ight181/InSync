@@ -9,6 +9,7 @@ type GeneralConfig struct {
 	MDnsServerConfig       MDnsServerConfig       `mapstructure:"mdns_server"`
 	MDnsBrowserConfig      MDnsBrowserConfig      `mapstructure:"mdns_browser"`
 	DeviceIdResolverConfig DeviceIdResolverConfig `mapstructure:"device_id_resolver"`
+	HashCacheConfig        HashCacheConfig        `mapstructure:"hash_cache"`
 }
 
 func (gc *GeneralConfig) Validate() error {
@@ -28,6 +29,12 @@ func (gc *GeneralConfig) Validate() error {
 		return err
 	}
 	if err := gc.MDnsBrowserConfig.Validate(); err != nil {
+		return err
+	}
+	if err := gc.DeviceIdResolverConfig.Validate(); err != nil {
+		return err
+	}
+	if err := gc.HashCacheConfig.Validate(); err != nil {
 		return err
 	}
 

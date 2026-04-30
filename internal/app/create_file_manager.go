@@ -19,8 +19,14 @@ func createFileManager(
 	db *gorm.DB,
 	fileSystem *filesys.FileSystem,
 	rootResolver *root.RootResolver,
+	hashCacheEntryExpireUnixTime int64,
 ) (*filemanager.FileManager, error) {
-	hashCacheRepo, err := hashrepo.NewHashRepository(db)
+	hashCacheRepoOpts := hashrepo.HashRepositoryOptions{
+		Db:                           db,
+		HashCacheEntryExpireUnixTime: hashCacheEntryExpireUnixTime,
+	}
+
+	hashCacheRepo, err := hashrepo.NewHashRepository(hashCacheRepoOpts)
 	if err != nil {
 		return nil, err
 	}

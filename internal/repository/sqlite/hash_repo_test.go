@@ -29,7 +29,12 @@ func (s *HashRepositorySuite) SetupTest() {
 	s.Require().NoError(err)
 	s.db = db
 
-	repo, err := hashrepo.NewHashRepository(db)
+	opts := hashrepo.HashRepositoryOptions{
+		Db:                           db,
+		HashCacheEntryExpireUnixTime: 10,
+	}
+
+	repo, err := hashrepo.NewHashRepository(opts)
 	s.Require().NoError(err)
 	s.repo = repo
 }

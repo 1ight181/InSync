@@ -67,6 +67,7 @@ func RunApp() {
 		db,
 		fileSystem,
 		rootResolver,
+		config.HashCacheConfig.HashCacheEntryExpireUnixTime,
 	)
 	if err != nil {
 		panic(fmt.Sprintf("Не удалось создать fileManager: %v", err))

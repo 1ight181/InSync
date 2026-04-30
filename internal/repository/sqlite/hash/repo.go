@@ -10,18 +10,27 @@ import (
 )
 
 type HashRepository struct {
-	db *gorm.DB
+	db                           *gorm.DB
+	hashCacheEntryExpireUnixTime int64
+}
+
+type HashRepositoryOptions struct {
+	Db                           *gorm.DB
+	HashCacheEntryExpireUnixTime int64
 }
 
 var (
 	ErrInvalidHashRepositoryOptions = errors.New("Все поля HashRepositoryOptions должны быть заполнены")
 )
 
-func NewHashRepository(db *gorm.DB) (*HashRepository, error) {
-	if db == nil {
+func NewHashRepository(opts HashRepositoryOptions) (*HashRepository, error) {
+	if opts.Db == nil {
 		return nil, ErrInvalidHashRepositoryOptions
 	}
-	return &HashRepository{db: db}, nil
+	return &HashRepository{
+		db:                           opts.Db,
+		hashCacheEntryExpireUnixTime: opts.HashCacheEntryExpireUnixTime,
+	}, nil
 }
 
 func (r *HashRepository) GetHashCache() (map[domain.Path]string, error) {
@@ -57,8 +66,7 @@ func (r *HashRepository) SetHashCache(fullPath domain.Path, hash string) error {
 
 	hashCacheEntry.FullPath = fullPath.String()
 	hashCacheEntry.Hash = hash
-	// TODO: вынести в конфиг
-	hashCacheEntry.Expires = time.Now().Add(time.Hour * 24 * 14).Unix()
+	hashCacheEntry.Expires = r.hashCacheEntryExpireUnixTime
 
 	if err := r.db.Save(&hashCacheEntry).Error; err != nil {
 		return err
