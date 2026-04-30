@@ -436,28 +436,48 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 			continue
 		}
 
-		// rename vs rename / move vs move — только если оба удаляют один и тот же base-путь
+		// rename vs rename / move vs move
 		if len(localCreates) == 1 && len(localDeletes) == 1 &&
 			len(remoteCreates) == 1 && len(remoteDeletes) == 1 {
 
-			if localDeletes[0].Path.String() != remoteDeletes[0].Path.String() {
-				continue
-			}
-
-			baseEntry, ok := s.findBaseEntryByPathAndHash(baseByPath, localDeletes[0].Path, hash)
+			localBaseEntry, ok := s.findBaseEntryByPathAndHash(baseByPath, localDeletes[0].Path, hash)
 			if !ok {
 				continue
 			}
 
-			if localCreates[0].Path.String() == remoteCreates[0].Path.String() {
+			remoteBaseEntry, ok := s.findBaseEntryByPathAndHash(baseByPath, remoteDeletes[0].Path, hash)
+			if !ok {
+				continue
+			}
+
+			// оба удаляют один и тот же base-путь
+			if localDeletes[0].Path.String() == remoteDeletes[0].Path.String() {
+				if localCreates[0].Path.String() == remoteCreates[0].Path.String() {
+					delete(localByHash, hash)
+					delete(remoteByHash, hash)
+					continue
+				}
+
+				conflicts = append(conflicts,
+					s.buildRenameMoveConflict(*localBaseEntry, &localCreates[0], &remoteCreates[0]),
+				)
 				delete(localByHash, hash)
 				delete(remoteByHash, hash)
 				continue
 			}
 
-			conflicts = append(conflicts,
-				s.buildRenameMoveConflict(*baseEntry, &localCreates[0], &remoteCreates[0]),
+			// разные base-пути — это два независимых очевидных move/rename
+			if localCreates[0].Path.String() == remoteCreates[0].Path.String() {
+				continue
+			}
+
+			localChanges = append(localChanges,
+				s.buildLocalRenameOrMove(*localBaseEntry, localCreates[0].Path),
 			)
+			remoteChanges = append(remoteChanges,
+				s.buildRemoteRenameOrMove(*remoteBaseEntry, remoteCreates[0].Path),
+			)
+
 			delete(localByHash, hash)
 			delete(remoteByHash, hash)
 			continue
