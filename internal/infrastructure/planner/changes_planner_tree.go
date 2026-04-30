@@ -373,9 +373,9 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 		remoteByHash[change.Hash] = append(remoteByHash[change.Hash], change)
 	}
 
-	baseByPath := make(map[string]domain.FileEntry, len(baseFiles))
+	baseByHash := make(map[string][]domain.FileEntry)
 	for _, entry := range baseFiles {
-		baseByPath[entry.RelativePath.String()] = entry
+		baseByHash[entry.FileInfo.Hash] = append(baseByHash[entry.FileInfo.Hash], entry)
 	}
 
 	processedHashes := make(map[string]struct{})
@@ -391,94 +391,53 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 			return nil, nil, nil, ctxErr
 		}
 
+		baseEntries := baseByHash[hash]
+		if len(baseEntries) != 1 {
+
+			continue
+		}
+		baseEntry := baseEntries[0]
+
 		localDeletes, localCreates := s.splitChanges(localByHash[hash])
 		remoteDeletes, remoteCreates := s.splitChanges(remoteByHash[hash])
 
-		// local create + remote delete -> move/rename на remote
-		if len(localCreates) == 1 && len(remoteDeletes) == 1 &&
-			len(localDeletes) == 0 && len(remoteCreates) == 0 {
+		if len(localCreates) == 1 && len(remoteCreates) == 1 &&
+			len(localDeletes) == 1 && len(remoteDeletes) == 1 {
 
-			baseEntry, ok := s.findBaseEntryByPathAndHash(baseByPath, remoteDeletes[0].Path, hash)
-			if !ok {
-				continue
-			}
-
-			if localCreates[0].Path.String() == remoteDeletes[0].Path.String() {
+			if localCreates[0].Path.String() == remoteCreates[0].Path.String() {
 				delete(localByHash, hash)
 				delete(remoteByHash, hash)
 				continue
 			}
 
-			remoteChanges = append(remoteChanges,
-				s.buildRemoteRenameOrMove(*baseEntry, localCreates[0].Path),
+			conflicts = append(conflicts,
+				s.buildRenameMoveConflict(baseEntry, &localCreates[0], &remoteCreates[0]),
 			)
+
 			delete(localByHash, hash)
 			delete(remoteByHash, hash)
 			continue
 		}
 
-		// remote create + local delete -> move/rename на local
-		if len(remoteCreates) == 1 && len(localDeletes) == 1 &&
-			len(remoteDeletes) == 0 && len(localCreates) == 0 {
-
-			baseEntry, ok := s.findBaseEntryByPathAndHash(baseByPath, localDeletes[0].Path, hash)
-			if !ok {
-				continue
-			}
-
-			if remoteCreates[0].Path.String() == localDeletes[0].Path.String() {
-				delete(localByHash, hash)
-				delete(remoteByHash, hash)
-				continue
-			}
-
-			localChanges = append(localChanges,
-				s.buildLocalRenameOrMove(*baseEntry, remoteCreates[0].Path),
-			)
-			delete(localByHash, hash)
-			delete(remoteByHash, hash)
-			continue
-		}
-
-		// обе стороны сделали по одному create и delete
+		// --- rename on one side only ---
 		if len(localCreates) == 1 && len(localDeletes) == 1 &&
-			len(remoteCreates) == 1 && len(remoteDeletes) == 1 {
+			len(remoteCreates) == 0 && len(remoteDeletes) == 0 {
 
-			localBaseEntry, ok := s.findBaseEntryByPathAndHash(baseByPath, localDeletes[0].Path, hash)
-			if !ok {
-				continue
-			}
-
-			remoteBaseEntry, ok := s.findBaseEntryByPathAndHash(baseByPath, remoteDeletes[0].Path, hash)
-			if !ok {
-				continue
-			}
-
-			// оба удаляют один и тот же base-путь — либо совпадение, либо конфликт
-			if localDeletes[0].Path.String() == remoteDeletes[0].Path.String() {
-				if localCreates[0].Path.String() == remoteCreates[0].Path.String() {
-					delete(localByHash, hash)
-					delete(remoteByHash, hash)
-					continue
-				}
-
-				conflicts = append(conflicts,
-					s.buildRenameMoveConflict(*localBaseEntry, &localCreates[0], &remoteCreates[0]),
-				)
-				delete(localByHash, hash)
-				delete(remoteByHash, hash)
-				continue
-			}
-
-			// разные base-пути — это два независимых move/rename
 			localChanges = append(localChanges,
-				s.buildLocalRenameOrMove(*localBaseEntry, remoteCreates[0].Path),
-			)
-			remoteChanges = append(remoteChanges,
-				s.buildRemoteRenameOrMove(*remoteBaseEntry, localCreates[0].Path),
+				s.buildLocalRenameOrMove(baseEntry, localCreates[0].Path),
 			)
 
 			delete(localByHash, hash)
+			continue
+		}
+
+		if len(remoteCreates) == 1 && len(remoteDeletes) == 1 &&
+			len(localCreates) == 0 && len(localDeletes) == 0 {
+
+			remoteChanges = append(remoteChanges,
+				s.buildRemoteRenameOrMove(baseEntry, remoteCreates[0].Path),
+			)
+
 			delete(remoteByHash, hash)
 			continue
 		}
@@ -492,21 +451,6 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 	s.appendRemainingLocalChanges(localByHash, &localChanges)
 
 	return localChanges, remoteChanges, conflicts, nil
-}
-
-func (s *ChangesPlannerWithTreeSkip) findBaseEntryByPathAndHash(
-	baseByPath map[string]domain.FileEntry,
-	path domain.Path,
-	hash string,
-) (*domain.FileEntry, bool) {
-	entry, ok := baseByPath[path.String()]
-	if !ok {
-		return nil, false
-	}
-	if entry.FileInfo.Hash != hash {
-		return nil, false
-	}
-	return &entry, true
 }
 
 func (s *ChangesPlannerWithTreeSkip) splitChanges(

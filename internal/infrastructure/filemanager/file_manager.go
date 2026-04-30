@@ -150,7 +150,7 @@ func (f *FileManager) RenameFile(ctx context.Context, oldScopedPath domain.Scope
 		return err
 	}
 
-	if err := f.pathTreeWriter.RemovePath(oldScopedPath); err != nil {
+	if err := f.pathTreeWriter.RemovePath(oldScopedPath); err != nil && !errors.Is(err, pathtree.ErrNotFound) {
 		return err
 	}
 
@@ -353,7 +353,6 @@ func (f *FileManager) createMetadata(entryInfo fs.FileInfo) domain.FileMetadata 
 func (f *FileManager) resolveHash(
 	resourceContent cont.ResourceContent,
 	rootName domain.RootName,
-	currentMetadata domain.FileMetadata,
 	shouldRecalculateHash bool,
 ) (string, error) {
 	if shouldRecalculateHash {
@@ -460,7 +459,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 		}
 
 		fileMetadata := f.createMetadata(entryInfo)
-		hashValue, err := f.resolveHash(resourceContent, rootName, fileMetadata, shouldRecalculateHash)
+		hashValue, err := f.resolveHash(resourceContent, rootName, shouldRecalculateHash)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -521,7 +520,7 @@ func (f *FileManager) createFileEntryForDirectory(
 	}
 
 	metadata := f.createMetadata(info)
-	hashValue, err := f.resolveHash(resourceContent, rootName, metadata, shouldRecalculateHash)
+	hashValue, err := f.resolveHash(resourceContent, rootName, shouldRecalculateHash)
 	if err != nil {
 		return domain.FileEntry{}, err
 	}
