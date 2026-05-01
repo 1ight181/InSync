@@ -33,7 +33,7 @@ func NewBaseSnapshotUseCase(opts BaseSnapshotUseCaseOpts) (*BaseSnapshotUseCase,
 
 func (b *BaseSnapshotUseCase) UpdateBaseSnapshot(ctx context.Context, rootName domain.RootName) error {
 	currentBaseSnapshot, err := b.baseSnapshotManager.GetBaseSnapshot(ctx, rootName)
-	if err != nil {
+	if err != nil && !errors.Is(err, domain.ErrBaseSnapshotNotFound) {
 		return err
 	}
 
