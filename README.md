@@ -227,6 +227,7 @@ The alias is displayed next to the node name and makes working in the REPL easie
 - [ ]  Raise test coverage to 90%
 - [ ]  Add daemon mode
 - [ ]  Move to Bubble Tea
+- [ ]  Move to rsync algorithms
 
 ---
 

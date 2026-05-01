@@ -226,6 +226,7 @@ insync> set-alias nodeNameExample aliasExample
 - [ ] Доведение покрытия тестами до 90%
 - [ ] Добавление daemon mode
 - [ ] Переход на Bubble Tea
+- [ ] Переход на rsync algorithms
 
 ---
 
