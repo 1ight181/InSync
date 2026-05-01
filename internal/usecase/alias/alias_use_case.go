@@ -38,3 +38,11 @@ func (a *AliasUseCase) RemoveAlias(aliasName string) error {
 func (a *AliasUseCase) GetAliases() map[domain.NodeName]string {
 	return a.aliasProvider.GetAliases()
 }
+
+func (a *AliasUseCase) GetNodeByAlias(aliasName string) (domain.NodeName, bool) {
+	return a.aliasProvider.GetNodeByAlias(aliasName)
+}
+
+func (a *AliasUseCase) GetAliasByNode(nodeName domain.NodeName) (string, bool) {
+	return a.aliasProvider.GetAliasByNode(nodeName)
+}

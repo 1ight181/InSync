@@ -9,13 +9,11 @@ import (
 type NodeUseCase struct {
 	nodeNamesBrowser      INodeNamesBrowser
 	localDeviceIdResolver ILocalDeviceIdProvider
-	aliasProvider         IAliasProvider
 }
 
 type NodeUseCaseOptions struct {
 	NodeNamesBrowser      INodeNamesBrowser
 	LocalDeviceIdResolver ILocalDeviceIdProvider
-	AliasProvider         IAliasProvider
 }
 
 var (
@@ -24,19 +22,17 @@ var (
 
 func NewNodeUseCase(opts NodeUseCaseOptions) (*NodeUseCase, error) {
 	if opts.NodeNamesBrowser == nil ||
-		opts.LocalDeviceIdResolver == nil ||
-		opts.AliasProvider == nil {
+		opts.LocalDeviceIdResolver == nil {
 		return nil, ErrInvalidNodeUseCaseOptions
 	}
 	return &NodeUseCase{
 		nodeNamesBrowser:      opts.NodeNamesBrowser,
 		localDeviceIdResolver: opts.LocalDeviceIdResolver,
-		aliasProvider:         opts.AliasProvider,
 	}, nil
 }
 
 // Возвращает канал с мапой имя узла - алиас
-func (c *NodeUseCase) ShowNodeNames(ctx context.Context) (chan domain.NodeNameWithAlias, error) {
+func (c *NodeUseCase) ShowNodeNames(ctx context.Context) (chan domain.NodeName, error) {
 	rawNodeNamesChan, err := c.nodeNamesBrowser.BrowseNodeNames(ctx)
 	if err != nil {
 		return nil, err
@@ -47,7 +43,7 @@ func (c *NodeUseCase) ShowNodeNames(ctx context.Context) (chan domain.NodeNameWi
 		return nil, err
 	}
 
-	validNodeNamesChan := make(chan domain.NodeNameWithAlias, 10)
+	validNodeNamesChan := make(chan domain.NodeName, 10)
 	selfNodeName, err := domain.NewNodeName(localDeviceId.String())
 	if err != nil {
 		return nil, err
@@ -60,13 +56,7 @@ func (c *NodeUseCase) ShowNodeNames(ctx context.Context) (chan domain.NodeNameWi
 				continue
 			}
 
-			validNodeName := rawNodeName
-
-			alias := c.aliasProvider.GetAlias(rawNodeName)
-			validNodeNamesChan <- domain.NodeNameWithAlias{
-				NodeName: validNodeName,
-				Alias:    alias,
-			}
+			validNodeNamesChan <- rawNodeName
 		}
 	}()
 

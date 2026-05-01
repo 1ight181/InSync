@@ -78,9 +78,8 @@ type Cli struct {
 	loggerCtx context.Context
 
 	shouldUseCache *bool
-	// nodeName -> alias
-	nodeNameCache []domain.NodeNameWithAlias
-	exitCtxCancel context.CancelFunc
+	nodeNameCache  []domain.NodeName
+	exitCtxCancel  context.CancelFunc
 }
 
 type CliOptions struct {
@@ -428,23 +427,15 @@ func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("Доступные узлы (динамический список, нажмите Ctrl+C для завершения):")
 
-	var newNodeNamesCache []domain.NodeNameWithAlias
+	var newNodeNamesCache []domain.NodeName
 
 	for i := 1; ; i++ {
 		select {
-		case nodeNameWithAlias, ok := <-nodeNamesChan:
+		case nodeName, ok := <-nodeNamesChan:
 			if ok {
-				nodeName := nodeNameWithAlias.NodeName
-				alias := nodeNameWithAlias.Alias
 				fmt.Printf("%d. %s", i, nodeName)
 
-				if alias != "" {
-					alias = fmt.Sprintf("(%s)", alias)
-				}
-
-				fmt.Println(alias)
-
-				newNodeNamesCache = append(newNodeNamesCache, nodeNameWithAlias)
+				newNodeNamesCache = append(newNodeNamesCache, nodeName)
 				c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Доступный узел", slog.String("name", nodeName.String()))
 			}
 		case <-interruptCtx.Done():
@@ -601,10 +592,9 @@ func (c *Cli) connectCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	var nodeNameToConnect domain.NodeName
-	for _, alias := range c.nodeNameCache {
-		if nodeName.String() == alias.Alias {
-			nodeNameToConnect = alias.NodeName
-		}
+	// Проверяем, не передан ли псевдоним в качестве аргумента
+	if node, ok := c.aliasUseCase.GetNodeByAlias(nodeName.String()); ok {
+		nodeNameToConnect = node
 	}
 
 	if nodeNameToConnect == "" {
@@ -946,9 +936,8 @@ func (c *Cli) setAliasSuggestionFunc(prefix string) []prompt.Suggest {
 
 	switch length {
 	case 2:
-		nodeNamesWithAlias := c.nodeNameCache
-		for _, nodeNameWithAlias := range nodeNamesWithAlias {
-			nodeName := nodeNameWithAlias.NodeName
+		nodeNames := c.nodeNameCache
+		for _, nodeName := range nodeNames {
 			if strings.HasPrefix(nodeName.String(), parts[1]) {
 				suggestions = append(suggestions, prompt.Suggest{
 					Text: nodeName.String(),
@@ -964,7 +953,6 @@ func (c *Cli) setAliasSuggestionFunc(prefix string) []prompt.Suggest {
 
 func (c *Cli) removeAliasSuggestionFunc(prefix string) []prompt.Suggest {
 	suggestions := make([]prompt.Suggest, 0)
-	nodeNamesWithAlias := c.nodeNameCache
 
 	parts := strings.Fields(prefix)
 
@@ -978,9 +966,9 @@ func (c *Cli) removeAliasSuggestionFunc(prefix string) []prompt.Suggest {
 		return nil
 	}
 
-	for _, nodeNamesWithAlias := range nodeNamesWithAlias {
-		alias := nodeNamesWithAlias.Alias
-		nodeName := nodeNamesWithAlias.NodeName
+	aliasByNodeName := c.aliasUseCase.GetAliases()
+
+	for nodeName, alias := range aliasByNodeName {
 		if strings.HasPrefix(alias, parts[1]) {
 			suggestions = append(suggestions, prompt.Suggest{
 				Text:        alias,
@@ -1004,20 +992,35 @@ func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
 	if length < 2 {
 		return nil
 	}
-
-	nodeNamesWithAlias := c.nodeNameCache
-
 	suggestions := make([]prompt.Suggest, 0)
-	for _, nodeNameWithAlias := range nodeNamesWithAlias {
-		nodeNameCandidate := nodeNameWithAlias.NodeName
-		descripton := ""
-		if nodeNameWithAlias.Alias != "" {
-			nodeNameCandidate = domain.NodeName(nodeNameWithAlias.Alias)
-			descripton = nodeNameWithAlias.NodeName.String()
+	if len(c.nodeNameCache) != 0 {
+		for _, nodeName := range c.nodeNameCache {
+			nodeNameCandidate := nodeName.String()
+			description := ""
+			if alias, ok := c.aliasUseCase.GetAliasByNode(nodeName); ok {
+				nodeNameCandidate = alias
+				description = nodeName.String()
+			}
+
+			if strings.HasPrefix(nodeNameCandidate, parts[1]) {
+				suggestions = append(suggestions, prompt.Suggest{
+					Text:        nodeNameCandidate,
+					Description: description,
+				})
+			}
 		}
-		if strings.HasPrefix(nodeNameCandidate.String(), parts[1]) {
+	}
+
+	for nodeName, alias := range c.aliasUseCase.GetAliases() {
+		nodeNameCandidate := nodeName.String()
+		descripton := ""
+		if alias != "" {
+			nodeNameCandidate = alias
+			descripton = nodeName.String()
+		}
+		if strings.HasPrefix(nodeNameCandidate, parts[1]) {
 			suggestions = append(suggestions, prompt.Suggest{
-				Text:        nodeNameCandidate.String(),
+				Text:        nodeNameCandidate,
 				Description: descripton,
 			})
 		}

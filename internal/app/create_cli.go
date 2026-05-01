@@ -68,7 +68,6 @@ func createCLi(
 	nodeUseCaseOpts := nodeusecase.NodeUseCaseOptions{
 		NodeNamesBrowser:      mDnsNodeNamesBrowser,
 		LocalDeviceIdResolver: deviceIdProvider,
-		AliasProvider:         aliasProvider,
 	}
 
 	nodeUseCase, err := nodeusecase.NewNodeUseCase(nodeUseCaseOpts)

@@ -6,8 +6,9 @@ import (
 )
 
 type AliasProvider struct {
-	aliasRepository IAliasRepository
-	aliasesCache    map[domain.NodeName]string
+	aliasRepository  IAliasRepository
+	nodeToAliasCache map[domain.NodeName]string
+	aliasToNodeCache map[string]domain.NodeName
 }
 
 var (
@@ -19,19 +20,25 @@ func NewAliasProvider(aliasRepository IAliasRepository) (*AliasProvider, error) 
 		return nil, ErrInvalidAliasProviderOptions
 	}
 
-	aliases, err := aliasRepository.GetAliases()
+	nodeToAliasCache, err := aliasRepository.GetAliases()
 	if err != nil {
 		return nil, err
 	}
 
+	aliasToNodeCache := make(map[string]domain.NodeName)
+	for nodeName, alias := range nodeToAliasCache {
+		aliasToNodeCache[alias] = nodeName
+	}
+
 	return &AliasProvider{
-		aliasRepository: aliasRepository,
-		aliasesCache:    aliases,
+		aliasRepository:  aliasRepository,
+		nodeToAliasCache: nodeToAliasCache,
+		aliasToNodeCache: aliasToNodeCache,
 	}, nil
 }
 
 func (a *AliasProvider) GetAliases() map[domain.NodeName]string {
-	return a.aliasesCache
+	return a.nodeToAliasCache
 }
 
 func (a *AliasProvider) SetAlias(newAlias string, nodeName domain.NodeName) error {
@@ -39,7 +46,8 @@ func (a *AliasProvider) SetAlias(newAlias string, nodeName domain.NodeName) erro
 		return err
 	}
 
-	a.aliasesCache[nodeName] = newAlias
+	a.nodeToAliasCache[nodeName] = newAlias
+	a.aliasToNodeCache[newAlias] = nodeName
 	return nil
 }
 
@@ -48,15 +56,23 @@ func (a *AliasProvider) RemoveAlias(aliasName string) error {
 		return err
 	}
 
-	for nodeName := range a.aliasesCache {
-		if a.aliasesCache[nodeName] == aliasName {
-			delete(a.aliasesCache, nodeName)
-		}
-	}
+	nodeNameToDelete := a.aliasToNodeCache[aliasName]
+	delete(a.nodeToAliasCache, nodeNameToDelete)
+	delete(a.aliasToNodeCache, aliasName)
 
 	return nil
 }
 
 func (a *AliasProvider) GetAlias(nodeName domain.NodeName) string {
-	return a.aliasesCache[nodeName]
+	return a.nodeToAliasCache[nodeName]
+}
+
+func (a *AliasProvider) GetNodeByAlias(aliasName string) (domain.NodeName, bool) {
+	nodeName, ok := a.aliasToNodeCache[aliasName]
+	return nodeName, ok
+}
+
+func (a *AliasProvider) GetAliasByNode(nodeName domain.NodeName) (string, bool) {
+	alias, ok := a.nodeToAliasCache[nodeName]
+	return alias, ok
 }
