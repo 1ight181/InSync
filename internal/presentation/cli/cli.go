@@ -433,7 +433,12 @@ func (c *Cli) nodesCmd(cmd *cobra.Command, args []string) error {
 		select {
 		case nodeName, ok := <-nodeNamesChan:
 			if ok {
-				fmt.Printf("%d. %s", i, nodeName)
+				nodeNameCandidate := nodeName.String()
+				if alias, ok := c.aliasUseCase.GetAliasByNode(nodeName); ok {
+					nodeNameCandidate = alias
+				}
+
+				fmt.Printf("%d. %s\n", i, nodeNameCandidate)
 
 				newNodeNamesCache = append(newNodeNamesCache, nodeName)
 				c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Доступный узел", slog.String("name", nodeName.String()))
@@ -1019,11 +1024,13 @@ func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
 		return nil
 	}
 	suggestions := make([]prompt.Suggest, 0)
+	alreadyAdded := make(map[string]struct{})
 	if len(c.nodeNameCache) != 0 {
 		for _, nodeName := range c.nodeNameCache {
 			nodeNameCandidate := nodeName.String()
 			description := ""
 			if alias, ok := c.aliasUseCase.GetAliasByNode(nodeName); ok {
+				alreadyAdded[nodeNameCandidate] = struct{}{}
 				nodeNameCandidate = alias
 				description = nodeName.String()
 			}
@@ -1038,6 +1045,9 @@ func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
 	}
 
 	for nodeName, alias := range c.aliasUseCase.GetAliases() {
+		if _, ok := alreadyAdded[nodeName.String()]; ok {
+			continue
+		}
 		nodeNameCandidate := nodeName.String()
 		descripton := ""
 		if alias != "" {
