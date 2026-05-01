@@ -201,10 +201,10 @@ The alias is displayed next to the node name and makes working in the REPL easie
 - `connect <nodeName>` — connect to a node
 - `current-node` — show the currently connected node
 - `add-root <rootName> <path>` — add a root directory for synchronization
-- `remove-root <rootName>` — remove a root directory from synchronization
+- `remove-root <rootName> [--should_delete_snapshots]` — remove a root directory from synchronization
 - `init <rootName>` — create a base snapshot for selected root
 - `dry-run <rootName>` — show the synchronization plan without applying it
-- `sync <rootName>` — apply changes
+- `sync <rootName> [--should-use-cache]` — apply changes
 - `set-alias <nodeName> <alias>` — assign an alias to a node
 - `remove-alias <alias>` — remove an assigned alias
 

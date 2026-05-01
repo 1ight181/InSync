@@ -200,10 +200,10 @@ insync> set-alias nodeNameExample aliasExample
 - `connect <nodeName>` — подключиться к узлу
 - `current-node` — показывает текущий подключенный узел
 - `add-root <rootName> <path>` — добавить корневой каталог для синхронизации
--  `remove-root  <rootName>` — удаляет корневой каталог для синхронизации
+- `remove-root  <rootName>  [--should_delete_snapshots]` — удаляет корневой каталог для синхронизации
 - `init <rootName>` — создать base snapshot для выбранного узла
 - `dry-run <rootName>` — показать план синхронизации без применения
-- `sync <rootName>` — применить изменения
+- `sync <rootName> [--should-use-cache]` — применить изменения
 - `set-alias <nodeName> <alias>` — назначить алиас узлу
 - `remove-alias <alias>` — удалить назначенный алиас
 
