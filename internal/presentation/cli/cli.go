@@ -466,8 +466,12 @@ func (c *Cli) currentNodeCmd(cmd *cobra.Command, args []string) error {
 		fmt.Println("Не удалось получить текущий узел")
 		return err
 	}
+	currentNodeCandidate := currentNode.String()
+	if alias, ok := c.aliasUseCase.GetAliasByNode(currentNode); ok {
+		currentNodeCandidate = alias
+	}
 	c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Получен текущий узел", slog.String("node", currentNode.String()))
-	fmt.Printf("Текущий подключенный узел: %s\n", currentNode)
+	fmt.Printf("Текущий подключенный узел: %s\n", currentNodeCandidate)
 
 	return nil
 }
