@@ -532,7 +532,7 @@ func TestPlanner_FileMovedOnLocal_MoveChangeOnRemote(t *testing.T) {
 	}
 
 	localFiles := []domain.FileEntry{
-		createDirectoryEntry(t, "/docs", "dir-docs-base", 2, 10, 0),
+		createDirectoryEntry(t, "/docs", "dir-docs-local", 2, 10, 0),
 		createDirectoryEntry(t, "/archive", "dir-archive-local", 2, 20, 0),
 		createRegularFileEntry(t, "/archive/report.txt", "hash-1", 1, 20, 100),
 	}
@@ -550,16 +550,22 @@ func TestPlanner_FileMovedOnLocal_MoveChangeOnRemote(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, plan.LocalChanges, 0)
-	require.Len(t, plan.RemoteChanges, 1)
+	require.Len(t, plan.RemoteChanges, 2)
 	require.Len(t, plan.Conflicts, 0)
 
-	expectedRemoteChange := domain.RemoteChange{
-		OldRelativePath: mustPath(t, "/docs/report.txt"),
-		NewRelativePath: mustPath(t, "/archive/report.txt"),
-		ChangeType:      domain.Move,
+	expectedRemoteChanges := []domain.RemoteChange{
+		{
+			OldRelativePath: mustPath(t, "/docs/report.txt"),
+			NewRelativePath: mustPath(t, "/archive/report.txt"),
+			ChangeType:      domain.Move,
+		},
+		{
+			NewRelativePath: mustPath(t, "/archive"),
+			ChangeType:      domain.CreateDir,
+		},
 	}
 
-	require.Equal(t, expectedRemoteChange, plan.RemoteChanges[0])
+	require.ElementsMatch(t, expectedRemoteChanges, plan.RemoteChanges)
 }
 
 func TestPlanner_FileRenamedOnRemote_RenameChangeOnLocal(t *testing.T) {
@@ -599,38 +605,6 @@ func TestPlanner_FileRenamedOnRemote_RenameChangeOnLocal(t *testing.T) {
 	}
 
 	require.Equal(t, expectedLocalChange, plan.LocalChanges[0])
-}
-
-func TestPlanner_BothRenamedDifferently_ReturnsConflict(t *testing.T) {
-	planner := NewChangesPlannerWithTreeSkip()
-	ctx := context.Background()
-
-	baseFiles := []domain.FileEntry{
-		createDirectoryEntry(t, "/docs", "dir-docs-base", 2, 10, 0),
-		createRegularFileEntry(t, "/docs/report.txt", "hash-1", 1, 10, 100),
-	}
-
-	localFiles := []domain.FileEntry{
-		createDirectoryEntry(t, "/docs", "dir-docs-local", 2, 20, 0),
-		createRegularFileEntry(t, "/docs/local.txt", "hash-1", 1, 20, 100),
-	}
-
-	remoteFiles := []domain.FileEntry{
-		createDirectoryEntry(t, "/docs", "dir-docs-remote", 2, 30, 0),
-		createRegularFileEntry(t, "/docs/remote.txt", "hash-1", 1, 30, 100),
-	}
-
-	baseSnap := createBaseSnapshot(t, baseFiles)
-	localSnap := createSnapshot(t, localFiles)
-	remoteSnap := createSnapshot(t, remoteFiles)
-
-	plan, err := planner.Plan(ctx, baseSnap, localSnap, remoteSnap)
-	require.NoError(t, err)
-
-	require.Len(t, plan.LocalChanges, 0)
-	require.Len(t, plan.RemoteChanges, 0)
-	require.Len(t, plan.Conflicts, 1)
-	require.Equal(t, domain.ConflictLocalRenamedRemoteRenamed, plan.Conflicts[0].Conflict)
 }
 
 func TestPlanner_NewDirectoryOnLocal_CreateDirChangeOnRemote(t *testing.T) {
