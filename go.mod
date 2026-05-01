@@ -3,8 +3,8 @@ module insync
 go 1.25.3
 
 require (
-	github.com/1ight181/comptplus-ctrl-c v0.0.2
-	github.com/1ight181/go-prompt-ctrl-c v0.0.2
+	github.com/1ight181/comptplus-ctrl-c v0.0.3
+	github.com/1ight181/go-prompt-ctrl-c v0.0.3
 	github.com/glebarez/sqlite v1.11.0
 	github.com/google/uuid v1.6.0
 	github.com/knadh/koanf/parsers/yaml v1.1.0
@@ -32,7 +32,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-isatty v0.0.21 // indirect
+	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mattn/go-runewidth v0.0.23 // indirect
 	github.com/mattn/go-tty v0.0.8 // indirect
 	github.com/pkg/term v1.2.0-beta.2 // indirect
