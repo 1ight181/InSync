@@ -53,7 +53,8 @@ const (
 )
 
 const (
-	shouldUseCacheFlagName = "should_use_cache"
+	shouldUseCacheFlagName        = "should_use_cache"
+	shouldDeleteSnapshotsFlagName = "should_delete_snapshots"
 )
 
 const (
@@ -314,7 +315,7 @@ func (c *Cli) createRemoveRootCmd() *cobra.Command {
 	}
 
 	shouldDeleteSnapshotsPtr := removeRootCmd.Flags().Bool(
-		"should-delete-snapshots", false,
+		shouldDeleteSnapshotsFlagName, false,
 		"Указывает стоит ли удалять связанные снимки при удалении корневого каталога",
 	)
 
