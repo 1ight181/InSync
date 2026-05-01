@@ -160,16 +160,8 @@ insync> add-root exampleRoot "/path/to/remote-root"
 After adding a root, you can initialize the base state:
 
 ```
-insync> init remote exampleRoot
+insync> init exampleRoot
 ```
-
-or
-
-```
-insync> init local exampleRoot
-```
-
-The choice depends on which state should become the starting point for synchronization.
 
 ---
 
@@ -210,7 +202,7 @@ The alias is displayed next to the node name and makes working in the REPL easie
 - `current-node` — show the currently connected node
 - `add-root <rootName> <path>` — add a root directory for synchronization
 - `remove-root <rootName>` — remove a root directory from synchronization
-- `init local|remote` — create a base snapshot from the selected side
+- `init <rootName>` — create a base snapshot for selected root
 - `dry-run <rootName>` — show the synchronization plan without applying it
 - `sync <rootName>` — apply changes
 - `set-alias <nodeName> <alias>` — assign an alias to a node

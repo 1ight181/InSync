@@ -6,6 +6,5 @@ import (
 )
 
 type IInitUseCase interface {
-	InitFromLocal(ctx context.Context, rootName domain.RootName) error
-	InitFromRemote(ctx context.Context, rootName domain.RootName) error
+	Init(ctx context.Context, rootName domain.RootName) error
 }

@@ -159,16 +159,8 @@ insync> add-root exampleRoot "/path/to/remote-root"
 После добавления root можно инициализировать базовое состояние:
 
 ```
-insync> init remote exampleRoot
+insync> init exampleRoot
 ```
-
-или
-
-```
-insync> init local exampleRoot
-```
-
-Выбор стороны зависит от того, какое состояние должно стать отправной точкой синхронизации.
 
 ---
 
@@ -209,7 +201,7 @@ insync> set-alias nodeNameExample aliasExample
 - `current-node` — показывает текущий подключенный узел
 - `add-root <rootName> <path>` — добавить корневой каталог для синхронизации
 -  `remove-root  <rootName>` — удаляет корневой каталог для синхронизации
-- `init local|remote` — создать base snapshot от выбранной стороны
+- `init <rootName>` — создать base snapshot для выбранного узла
 - `dry-run <rootName>` — показать план синхронизации без применения
 - `sync <rootName>` — применить изменения
 - `set-alias <nodeName> <alias>` — назначить алиас узлу

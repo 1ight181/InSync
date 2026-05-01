@@ -148,9 +148,8 @@ func createCLi(
 	}
 
 	initUseCaseOpts := initusecase.InitUseCaseOptions{
-		BaseSnapshotManager:    baseSnapshotManager,
-		RemoteSnapshotProvider: remoteSnapshotProvider,
-		LocalSnapshotProvider:  localSnapshotProvider,
+		BaseSnapshotManager:   baseSnapshotManager,
+		LocalSnapshotProvider: localSnapshotProvider,
 	}
 
 	initUseCase, err := initusecase.NewInitUseCase(initUseCaseOpts)

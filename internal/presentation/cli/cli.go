@@ -254,11 +254,10 @@ func (c *Cli) createInitCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   fmt.Sprintf("%s base_snapshot_provider root_name", initCmdName),
 		Short: "Инициализация",
-		Long: `Инициализация. Создает базовый снимок. Если вызывается повторно, то перезаписывает снимок.
-		base_snapshot_provider - remote или local, то есть, кто будет основной для первой синхронизации
+		Long: `Инициализация. Создает базовый снимок. Если вызывается повторно, то перезаписывает текущий базовый снимок.
 		root_name - имя корневого каталога
 		`,
-		Args: cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(1),
 		RunE: c.initCmd,
 		Annotations: map[string]string{
 			cobraprompt.DynamicSuggestionsAnnotation: initCmdName,
@@ -374,11 +373,6 @@ func (c *Cli) createSyncCmd() *cobra.Command {
 
 func (c *Cli) initCmd(cmd *cobra.Command, args []string) error {
 	c.logger.Debug("Выполнение команды init")
-	baseProvider := args[0]
-	if baseProvider != "remote" && baseProvider != "local" {
-		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Неверный базовый провайдер", slog.String("baseProvider", baseProvider))
-		return ErrInvalidBaseProvider
-	}
 
 	rootName, err := domain.NewRootName(args[1])
 	if err != nil {
@@ -391,18 +385,10 @@ func (c *Cli) initCmd(cmd *cobra.Command, args []string) error {
 	interruptCtx, interruptCancel := signal.NotifyContext(cmdCtx, os.Interrupt)
 	defer interruptCancel()
 
-	if baseProvider == "remote" {
-		if err := c.initUseCase.InitFromRemote(interruptCtx, rootName); err != nil {
-			c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось выполнить init", slog.String("error", err.Error()))
-			fmt.Println("Не удалось выполнить init")
-			return err
-		}
-	} else {
-		if err := c.initUseCase.InitFromLocal(interruptCtx, rootName); err != nil {
-			c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось выполнить init", slog.String("error", err.Error()))
-			fmt.Println("Не удалось выполнить init")
-			return err
-		}
+	if err := c.initUseCase.Init(interruptCtx, rootName); err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось выполнить init", slog.String("error", err.Error()))
+		fmt.Println("Не удалось выполнить init")
+		return err
 	}
 
 	fmt.Println("Базовый снимок создан")
@@ -1041,19 +1027,8 @@ func (c *Cli) initNameSuggestionFunc(prefix string) []prompt.Suggest {
 
 	length := len(parts)
 
-	if length < 2 || length > 3 {
+	if length != 2 {
 		return nil
-	}
-
-	if !strings.Contains(parts[1], "remote") && !strings.Contains(parts[1], "local") {
-		suggestions = append(suggestions, prompt.Suggest{
-			Text: "local",
-		})
-		suggestions = append(suggestions, prompt.Suggest{
-			Text: "remote",
-		})
-
-		return suggestions
 	}
 
 	rootNames, err := c.rootUseCase.GetRoots()
@@ -1063,15 +1038,6 @@ func (c *Cli) initNameSuggestionFunc(prefix string) []prompt.Suggest {
 
 	for rootName, path := range rootNames {
 		if strings.HasPrefix(rootName.String(), parts[1]) {
-			suggestions = append(suggestions, prompt.Suggest{
-				Text:        rootName.String(),
-				Description: path.String(),
-			})
-		}
-	}
-
-	if len(suggestions) == 0 {
-		for rootName, path := range rootNames {
 			suggestions = append(suggestions, prompt.Suggest{
 				Text:        rootName.String(),
 				Description: path.String(),
