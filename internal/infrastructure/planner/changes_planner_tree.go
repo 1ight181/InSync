@@ -214,6 +214,20 @@ func (s *ChangesPlannerWithTreeSkip) handleDeletion(
 		}, nil
 	}
 
+	if localEntry == nil && remoteEntry == nil {
+		return nil, nil, nil, &potentialChange{
+				Changetype: domain.Delete,
+				Hash:       baseEntry.FileInfo.Hash,
+				Modify:     baseEntry.FileInfo.Metadata.ModifiedUnix,
+				Path:       baseEntry.RelativePath,
+			}, &potentialChange{
+				Changetype: domain.Delete,
+				Hash:       baseEntry.FileInfo.Hash,
+				Modify:     baseEntry.FileInfo.Metadata.ModifiedUnix,
+				Path:       baseEntry.RelativePath,
+			}
+	}
+
 	return nil, nil, nil, nil, nil
 }
 
@@ -400,6 +414,13 @@ func (s *ChangesPlannerWithTreeSkip) detectRenamesAndMoves(
 
 		localDeletes, localCreates := s.splitChanges(localByHash[hash])
 		remoteDeletes, remoteCreates := s.splitChanges(remoteByHash[hash])
+
+		if len(localCreates) == 0 && len(remoteCreates) == 0 &&
+			len(localDeletes) == 1 && len(remoteDeletes) == 1 {
+			delete(localByHash, hash)
+			delete(remoteByHash, hash)
+			continue
+		}
 
 		if len(localCreates) == 1 && len(remoteCreates) == 1 &&
 			len(localDeletes) == 1 && len(remoteDeletes) == 1 {

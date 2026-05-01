@@ -607,6 +607,38 @@ func TestPlanner_FileRenamedOnRemote_RenameChangeOnLocal(t *testing.T) {
 	require.Equal(t, expectedLocalChange, plan.LocalChanges[0])
 }
 
+func TestPlanner_BothRenamedDifferently_ReturnsConflict(t *testing.T) {
+	planner := NewChangesPlannerWithTreeSkip()
+	ctx := context.Background()
+
+	baseFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/docs", "dir-docs-base", 2, 10, 0),
+		createRegularFileEntry(t, "/docs/report.txt", "hash-1", 1, 10, 100),
+	}
+
+	localFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/docs", "dir-docs-local", 2, 20, 0),
+		createRegularFileEntry(t, "/docs/local.txt", "hash-1", 1, 20, 100),
+	}
+
+	remoteFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/docs", "dir-docs-remote", 2, 30, 0),
+		createRegularFileEntry(t, "/docs/remote.txt", "hash-1", 1, 30, 100),
+	}
+
+	baseSnap := createBaseSnapshot(t, baseFiles)
+	localSnap := createSnapshot(t, localFiles)
+	remoteSnap := createSnapshot(t, remoteFiles)
+
+	plan, err := planner.Plan(ctx, baseSnap, localSnap, remoteSnap)
+	require.NoError(t, err)
+
+	require.Len(t, plan.LocalChanges, 0)
+	require.Len(t, plan.RemoteChanges, 0)
+	require.Len(t, plan.Conflicts, 1)
+	require.Equal(t, domain.ConflictLocalRenamedRemoteRenamed, plan.Conflicts[0].Conflict)
+}
+
 func TestPlanner_NewDirectoryOnLocal_CreateDirChangeOnRemote(t *testing.T) {
 	planner := NewChangesPlannerWithTreeSkip()
 	ctx := context.Background()
@@ -812,4 +844,119 @@ func createMetadata(modUnix uint64, sizeBytes uint64, isDir bool) domain.FileMet
 		SizeBytes:    sizeBytes,
 		IsDirectory:  isDir,
 	}
+}
+func TestPlanner_BothDeletedSameFile_EmptyPlan(t *testing.T) {
+	planner := NewChangesPlannerWithTreeSkip()
+	ctx := context.Background()
+
+	baseFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/docs", "dir-docs-base", 2, 10, 0),
+		createRegularFileEntry(t, "/docs/report.txt", "hash-1", 1, 10, 100),
+	}
+
+	localFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/docs", "dir-docs-local", 1, 20, 0),
+	}
+
+	remoteFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/docs", "dir-docs-remote", 1, 30, 0),
+	}
+
+	baseSnap := createBaseSnapshot(t, baseFiles)
+	localSnap := createSnapshot(t, localFiles)
+	remoteSnap := createSnapshot(t, remoteFiles)
+
+	plan, err := planner.Plan(ctx, baseSnap, localSnap, remoteSnap)
+	require.NoError(t, err)
+
+	require.Empty(t, plan)
+}
+
+func TestPlanner_BothRenamedToSamePath_EmptyPlan(t *testing.T) {
+	planner := NewChangesPlannerWithTreeSkip()
+	ctx := context.Background()
+
+	baseFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/docs", "dir-docs-base", 2, 10, 0),
+		createRegularFileEntry(t, "/docs/report.txt", "hash-1", 1, 10, 100),
+	}
+
+	localFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/docs", "dir-docs-local", 2, 20, 0),
+		createRegularFileEntry(t, "/docs/final.txt", "hash-1", 1, 20, 100),
+	}
+
+	remoteFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/docs", "dir-docs-remote", 2, 30, 0),
+		createRegularFileEntry(t, "/docs/final.txt", "hash-1", 1, 30, 100),
+	}
+
+	baseSnap := createBaseSnapshot(t, baseFiles)
+	localSnap := createSnapshot(t, localFiles)
+	remoteSnap := createSnapshot(t, remoteFiles)
+
+	plan, err := planner.Plan(ctx, baseSnap, localSnap, remoteSnap)
+	require.NoError(t, err)
+
+	require.Empty(t, plan)
+}
+
+func TestPlanner_BothMovedDifferently_ReturnsConflict(t *testing.T) {
+	planner := NewChangesPlannerWithTreeSkip()
+	ctx := context.Background()
+
+	baseFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/docs", "dir-docs-base", 2, 10, 0),
+		createRegularFileEntry(t, "/docs/report.txt", "hash-1", 1, 10, 100),
+	}
+
+	localFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/archive", "dir-archive-local", 2, 20, 0),
+		createRegularFileEntry(t, "/archive/report.txt", "hash-1", 1, 20, 100),
+	}
+
+	remoteFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/backup", "dir-backup-remote", 2, 30, 0),
+		createRegularFileEntry(t, "/backup/report.txt", "hash-1", 1, 30, 100),
+	}
+
+	baseSnap := createBaseSnapshot(t, baseFiles)
+	localSnap := createSnapshot(t, localFiles)
+	remoteSnap := createSnapshot(t, remoteFiles)
+
+	plan, err := planner.Plan(ctx, baseSnap, localSnap, remoteSnap)
+	require.NoError(t, err)
+
+	require.Len(t, plan.LocalChanges, 1)
+	require.Len(t, plan.RemoteChanges, 1)
+	require.Len(t, plan.Conflicts, 1)
+	require.Equal(t, domain.ConflictLocalMovedRemoteMoved, plan.Conflicts[0].Conflict)
+}
+
+func TestPlanner_BothDeletedDirectoryTree_EmptyPlan(t *testing.T) {
+	planner := NewChangesPlannerWithTreeSkip()
+	ctx := context.Background()
+
+	baseFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/docs", "dir-docs-base", 3, 10, 0),
+		createDirectoryEntry(t, "/docs/sub", "dir-sub-base", 2, 11, 0),
+		createRegularFileEntry(t, "/docs/sub/report.txt", "hash-1", 1, 12, 100),
+	}
+
+	localFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/docs", "dir-docs-local", 1, 20, 0),
+	}
+
+	remoteFiles := []domain.FileEntry{
+		createDirectoryEntry(t, "/docs", "dir-docs-remote", 1, 30, 0),
+	}
+
+	baseSnap := createBaseSnapshot(t, baseFiles)
+	localSnap := createSnapshot(t, localFiles)
+	remoteSnap := createSnapshot(t, remoteFiles)
+
+	plan, err := planner.Plan(ctx, baseSnap, localSnap, remoteSnap)
+	require.NoError(t, err)
+
+	require.Empty(t, plan)
 }
