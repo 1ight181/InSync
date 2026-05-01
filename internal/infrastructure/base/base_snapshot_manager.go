@@ -7,12 +7,12 @@ import (
 )
 
 type BaseSnapshotManager struct {
-	baseSnapshotRepository IBaseSnapshotRepositoryReader
+	baseSnapshotRepository IBaseSnapshotRepository
 	deviceIdProvider       IDeviceIdProvider
 }
 
 type BaseSnapshotManagerOptions struct {
-	BaseSnapshotRepository IBaseSnapshotRepositoryReader
+	BaseSnapshotRepository IBaseSnapshotRepository
 	DeviceIdProvider       IDeviceIdProvider
 }
 
@@ -61,4 +61,8 @@ func (b *BaseSnapshotManager) CreateBaseSnapshot(ctx context.Context, newBaseSna
 	}
 
 	return b.baseSnapshotRepository.CreateBaseSnapshot(ctx, newBaseSnapshot, isInitial, localDeviceId, remoteDeviceId, rootName)
+}
+
+func (b *BaseSnapshotManager) DeleteBaseSnapshots(ctx context.Context, rootName domain.RootName) error {
+	return b.baseSnapshotRepository.DeleteBaseSnapshots(ctx, rootName)
 }

@@ -73,13 +73,15 @@ type Cli struct {
 	rootUseCase    IRootUseCase
 	initUseCase    IInitUseCase
 	aliasUseCase   IAliasUseCase
+	baseUseCase    IBaseUseCase
 
 	logger    *slog.Logger
 	loggerCtx context.Context
 
-	shouldUseCache *bool
-	nodeNameCache  []domain.NodeName
-	exitCtxCancel  context.CancelFunc
+	shouldUseCache        *bool
+	shouldDeleteSnapshots *bool
+	nodeNameCache         []domain.NodeName
+	exitCtxCancel         context.CancelFunc
 }
 
 type CliOptions struct {
@@ -90,8 +92,8 @@ type CliOptions struct {
 	RootUseCase    IRootUseCase
 	InitUseCase    IInitUseCase
 	AliasUseCase   IAliasUseCase
-
-	Logger *slog.Logger
+	BaseUseCase    IBaseUseCase
+	Logger         *slog.Logger
 }
 
 var (
@@ -107,7 +109,8 @@ func NewCli(opts CliOptions) (*Cli, error) {
 		opts.RootUseCase == nil ||
 		opts.InitUseCase == nil ||
 		opts.AliasUseCase == nil ||
-		opts.Logger == nil {
+		opts.Logger == nil ||
+		opts.BaseUseCase == nil {
 		return nil, ErrInvalidCliOptions
 	}
 	loggerCtx := context.Background()
@@ -119,6 +122,7 @@ func NewCli(opts CliOptions) (*Cli, error) {
 		rootUseCase:    opts.RootUseCase,
 		initUseCase:    opts.InitUseCase,
 		aliasUseCase:   opts.AliasUseCase,
+		baseUseCase:    opts.BaseUseCase,
 
 		logger:    opts.Logger,
 		loggerCtx: loggerCtx,
@@ -297,7 +301,7 @@ func (c *Cli) createAddRootCmd() *cobra.Command {
 }
 
 func (c *Cli) createRemoveRootCmd() *cobra.Command {
-	return &cobra.Command{
+	removeRootCmd := &cobra.Command{
 		Use:   fmt.Sprintf("%s root-name", removeRootCmdName),
 		Short: "Удалить корневой каталог",
 		Long: `Удалить корневой каталог. 
@@ -308,6 +312,15 @@ func (c *Cli) createRemoveRootCmd() *cobra.Command {
 			cobraprompt.DynamicSuggestionsAnnotation: removeRootCmdName,
 		},
 	}
+
+	shouldDeleteSnapshotsPtr := removeRootCmd.Flags().Bool(
+		"should-delete-snapshots", false,
+		"Указывает стоит ли удалять связанные снимки при удалении корневого каталога",
+	)
+
+	c.shouldDeleteSnapshots = shouldDeleteSnapshotsPtr
+
+	return removeRootCmd
 }
 
 func (c *Cli) createRootsCmd() *cobra.Command {
@@ -470,7 +483,11 @@ func (c *Cli) addRootCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := c.rootUseCase.AddRoot(rootName, rootRelativePath); err != nil {
+	ctx := cmd.Context()
+	interruptCtx, interruptCancel := signal.NotifyContext(ctx, os.Interrupt)
+	defer interruptCancel()
+
+	if err := c.rootUseCase.AddRoot(interruptCtx, rootName, rootRelativePath); err != nil {
 		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось добавить корневой каталог", slog.String("error", err.Error()))
 		fmt.Println("Не удалось добавить корневой каталог")
 		return err
@@ -491,7 +508,21 @@ func (c *Cli) removeRootCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	c.rootUseCase.RemoveRoot(rootName)
+	ctx := cmd.Context()
+	interruptCtx, interruptCancel := signal.NotifyContext(ctx, os.Interrupt)
+	defer interruptCancel()
+
+	if err := c.baseUseCase.DeleteBaseSnapshots(interruptCtx, rootName); err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось удалить связанные снимки", slog.String("error", err.Error()))
+		fmt.Println("Не удалось удалить связанные снимки")
+		return err
+	}
+
+	if err := c.rootUseCase.RemoveRoot(interruptCtx, rootName); err != nil {
+		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось удалить корневой каталог", slog.String("error", err.Error()))
+		fmt.Println("Не удалось удалить корневой каталог")
+		return err
+	}
 
 	c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Корневой каталог удален", slog.String("name", rootName.String()))
 	fmt.Printf("Корневой каталог %s удален\n", rootName)

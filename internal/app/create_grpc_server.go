@@ -20,17 +20,8 @@ func startGrpcServer(
 	localSnapshotProvider *local.LocalSnapshotProvider,
 	baseSnapshotManager *base.BaseSnapshotManager,
 	cleanups *cleanupStack,
+	baseUseCase *baseusecase.BaseSnapshotUseCase,
 ) (*server.GrpcServer, error) {
-	baseUseCaseOpts := baseusecase.BaseSnapshotUseCaseOpts{
-		BaseSnapshotManager:   baseSnapshotManager,
-		LocalSnapshotProvider: localSnapshotProvider,
-	}
-
-	baseUseCase, err := baseusecase.NewBaseSnapshotUseCase(baseUseCaseOpts)
-	if err != nil {
-		return nil, err
-	}
-
 	fileUseCaseOpts := fileusecase.FileUseCaseOptions{
 		FileManager:          fileManager,
 		BaseSnapshotProvider: baseSnapshotManager,

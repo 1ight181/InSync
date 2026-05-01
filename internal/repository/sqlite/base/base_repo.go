@@ -62,3 +62,7 @@ func (b *BaseSnapshotRepository) CreateBaseSnapshot(ctx context.Context,
 	baseSnapshotModel := ToBaseSnapshot(baseSnapshot, isInitial, localDeviceId, remoteDeviceId, rootName)
 	return b.db.WithContext(ctx).Create(&baseSnapshotModel).Error
 }
+
+func (b *BaseSnapshotRepository) DeleteBaseSnapshots(ctx context.Context, rootName domain.RootName) error {
+	return b.db.WithContext(ctx).Where("root_name = ?", rootName.String()).Delete(&BaseSnapshot{}).Error
+}

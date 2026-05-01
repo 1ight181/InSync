@@ -1,6 +1,7 @@
 package root
 
 import (
+	"context"
 	"errors"
 	"insync/internal/domain"
 )
@@ -20,12 +21,12 @@ func NewRootUseCase(rootRegistrar IRootRegistrar) (*RootUseCase, error) {
 	return &RootUseCase{rootRegistrar: rootRegistrar}, nil
 }
 
-func (r *RootUseCase) AddRoot(rootName domain.RootName, rootPath domain.Path) error {
-	return r.rootRegistrar.AddRoot(rootName, rootPath)
+func (r *RootUseCase) AddRoot(ctx context.Context, rootName domain.RootName, rootPath domain.Path) error {
+	return r.rootRegistrar.AddRoot(ctx, rootName, rootPath)
 }
 
-func (r *RootUseCase) RemoveRoot(rootName domain.RootName) error {
-	return r.rootRegistrar.RemoveRoot(rootName)
+func (r *RootUseCase) RemoveRoot(ctx context.Context, rootName domain.RootName) error {
+	return r.rootRegistrar.RemoveRoot(ctx, rootName)
 }
 
 func (r *RootUseCase) GetRoots() (map[domain.RootName]domain.Path, error) {

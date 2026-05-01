@@ -19,6 +19,7 @@ import (
 	cli "insync/internal/presentation/cli"
 	aliasrepo "insync/internal/repository/sqlite/alias"
 	aliasusecase "insync/internal/usecase/alias"
+	baseusecase "insync/internal/usecase/base"
 	connusecase "insync/internal/usecase/connect"
 	initusecase "insync/internal/usecase/init"
 	nodeusecase "insync/internal/usecase/node"
@@ -41,6 +42,7 @@ func createCLi(
 	localSnapshotProvider *local.LocalSnapshotProvider,
 	rootResolver *root.RootResolver,
 	db *gorm.DB,
+	baseUseCase *baseusecase.BaseSnapshotUseCase,
 ) (*cli.Cli, error) {
 	connectUseCase, err := connusecase.NewConnectUseCase(connectionManager)
 	if err != nil {
@@ -179,6 +181,7 @@ func createCLi(
 		RootUseCase:    rootUseCase,
 		InitUseCase:    initUseCase,
 		AliasUseCase:   aliasUseCase,
+		BaseUseCase:    baseUseCase,
 
 		Logger: cliLogger,
 	}

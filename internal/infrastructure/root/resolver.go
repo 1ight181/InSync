@@ -1,6 +1,7 @@
 package root
 
 import (
+	"context"
 	"insync/internal/domain"
 )
 
@@ -43,14 +44,14 @@ func (p *RootResolver) ResolveRoot(scopedPath domain.ScopedPath) (domain.Path, e
 	return rootPathWithRelative, nil
 }
 
-func (p *RootResolver) AddRoot(rootName domain.RootName, rootPath domain.Path) error {
+func (p *RootResolver) AddRoot(ctx context.Context, rootName domain.RootName, rootPath domain.Path) error {
 	p.rootMap[rootName] = rootPath
-	return p.rootRepo.AddRoot(rootName, rootPath)
+	return p.rootRepo.AddRoot(ctx, rootName, rootPath)
 }
 
-func (p *RootResolver) RemoveRoot(rootName domain.RootName) error {
+func (p *RootResolver) RemoveRoot(ctx context.Context, rootName domain.RootName) error {
 	delete(p.rootMap, rootName)
-	return p.rootRepo.RemoveRoot(rootName)
+	return p.rootRepo.RemoveRoot(ctx, rootName)
 }
 
 func (p *RootResolver) GetRoots() (map[domain.RootName]domain.Path, error) {

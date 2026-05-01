@@ -1,6 +1,7 @@
 package root
 
 import (
+	"context"
 	"errors"
 	"insync/internal/domain"
 
@@ -29,7 +30,7 @@ func (r *RootRepository) GetRoots() (map[domain.RootName]domain.Path, error) {
 	return rootMap, nil
 }
 
-func (r *RootRepository) AddRoot(rootName domain.RootName, path domain.Path) error {
+func (r *RootRepository) AddRoot(ctx context.Context, rootName domain.RootName, path domain.Path) error {
 	var root Root
 	err := r.db.First(&root, "root_name = ?", rootName).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -39,7 +40,7 @@ func (r *RootRepository) AddRoot(rootName domain.RootName, path domain.Path) err
 	root.RootName = rootName.String()
 	root.RootPath = path.String()
 
-	err = r.db.Save(&root).Error
+	err = r.db.WithContext(ctx).Save(&root).Error
 	if errors.Is(err, gorm.ErrDuplicatedKey) {
 		return domain.ErrRootAlreadyExists
 	}
@@ -47,8 +48,8 @@ func (r *RootRepository) AddRoot(rootName domain.RootName, path domain.Path) err
 	return err
 }
 
-func (r *RootRepository) RemoveRoot(rootName domain.RootName) error {
-	return r.db.Delete(&Root{}, "root_name = ?", rootName).Error
+func (r *RootRepository) RemoveRoot(ctx context.Context, rootName domain.RootName) error {
+	return r.db.WithContext(ctx).Delete(&Root{}, "root_name = ?", rootName).Error
 }
 
 func (r *RootRepository) toRoot(rootName domain.RootName, path domain.Path) Root {

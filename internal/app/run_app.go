@@ -6,6 +6,7 @@ import (
 	"insync/internal/infrastructure/filesys"
 	"insync/internal/infrastructure/root"
 	rootrepo "insync/internal/repository/sqlite/root"
+	baseusecase "insync/internal/usecase/base"
 	"time"
 )
 
@@ -90,6 +91,16 @@ func RunApp() {
 
 	serverLogger := logger.With(moduleAtrributeName, grpcServerModuleName)
 
+	baseUseCaseOpts := baseusecase.BaseSnapshotUseCaseOpts{
+		BaseSnapshotManager:   baseSnapshotManager,
+		LocalSnapshotProvider: localSnapshotProvider,
+	}
+
+	baseUseCase, err := baseusecase.NewBaseSnapshotUseCase(baseUseCaseOpts)
+	if err != nil {
+		panic(fmt.Sprintf("Не удалось создать baseUseCase: %v", err))
+	}
+
 	grpcServer, err := startGrpcServer(
 		serverLogger,
 		&config.ServerConfig,
@@ -97,6 +108,7 @@ func RunApp() {
 		localSnapshotProvider,
 		baseSnapshotManager,
 		&cleanups,
+		baseUseCase,
 	)
 
 	if err != nil {
@@ -136,6 +148,7 @@ func RunApp() {
 		localSnapshotProvider,
 		rootResolver,
 		db,
+		baseUseCase,
 	)
 	if err != nil {
 		panic(fmt.Sprintf("Не удалось создать CLI: %v", err))

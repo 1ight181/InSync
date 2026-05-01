@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"insync/internal/domain"
 	"log/slog"
 	"testing"
@@ -56,7 +57,7 @@ func (s *RootRepositorySuite) TestRootRepository_AddRoot_And_GetRoots() {
 	path, err := domain.NewPath("path/to/root1")
 	s.Require().NoError(err)
 
-	err = s.repo.AddRoot(rootName, path)
+	err = s.repo.AddRoot(context.Background(), rootName, path)
 	s.Require().NoError(err)
 
 	rootMap, err := s.repo.GetRoots()
@@ -75,10 +76,10 @@ func (s *RootRepositorySuite) TestRootRepository_AddRoot_Overwrite() {
 	path2, err := domain.NewPath("path/two")
 	s.Require().NoError(err)
 
-	err = s.repo.AddRoot(rootName, path1)
+	err = s.repo.AddRoot(context.Background(), rootName, path1)
 	s.Require().NoError(err)
 
-	err = s.repo.AddRoot(rootName, path2)
+	err = s.repo.AddRoot(context.Background(), rootName, path2)
 	s.Require().NoError(err)
 
 	rootMap, err := s.repo.GetRoots()
@@ -94,10 +95,10 @@ func (s *RootRepositorySuite) TestRootRepository_RemoveRoot() {
 	path, err := domain.NewPath("path/to/root")
 	s.Require().NoError(err)
 
-	err = s.repo.AddRoot(rootName, path)
+	err = s.repo.AddRoot(context.Background(), rootName, path)
 	s.Require().NoError(err)
 
-	err = s.repo.RemoveRoot(rootName)
+	err = s.repo.RemoveRoot(context.Background(), rootName)
 	s.Require().NoError(err)
 
 	rootMap, err := s.repo.GetRoots()
@@ -107,7 +108,7 @@ func (s *RootRepositorySuite) TestRootRepository_RemoveRoot() {
 }
 
 func (s *RootRepositorySuite) TestRootRepository_RemoveRoot_NonExisting() {
-	err := s.repo.RemoveRoot(domain.RootName("missing"))
+	err := s.repo.RemoveRoot(context.Background(), domain.RootName("missing"))
 	s.Require().NoError(err)
 }
 

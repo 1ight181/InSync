@@ -44,3 +44,7 @@ func (b *BaseSnapshotUseCase) UpdateBaseSnapshot(ctx context.Context, rootName d
 
 	return b.baseSnapshotManager.CreateBaseSnapshot(ctx, localSnapshot, rootName, false)
 }
+
+func (b *BaseSnapshotUseCase) DeleteBaseSnapshots(ctx context.Context, rootName domain.RootName) error {
+	return b.baseSnapshotManager.DeleteBaseSnapshots(ctx, rootName)
+}
