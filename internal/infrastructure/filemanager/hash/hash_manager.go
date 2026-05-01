@@ -40,7 +40,7 @@ func NewHashManager(opts HashManagerOptions) (*HashManager, error) {
 		return nil, ErrInvalidOpts
 	}
 
-	dirtyPaths, err := opts.DirtyPathsRepository.GetDirtyPaths()
+	dirtyPaths, err := opts.DirtyPathsRepository.GetDirtyPaths(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func NewHashManager(opts HashManagerOptions) (*HashManager, error) {
 	}, nil
 }
 
-func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, rootName domain.RootName) (string, error) {
+func (h *HashManager) ResolveHash(ctx context.Context, resourceContent cont.ResourceContent, rootName domain.RootName) (string, error) {
 	// TODO: сделать отдельно rel и abs пути, сделать через конструктор
 	scopedPath := domain.ScopedPath{
 		Root: rootName,
@@ -82,16 +82,16 @@ func (h *HashManager) ResolveHash(resourceContent cont.ResourceContent, rootName
 		)
 	}
 
-	return h.calcHash(resourceContent, rootName)
+	return h.calcHash(ctx, resourceContent, rootName)
 }
 
-func (h *HashManager) ResolveWithForceRecalc(resourceContent cont.ResourceContent, rootName domain.RootName) (string, error) {
-	return h.calcHash(resourceContent, rootName)
+func (h *HashManager) ResolveWithForceRecalc(ctx context.Context, resourceContent cont.ResourceContent, rootName domain.RootName) (string, error) {
+	return h.calcHash(ctx, resourceContent, rootName)
 }
 
-func (h *HashManager) MarkDirty(scopedPath domain.ScopedPath) error {
+func (h *HashManager) MarkDirty(ctx context.Context, scopedPath domain.ScopedPath) error {
 	h.dirtyPaths[scopedPath] = struct{}{}
-	h.dirtyPathsRepository.SetDirtyPath(scopedPath)
+	h.dirtyPathsRepository.SetDirtyPath(ctx, scopedPath)
 
 	parents, err := h.pathTreeReader.GetParents(scopedPath)
 	if err != nil {
@@ -100,13 +100,13 @@ func (h *HashManager) MarkDirty(scopedPath domain.ScopedPath) error {
 
 	for _, parent := range parents {
 		h.dirtyPaths[parent] = struct{}{}
-		h.dirtyPathsRepository.SetDirtyPath(parent)
+		h.dirtyPathsRepository.SetDirtyPath(ctx, parent)
 	}
 
 	return nil
 }
 
-func (h *HashManager) calcHash(resourceContent cont.ResourceContent, rootName domain.RootName) (string, error) {
+func (h *HashManager) calcHash(ctx context.Context, resourceContent cont.ResourceContent, rootName domain.RootName) (string, error) {
 	hash, err := h.hashCalculator.CalculateHash(resourceContent)
 	if err != nil {
 		return "", err
@@ -120,7 +120,7 @@ func (h *HashManager) calcHash(resourceContent cont.ResourceContent, rootName do
 		slog.String("hash", hash),
 	)
 
-	if err := h.hashCache.SetHashCache(resourceContent.FullPath, hash); err != nil {
+	if err := h.hashCache.SetHashCache(ctx, resourceContent.FullPath, hash); err != nil {
 		return "", err
 	}
 
@@ -138,7 +138,7 @@ func (h *HashManager) calcHash(resourceContent cont.ResourceContent, rootName do
 	}
 
 	delete(h.dirtyPaths, scopedPath)
-	h.dirtyPathsRepository.RemoveDirtyPath(scopedPath)
+	h.dirtyPathsRepository.RemoveDirtyPath(ctx, scopedPath)
 
 	return hash, nil
 }

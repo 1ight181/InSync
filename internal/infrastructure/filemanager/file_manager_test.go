@@ -103,7 +103,7 @@ func (s *FileManagerSuite) TestRenameFile_Success() {
 	s.mockFileSystem.On("Rename", oldResolved, newResolved).Return(nil)
 	s.mockPathTreeWriter.On("RemovePath", oldScopedPath).Return(nil)
 	s.mockPathTreeWriter.On("AddPath", newScopedPath).Return(nil)
-	s.mockHashManager.On("MarkDirty", newScopedPath).Return(nil)
+	s.mockHashManager.On("MarkDirty", mock.Anything, newScopedPath).Return(nil)
 
 	err := s.fileManager.RenameFile(ctx, oldScopedPath, newScopedPath)
 	s.Require().NoError(err)
@@ -118,7 +118,7 @@ func (s *FileManagerSuite) TestDeleteFile_Success() {
 	s.mockRootResolver.On("ResolveRoot", scopedPath).Return(resolved, nil)
 	s.mockFileSystem.On("Remove", resolved).Return(nil)
 	s.mockPathTreeWriter.On("RemovePath", scopedPath).Return(nil)
-	s.mockHashManager.On("MarkDirty", scopedPath).Return(nil)
+	s.mockHashManager.On("MarkDirty", mock.Anything, scopedPath).Return(nil)
 
 	err := s.fileManager.DeleteFile(ctx, scopedPath)
 	s.Require().NoError(err)
@@ -154,7 +154,7 @@ func (s *FileManagerSuite) TestPutFile_Success() {
 	s.mockRootResolver.On("ResolveRoot", scopedPath).Return(resolved, nil)
 	s.mockFileSystem.On("AtomicWrite", resolved, mock.Anything).Return(nil)
 	s.mockPathTreeWriter.On("AddPath", scopedPath).Return(nil)
-	s.mockHashManager.On("MarkDirty", scopedPath).Return(nil)
+	s.mockHashManager.On("MarkDirty", mock.Anything, scopedPath).Return(nil)
 
 	err := s.fileManager.PutFile(ctx, scopedPath, bytes.NewReader(testData))
 	s.Require().NoError(err)
@@ -184,7 +184,7 @@ func (s *FileManagerSuite) TestGetSnapshot_UsesResolveWithForceRecalc_WhenMetada
 	s.mockRootResolver.On("ResolveRoot", scopedPath).Return(rootPath, nil)
 	s.mockFileSystem.On("ReadDir", rootPath).Return([]fs.DirEntry{}, nil)
 	s.mockFileSystem.On("Stat", rootPath).Return(mockFileInfo{size: 0, modTime: time.Unix(2, 0), isDir: true}, nil)
-	s.mockHashManager.On("ResolveWithForceRecalc", mock.Anything, rootName).Return("recalc-hash", nil)
+	s.mockHashManager.On("ResolveWithForceRecalc", mock.Anything, mock.Anything, rootName).Return("recalc-hash", nil)
 
 	snapshot, err = s.fileManager.GetSnapshot(ctx, rootName, &baseSnapshot)
 	s.Require().NoError(err)
@@ -216,7 +216,7 @@ func (s *FileManagerSuite) TestGetSnapshot_UsesResolveHash_WhenMetadataMatches()
 	s.mockRootResolver.On("ResolveRoot", scopedPath).Return(rootPath, nil)
 	s.mockFileSystem.On("ReadDir", rootPath).Return([]fs.DirEntry{}, nil)
 	s.mockFileSystem.On("Stat", rootPath).Return(mockFileInfo{size: 0, modTime: time.Unix(int64(baseMetadata.ModifiedUnix), 0), isDir: true}, nil)
-	s.mockHashManager.On("ResolveHash", mock.Anything, rootName).Return("cached-hash", nil)
+	s.mockHashManager.On("ResolveHash", mock.Anything, mock.Anything, rootName).Return("cached-hash", nil)
 
 	snapshot, err = s.fileManager.GetSnapshot(ctx, rootName, &baseSnapshot)
 	s.Require().NoError(err)
@@ -251,18 +251,18 @@ type MockIHashManager struct {
 	mock.Mock
 }
 
-func (m *MockIHashManager) ResolveHash(resourceContent resource.ResourceContent, rootName domain.RootName) (string, error) {
-	args := m.Called(resourceContent, rootName)
+func (m *MockIHashManager) ResolveHash(ctx context.Context, resourceContent resource.ResourceContent, rootName domain.RootName) (string, error) {
+	args := m.Called(ctx, resourceContent, rootName)
 	return args.String(0), args.Error(1)
 }
 
-func (m *MockIHashManager) ResolveWithForceRecalc(resourceContent resource.ResourceContent, rootName domain.RootName) (string, error) {
-	args := m.Called(resourceContent, rootName)
+func (m *MockIHashManager) ResolveWithForceRecalc(ctx context.Context, resourceContent resource.ResourceContent, rootName domain.RootName) (string, error) {
+	args := m.Called(ctx, resourceContent, rootName)
 	return args.String(0), args.Error(1)
 }
 
-func (m *MockIHashManager) MarkDirty(scopedPath domain.ScopedPath) error {
-	args := m.Called(scopedPath)
+func (m *MockIHashManager) MarkDirty(ctx context.Context, scopedPath domain.ScopedPath) error {
+	args := m.Called(ctx, scopedPath)
 	return args.Error(0)
 }
 

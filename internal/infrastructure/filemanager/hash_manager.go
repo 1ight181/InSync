@@ -1,12 +1,13 @@
 package filemanager
 
 import (
+	"context"
 	"insync/internal/domain"
 	cont "insync/internal/infrastructure/filemanager/content"
 )
 
 type IHashManager interface {
-	ResolveHash(resourceContent cont.ResourceContent, rootName domain.RootName) (string, error)
-	MarkDirty(scopedPath domain.ScopedPath) error
-	ResolveWithForceRecalc(resourceContent cont.ResourceContent, rootName domain.RootName) (string, error)
+	ResolveHash(ctx context.Context, resourceContent cont.ResourceContent, rootName domain.RootName) (string, error)
+	MarkDirty(ctx context.Context, scopedPath domain.ScopedPath) error
+	ResolveWithForceRecalc(ctx context.Context, resourceContent cont.ResourceContent, rootName domain.RootName) (string, error)
 }

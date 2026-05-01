@@ -1,8 +1,11 @@
 package cache
 
-import "insync/internal/domain"
+import (
+	"context"
+	"insync/internal/domain"
+)
 
 type IHashCacheRepository interface {
-	GetHashCache() (map[domain.Path]string, error)
-	SetHashCache(fullPath domain.Path, hash string) error
+	GetHashCache(ctx context.Context) (map[domain.Path]string, error)
+	SetHashCache(ctx context.Context, fullPath domain.Path, hash string) error
 }

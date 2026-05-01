@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"insync/internal/domain"
 	hashrepo "insync/internal/repository/sqlite/hash"
 	"log/slog"
@@ -49,7 +50,7 @@ func TestHashRepositorySuite(t *testing.T) {
 }
 
 func (s *HashRepositorySuite) TestHashRepositorySuite_Get_Empty() {
-	hashCache, err := s.repo.GetHashCache()
+	hashCache, err := s.repo.GetHashCache(context.Background())
 	s.Require().NoError(err)
 	s.Require().Empty(hashCache)
 }
@@ -57,17 +58,17 @@ func (s *HashRepositorySuite) TestHashRepositorySuite_Get_Empty() {
 func (s *HashRepositorySuite) TestHashRepositorySuite_SetHashCache_Success() {
 	path1 := domain.Path("path")
 	hash1 := "hash"
-	err := s.repo.SetHashCache(path1, hash1)
+	err := s.repo.SetHashCache(context.Background(), path1, hash1)
 	s.Require().NoError(err)
 
 	path2 := domain.Path("path/to")
 	hash2 := "hash1"
-	err = s.repo.SetHashCache(path2, hash2)
+	err = s.repo.SetHashCache(context.Background(), path2, hash2)
 	s.Require().NoError(err)
 
 	path3 := domain.Path("path/to/file2")
 	hash3 := "hash2"
-	err = s.repo.SetHashCache(path3, hash3)
+	err = s.repo.SetHashCache(context.Background(), path3, hash3)
 	s.Require().NoError(err)
 
 	expected := map[domain.Path]string{
@@ -76,7 +77,7 @@ func (s *HashRepositorySuite) TestHashRepositorySuite_SetHashCache_Success() {
 		path3: hash3,
 	}
 
-	hashCache, err := s.repo.GetHashCache()
+	hashCache, err := s.repo.GetHashCache(context.Background())
 	s.Require().NoError(err)
 	s.Require().Equal(expected, hashCache)
 

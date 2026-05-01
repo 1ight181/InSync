@@ -1,9 +1,12 @@
 package hash
 
-import "insync/internal/domain"
+import (
+	"context"
+	"insync/internal/domain"
+)
 
 type IDirtyPathsRepository interface {
-	GetDirtyPaths() (map[domain.ScopedPath]struct{}, error)
-	SetDirtyPath(scopedPath domain.ScopedPath) error
-	RemoveDirtyPath(scopedPath domain.ScopedPath) error
+	GetDirtyPaths(ctx context.Context) (map[domain.ScopedPath]struct{}, error)
+	SetDirtyPath(ctx context.Context, scopedPath domain.ScopedPath) error
+	RemoveDirtyPath(ctx context.Context, scopedPath domain.ScopedPath) error
 }

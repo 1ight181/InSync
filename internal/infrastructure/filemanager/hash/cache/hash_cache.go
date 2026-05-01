@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"errors"
 	"insync/internal/domain"
 	"sync"
@@ -37,7 +38,7 @@ func NewHashCache(hashCacheRepository IHashCacheRepository) (*HashCache, error) 
 func (rc *HashCache) loadHashCache() error {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
-	hashSet, err := rc.hashCacheRepository.GetHashCache()
+	hashSet, err := rc.hashCacheRepository.GetHashCache(context.Background())
 	if err != nil {
 		return err
 	}
@@ -58,10 +59,10 @@ func (rc *HashCache) GetHashCache(fullPath domain.Path) (string, error) {
 	return hash, nil
 }
 
-func (rc *HashCache) SetHashCache(fullPath domain.Path, hash string) error {
+func (rc *HashCache) SetHashCache(ctx context.Context, fullPath domain.Path, hash string) error {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
-	if err := rc.hashCacheRepository.SetHashCache(fullPath, hash); err != nil {
+	if err := rc.hashCacheRepository.SetHashCache(ctx, fullPath, hash); err != nil {
 		return err
 	}
 

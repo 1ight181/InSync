@@ -54,7 +54,8 @@ func (b *BaseSnapshotRepository) GetLastBaseSnapshotByDeviceIdAndRootName(
 	return domainBaseSnapshot, nil
 }
 
-func (b *BaseSnapshotRepository) CreateBaseSnapshot(ctx context.Context,
+func (b *BaseSnapshotRepository) CreateBaseSnapshot(
+	ctx context.Context,
 	baseSnapshot domain.Snapshot, isInitial bool,
 	localDeviceId, remoteDeviceId domain.DeviceId,
 	rootName domain.RootName,

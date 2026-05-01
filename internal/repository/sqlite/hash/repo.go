@@ -1,6 +1,7 @@
 package hash
 
 import (
+	"context"
 	"errors"
 	"insync/internal/domain"
 	"insync/internal/repository/sqlite/hash/dirty"
@@ -33,9 +34,9 @@ func NewHashRepository(opts HashRepositoryOptions) (*HashRepository, error) {
 	}, nil
 }
 
-func (r *HashRepository) GetHashCache() (map[domain.Path]string, error) {
+func (r *HashRepository) GetHashCache(ctx context.Context) (map[domain.Path]string, error) {
 	var entries []HashCacheEntry
-	if err := r.db.Find(&entries).Error; err != nil {
+	if err := r.db.WithContext(ctx).Find(&entries).Error; err != nil {
 		return nil, err
 	}
 	var expired []HashCacheEntry
@@ -50,7 +51,7 @@ func (r *HashRepository) GetHashCache() (map[domain.Path]string, error) {
 	}
 
 	if len(expired) > 0 {
-		if err := r.db.Delete(&expired).Error; err != nil {
+		if err := r.db.WithContext(ctx).Delete(&expired).Error; err != nil {
 			return nil, err
 		}
 	}
@@ -58,9 +59,9 @@ func (r *HashRepository) GetHashCache() (map[domain.Path]string, error) {
 	return cache, nil
 }
 
-func (r *HashRepository) SetHashCache(fullPath domain.Path, hash string) error {
+func (r *HashRepository) SetHashCache(ctx context.Context, fullPath domain.Path, hash string) error {
 	var hashCacheEntry HashCacheEntry
-	if err := r.db.First(&hashCacheEntry, "full_path = ?", fullPath).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := r.db.WithContext(ctx).First(&hashCacheEntry, "full_path = ?", fullPath).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
 
@@ -68,16 +69,16 @@ func (r *HashRepository) SetHashCache(fullPath domain.Path, hash string) error {
 	hashCacheEntry.Hash = hash
 	hashCacheEntry.Expires = r.hashCacheEntryExpireUnixTime
 
-	if err := r.db.Save(&hashCacheEntry).Error; err != nil {
+	if err := r.db.WithContext(ctx).Save(&hashCacheEntry).Error; err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (r *HashRepository) GetDirtyPaths() (map[domain.ScopedPath]struct{}, error) {
+func (r *HashRepository) GetDirtyPaths(ctx context.Context) (map[domain.ScopedPath]struct{}, error) {
 	var dirtyPathEntries []dirty.DirtyPath
-	if err := r.db.Find(&dirtyPathEntries).Error; err != nil {
+	if err := r.db.WithContext(ctx).Find(&dirtyPathEntries).Error; err != nil {
 		return nil, err
 	}
 
@@ -89,10 +90,10 @@ func (r *HashRepository) GetDirtyPaths() (map[domain.ScopedPath]struct{}, error)
 	return dirtyPaths, nil
 }
 
-func (r *HashRepository) SetDirtyPath(scopedPath domain.ScopedPath) error {
-	return r.db.Save(&dirty.DirtyPath{RootName: scopedPath.Root.String(), FullPath: scopedPath.Path.String()}).Error
+func (r *HashRepository) SetDirtyPath(ctx context.Context, scopedPath domain.ScopedPath) error {
+	return r.db.WithContext(ctx).Save(&dirty.DirtyPath{RootName: scopedPath.Root.String(), FullPath: scopedPath.Path.String()}).Error
 }
 
-func (r *HashRepository) RemoveDirtyPath(scopedPath domain.ScopedPath) error {
-	return r.db.Delete(&dirty.DirtyPath{RootName: scopedPath.Root.String(), FullPath: scopedPath.Path.String()}).Error
+func (r *HashRepository) RemoveDirtyPath(ctx context.Context, scopedPath domain.ScopedPath) error {
+	return r.db.WithContext(ctx).Delete(&dirty.DirtyPath{RootName: scopedPath.Root.String(), FullPath: scopedPath.Path.String()}).Error
 }

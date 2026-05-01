@@ -158,7 +158,7 @@ func (f *FileManager) RenameFile(ctx context.Context, oldScopedPath domain.Scope
 		return err
 	}
 
-	return f.hashManager.MarkDirty(newScopedPath)
+	return f.hashManager.MarkDirty(ctx, newScopedPath)
 }
 
 func (f *FileManager) DeleteFile(ctx context.Context, scopedPath domain.ScopedPath) error {
@@ -179,7 +179,7 @@ func (f *FileManager) DeleteFile(ctx context.Context, scopedPath domain.ScopedPa
 		return err
 	}
 
-	return f.hashManager.MarkDirty(scopedPath)
+	return f.hashManager.MarkDirty(ctx, scopedPath)
 }
 
 func (f *FileManager) GetFile(ctx context.Context, scopedPath domain.ScopedPath) (io.ReadCloser, error) {
@@ -218,7 +218,7 @@ func (f *FileManager) PutFile(ctx context.Context, scopedPath domain.ScopedPath,
 		return err
 	}
 
-	return f.hashManager.MarkDirty(scopedPath)
+	return f.hashManager.MarkDirty(ctx, scopedPath)
 }
 
 func (f *FileManager) openDirContent(fullPath, relativePath domain.Path) (io.ReadCloser, error) {
@@ -351,15 +351,16 @@ func (f *FileManager) createMetadata(entryInfo fs.FileInfo) domain.FileMetadata 
 }
 
 func (f *FileManager) resolveHash(
+	ctx context.Context,
 	resourceContent cont.ResourceContent,
 	rootName domain.RootName,
 	shouldRecalculateHash bool,
 ) (string, error) {
 	if shouldRecalculateHash {
-		return f.hashManager.ResolveWithForceRecalc(resourceContent, rootName)
+		return f.hashManager.ResolveWithForceRecalc(ctx, resourceContent, rootName)
 	}
 
-	return f.hashManager.ResolveHash(resourceContent, rootName)
+	return f.hashManager.ResolveHash(ctx, resourceContent, rootName)
 }
 
 func (f *FileManager) collectAllFileEntries(
@@ -459,7 +460,7 @@ func (f *FileManager) collectFileEntriesRecursive(
 		}
 
 		fileMetadata := f.createMetadata(entryInfo)
-		hashValue, err := f.resolveHash(resourceContent, rootName, shouldRecalculateHash)
+		hashValue, err := f.resolveHash(ctx, resourceContent, rootName, shouldRecalculateHash)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -520,7 +521,7 @@ func (f *FileManager) createFileEntryForDirectory(
 	}
 
 	metadata := f.createMetadata(info)
-	hashValue, err := f.resolveHash(resourceContent, rootName, shouldRecalculateHash)
+	hashValue, err := f.resolveHash(ctx, resourceContent, rootName, shouldRecalculateHash)
 	if err != nil {
 		return domain.FileEntry{}, err
 	}
