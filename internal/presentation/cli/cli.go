@@ -388,7 +388,7 @@ func (c *Cli) createSyncCmd() *cobra.Command {
 func (c *Cli) initCmd(cmd *cobra.Command, args []string) error {
 	c.logger.Debug("Выполнение команды init")
 
-	rootName, err := domain.NewRootName(args[1])
+	rootName, err := domain.NewRootName(args[0])
 	if err != nil {
 		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось создать корневой каталог", slog.String("error", err.Error()))
 		fmt.Println("Не удалось создать корневой каталог")
