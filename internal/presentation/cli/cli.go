@@ -635,7 +635,7 @@ func (c *Cli) connectCmd(cmd *cobra.Command, args []string) error {
 	c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Подключение к узлу", slog.String("node", nodeName.String()))
 	fmt.Printf("Подключение к узлу %s\n", nodeName)
 
-	if err := c.connectUseCase.ConnectToNode(nodeName); err != nil {
+	if err := c.connectUseCase.ConnectToNode(nodeNameToConnect); err != nil {
 		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось подключиться к узлу", slog.String("error", err.Error()))
 		return err
 	}
