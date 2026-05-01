@@ -572,7 +572,11 @@ func (c *Cli) setAliasCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("псевдоним не может быть пустым")
 	}
 
-	if err := c.aliasUseCase.SetAlias(alias, nodeName); err != nil {
+	ctx := cmd.Context()
+	interruptCtx, interruptCancel := signal.NotifyContext(ctx, os.Interrupt)
+	defer interruptCancel()
+
+	if err := c.aliasUseCase.SetAlias(interruptCtx, alias, nodeName); err != nil {
 		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось установить псевдоним", slog.String("error", err.Error()))
 		fmt.Println("Не удалось установить псевдоним")
 		return err
@@ -588,7 +592,11 @@ func (c *Cli) removeAliasCmd(cmd *cobra.Command, args []string) error {
 
 	alias := args[0]
 
-	if err := c.aliasUseCase.RemoveAlias(alias); err != nil {
+	ctx := cmd.Context()
+	interruptCtx, interruptCancel := signal.NotifyContext(ctx, os.Interrupt)
+	defer interruptCancel()
+
+	if err := c.aliasUseCase.RemoveAlias(interruptCtx, alias); err != nil {
 		c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Не удалось удалить псевдоним", slog.String("error", err.Error()))
 		fmt.Println("Не удалось удалить псевдоним")
 		return err

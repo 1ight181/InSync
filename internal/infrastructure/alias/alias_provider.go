@@ -1,6 +1,7 @@
 package alias
 
 import (
+	"context"
 	"errors"
 	"insync/internal/domain"
 )
@@ -20,7 +21,7 @@ func NewAliasProvider(aliasRepository IAliasRepository) (*AliasProvider, error) 
 		return nil, ErrInvalidAliasProviderOptions
 	}
 
-	nodeToAliasCache, err := aliasRepository.GetAliases()
+	nodeToAliasCache, err := aliasRepository.GetAliases(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -41,8 +42,8 @@ func (a *AliasProvider) GetAliases() map[domain.NodeName]string {
 	return a.nodeToAliasCache
 }
 
-func (a *AliasProvider) SetAlias(newAlias string, nodeName domain.NodeName) error {
-	if err := a.aliasRepository.SetAlias(newAlias, nodeName); err != nil {
+func (a *AliasProvider) SetAlias(ctx context.Context, newAlias string, nodeName domain.NodeName) error {
+	if err := a.aliasRepository.SetAlias(ctx, newAlias, nodeName); err != nil {
 		return err
 	}
 
@@ -51,8 +52,8 @@ func (a *AliasProvider) SetAlias(newAlias string, nodeName domain.NodeName) erro
 	return nil
 }
 
-func (a *AliasProvider) RemoveAlias(aliasName string) error {
-	if err := a.aliasRepository.RemoveAlias(aliasName); err != nil {
+func (a *AliasProvider) RemoveAlias(ctx context.Context, aliasName string) error {
+	if err := a.aliasRepository.RemoveAlias(ctx, aliasName); err != nil {
 		return err
 	}
 

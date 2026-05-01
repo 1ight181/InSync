@@ -1,6 +1,7 @@
 package alias
 
 import (
+	"context"
 	"errors"
 	"insync/internal/domain"
 
@@ -23,7 +24,7 @@ func NewAliasRepository(db *gorm.DB) (*AliasRepository, error) {
 	return &AliasRepository{db: db}, nil
 }
 
-func (a *AliasRepository) GetAliases() (map[domain.NodeName]string, error) {
+func (a *AliasRepository) GetAliases(ctx context.Context) (map[domain.NodeName]string, error) {
 	var aliases []Alias
 	err := a.db.Find(&aliases).Error
 	if err != nil {
@@ -38,9 +39,9 @@ func (a *AliasRepository) GetAliases() (map[domain.NodeName]string, error) {
 	return aliasMap, nil
 }
 
-func (a *AliasRepository) SetAlias(newAlias string, nodeName domain.NodeName) error {
+func (a *AliasRepository) SetAlias(ctx context.Context, newAlias string, nodeName domain.NodeName) error {
 	var alias Alias
-	if err := a.db.First(&alias, "node_name = ?", nodeName).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := a.db.WithContext(ctx).First(&alias, "node_name = ?", nodeName).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
 
@@ -54,6 +55,6 @@ func (a *AliasRepository) SetAlias(newAlias string, nodeName domain.NodeName) er
 	return a.db.Save(&alias).Error
 }
 
-func (a *AliasRepository) RemoveAlias(aliasName string) error {
-	return a.db.Delete(&Alias{}, "name = ?", aliasName).Error
+func (a *AliasRepository) RemoveAlias(ctx context.Context, aliasName string) error {
+	return a.db.WithContext(ctx).Delete(&Alias{}, "name = ?", aliasName).Error
 }

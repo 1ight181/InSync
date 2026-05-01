@@ -1,6 +1,7 @@
 package alias
 
 import (
+	"context"
 	"errors"
 	"insync/internal/domain"
 )
@@ -27,12 +28,12 @@ func NewAliasUseCase(opts AliasUseCaseOptions) (*AliasUseCase, error) {
 	}, nil
 }
 
-func (a *AliasUseCase) SetAlias(newAlias string, nodeName domain.NodeName) error {
-	return a.aliasProvider.SetAlias(newAlias, nodeName)
+func (a *AliasUseCase) SetAlias(ctx context.Context, newAlias string, nodeName domain.NodeName) error {
+	return a.aliasProvider.SetAlias(ctx, newAlias, nodeName)
 }
 
-func (a *AliasUseCase) RemoveAlias(aliasName string) error {
-	return a.aliasProvider.RemoveAlias(aliasName)
+func (a *AliasUseCase) RemoveAlias(ctx context.Context, aliasName string) error {
+	return a.aliasProvider.RemoveAlias(ctx, aliasName)
 }
 
 func (a *AliasUseCase) GetAliases() map[domain.NodeName]string {

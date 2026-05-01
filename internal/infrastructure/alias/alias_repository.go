@@ -1,9 +1,12 @@
 package alias
 
-import "insync/internal/domain"
+import (
+	"context"
+	"insync/internal/domain"
+)
 
 type IAliasRepository interface {
-	GetAliases() (map[domain.NodeName]string, error)
-	SetAlias(newAlias string, nodeName domain.NodeName) error
-	RemoveAlias(aliasName string) error
+	GetAliases(ctx context.Context) (map[domain.NodeName]string, error)
+	SetAlias(ctx context.Context, newAlias string, nodeName domain.NodeName) error
+	RemoveAlias(ctx context.Context, aliasName string) error
 }
