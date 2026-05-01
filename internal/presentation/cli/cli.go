@@ -599,6 +599,18 @@ func (c *Cli) connectCmd(cmd *cobra.Command, args []string) error {
 		fmt.Println("Не удалось подключиться к узлу")
 		return err
 	}
+
+	var nodeNameToConnect domain.NodeName
+	for _, alias := range c.nodeNameCache {
+		if nodeName.String() == alias.Alias {
+			nodeNameToConnect = alias.NodeName
+		}
+	}
+
+	if nodeNameToConnect == "" {
+		nodeNameToConnect = nodeName
+	}
+
 	c.logger.LogAttrs(c.loggerCtx, slog.LevelDebug, "Подключение к узлу", slog.String("node", nodeName.String()))
 	fmt.Printf("Подключение к узлу %s\n", nodeName)
 
@@ -997,10 +1009,16 @@ func (c *Cli) nodeNameSuggestionFunc(prefix string) []prompt.Suggest {
 
 	suggestions := make([]prompt.Suggest, 0)
 	for _, nodeNameWithAlias := range nodeNamesWithAlias {
-		nodeName := nodeNameWithAlias.NodeName
-		if strings.HasPrefix(nodeName.String(), parts[1]) {
+		nodeNameCandidate := nodeNameWithAlias.NodeName
+		descripton := ""
+		if nodeNameWithAlias.Alias != "" {
+			nodeNameCandidate = domain.NodeName(nodeNameWithAlias.Alias)
+			descripton = nodeNameWithAlias.NodeName.String()
+		}
+		if strings.HasPrefix(nodeNameCandidate.String(), parts[1]) {
 			suggestions = append(suggestions, prompt.Suggest{
-				Text: nodeName.String(),
+				Text:        nodeNameCandidate.String(),
+				Description: descripton,
 			})
 		}
 
